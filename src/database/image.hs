@@ -2,11 +2,12 @@
 module Database.Image where
 
 import Control.Monad            (forM, when)
+import Data.List                (nub)
 import Data.Functor             ((<$>))
 import Data.Maybe               (isJust, fromJust)
 import Data.Text                (pack)
 import Database.SQLite.Simple   (Connection, Only(..), query, query_, execute, lastInsertRowId)
-import Database.Tag             (getTagByID, getTagsByImageID)
+import Database.Tag             (getTagByID, getTagsByImageID, setTag)
 import Types                    (Image(..), Tag(..), ID)
 
 -- | Associates the tag with the given ID to the image with the given ID.
@@ -70,28 +71,27 @@ setImage :: Connection -> Image -> IO Image
 setImage connection image@(Image id _ _ _ _) = case id of
     Just id -> updateImage connection image
     Nothing -> insertImage connection image
+    where
     
-    where insertImage connection (Image _ title ext hash tags) = do
-              execute connection insertCommand (title, ext, hash)
-              id <- lastInsertRowId connection
-              attachTagsByName id image tags
-              
-          updateImage connection (Image (Just id) title ext hash tags) = do
-              execute connection updateCommand (title, ext, hash, id)
-              clearTags connection id
-              attachTagsByName id image tags
-              
-          attachTagsByName id (Image _ title ext hash _) tags = do
-              forM tags $ attachTag connection id . fromJust . _tagID
-              return (Image (Just id) title ext hash tags)
-              
-          insertCommand = "INSERT INTO image \
-                          \(title, extension, hash) \
-                          \VALUES \
-                          \(?, ?, ?)"
-                    
-          updateCommand = "UPDATE image SET \
-                          \title = ?, \
-                          \extension = ?, \
-                          \hash = ? \
-                          \WHERE id = ?"
+        insertImage connection (Image _ title ext hash tags) = do
+            execute connection insertCommand (title, ext, hash)
+            id <- lastInsertRowId connection
+            attachTagsByName id title ext hash tags
+            where insertCommand = "INSERT INTO image \
+                                  \(title, extension, hash) \
+                                  \VALUES \
+                                  \(?, ?, ?)"
+        
+        updateImage connection (Image (Just id) title ext hash tags) = do
+            execute connection updateCommand (title, ext, hash, id)
+            attachTagsByName id title ext hash tags
+            where updateCommand = "UPDATE image SET \
+                                  \title = ?, \
+                                  \extension = ?, \
+                                  \hash = ? \
+                                  \WHERE id = ?"
+        
+        attachTagsByName id title ext hash tags = do
+            tags' <- nub <$> (forM tags $ setTag connection)
+            forM tags' $ attachTag connection id . fromJust . _tagID
+            return (Image (Just id) title ext hash tags')
