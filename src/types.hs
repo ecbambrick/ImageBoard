@@ -3,8 +3,26 @@ module Types where
 import Control.Applicative ((<$>), (<*>))
 import Data.Int (Int64)
 import Data.Maybe (fromMaybe)
+import Data.Monoid (Monoid(..))
 import Text.Printf (printf)
 import Database.SQLite.Simple.FromRow
+
+-- | A property with a name and a value to validate.
+data Property a = Property String a deriving (Show)
+
+-- | A validation error indicating the name, value, and message of an invalid
+-- | validation result.
+data Error = Error String String String deriving (Show)
+
+-- | The results of a validation, indicating whether the validation was
+-- | successful or a list of errors, otherwise.
+data Validation = Valid | Invalid [Error] deriving (Show)
+
+instance Monoid Validation where
+    mempty = Valid
+    mappend Valid b = b
+    mappend a Valid = a
+    mappend (Invalid a) (Invalid b) = Invalid (a ++ b)
 
 -- | The primary key of an entity.
 type ID = Int64
