@@ -1,9 +1,11 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Types where
 
 import Control.Applicative ((<$>), (<*>))
+import Data.Data (Data, Typeable)
 import Data.Int (Int64)
 import Data.Maybe (fromMaybe)
-import Data.Monoid (Monoid(..))
+import Data.Monoid (Monoid, mempty, mappend, mconcat)
 import Text.Printf (printf)
 import Database.SQLite.Simple.FromRow
 
@@ -11,7 +13,7 @@ import Database.SQLite.Simple.FromRow
 data Property a = Property String a deriving (Show)
 
 -- | A validation error indicating the name, value, and message of an invalid
--- | validation result.
+-- | property.
 data Error = Error String String String deriving (Show)
 
 -- | The results of a validation, indicating whether the validation was
@@ -31,7 +33,11 @@ type ID = Int64
 -- | nothing indicates a tag that has not yet been persisted.
 data Tag = Tag 
     { _tagID :: Maybe ID
-    , _tagName :: String }
+    , _tagName :: String
+    } deriving (Data, Typeable)
+
+instance Eq Tag where
+    (Tag _ name1) == (Tag _ name2) = name1 == name2
 
 instance FromRow Tag where 
     fromRow = Tag <$> field <*> field
@@ -46,7 +52,8 @@ data Image = Image
     , _imageTitle :: String
     , _imageExtension :: String
     , _imageHash :: String
-    , _imageTags :: [Tag] }
+    , _imageTags :: [Tag]
+    } deriving (Data, Typeable)
 
 instance FromRow Image where 
     fromRow = toImage [] <$> field <*> field <*> field <*> field
