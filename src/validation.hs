@@ -21,8 +21,8 @@ atLeast bound (Property name x)
 -- | invalid.
 isValidTag :: Property String -> Validation
 isValidTag (Property name x)
-    | and $ map isValid x = Valid
-    | otherwise           = Invalid [Error name x "invalid characters"]
+    | all isValid x = Valid
+    | otherwise     = Invalid [Error name x "invalid characters"]
     where
         isValid x = isAlphaNum x || elem x "._- "
 
@@ -30,6 +30,6 @@ isValidTag (Property name x)
 -- | with only whitespace; otherwise, invalid.
 isNotEmpty :: Property String -> Validation
 isNotEmpty (Property name x)
-    | null x              = Invalid [Error name x "empty string"]
-    | and $ map isSpace x = Invalid [Error name x "empty string"]
-    | otherwise           = Valid
+    | null x        = Invalid [Error name x "empty string"]
+    | all isSpace x = Invalid [Error name x "empty string"]
+    | otherwise     = Valid
