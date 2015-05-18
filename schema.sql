@@ -11,7 +11,7 @@ DROP TABLE IF EXISTS image;
 CREATE TABLE image (
     id          INTEGER     PRIMARY KEY AUTOINCREMENT,
     post_id     INTEGER     NOT NULL,
-    hash        TEXT        UNIQUE NOT NULL,
+    hash        TEXT        NOT NULL,
     width       INTEGER     NOT NULL,
     height      INTEGER     NOT NULL,
     file_size   INTEGER     NOT NULL,
@@ -35,8 +35,7 @@ CREATE TABLE gallery (
 DROP TABLE IF EXISTS category;
 CREATE TABLE category (
     id          INTEGER     PRIMARY KEY AUTOINCREMENT,
-    name        TEXT        UNIQUE NOT NULL,
-    is_library  INTEGER     NOT NULL -- boolean
+    name        TEXT        UNIQUE NOT NULL
 );
 
 DROP TABLE IF EXISTS tag;
