@@ -2,7 +2,31 @@ module Validation where
 
 import Text.Printf  (printf)
 import Data.Char    (isAlphaNum, isSpace)
-import Types        (Property(..), Validation(..), Error(..))
+import Data.Monoid  (Monoid, mempty, mappend)
+
+------------------------------------------------------------------------- Types
+
+-- | A validation error indicating the name, value, and message of an invalid
+-- | property.
+data Error = Error String String String 
+    deriving (Show)
+
+-- | A property with a name and a value to validate.
+data Property a = Property String a 
+    deriving (Show)
+
+-- | The results of a validation, indicating whether the validation was
+-- | successful or a list of errors, otherwise.
+data Validation = Valid | Invalid [Error] 
+    deriving (Show)
+
+instance Monoid Validation where
+    mempty = Valid
+    mappend Valid b = b
+    mappend a Valid = a
+    mappend (Invalid a) (Invalid b) = Invalid (a ++ b)
+
+-------------------------------------------------------------------- Validation
 
 -- | Returns valid if a property is nothing; otherwise, applies the given
 -- | validation function and returns the results.
