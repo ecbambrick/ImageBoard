@@ -1,11 +1,26 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Common where
 
+import Happstack.Server     (ServerPartT)
+import Control.Monad.Reader (ReaderT)
 import Control.Applicative  ((<$>), (<*>))
 import Data.Data            (Data, Typeable)
 import Data.Int             (Int64)
 
-------------------------------------------------------------------------- Types
+----------------------------------------------------------------------- Control
+
+-- | Main application monad which allows read-only access to configuration 
+-- | settings.
+type App = ReaderT Config (ServerPartT IO)
+
+-- | Configuration settings.
+data Config = Config 
+    { configPort                :: Int
+    , configDatabaseConnection  :: String
+    , configStoragePath         :: FilePath
+    , configDiskQuota           :: Int64 }
+
+-------------------------------------------------------------------------- Data
 
 -- | The primary key of a database entity.
 type ID = Int64
@@ -13,7 +28,7 @@ type ID = Int64
 -- | The date and time as a string.
 type DateTime = String
 
--- | A database entity with 
+-- | A database entity with an ID.
 data Entity a = Entity ID a deriving (Eq, Show)
 
 instance Functor Entity where
