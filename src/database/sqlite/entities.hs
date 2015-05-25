@@ -6,8 +6,12 @@ module Database.SQLite.Entities ( deleteImage, insertImage, selectImage
                                 , updateImage, attachTag, attachTags, clearTags
                                 , cleanTags, withDatabase ) where
 
+import Common                   ( Config(..), Entity(..), Image(..), Tag(..)
+                                , ID, App, (<$$>) )
 import Control.Applicative      ( (<$>), (<*>) )
 import Control.Monad            ( when )
+import Control.Monad.IO.Class   ( liftIO )
+import Control.Monad.Reader     ( asks )
 import Data.Int                 ( Int64 )
 import Data.Maybe               ( listToMaybe )
 import Data.Text                ( pack )
@@ -16,7 +20,8 @@ import Database.SQLite.Simple   ( FromRow(..), Query(..), Connection
                                 , query, query_, withConnection
                                 , withTransaction )
 import Foreign.Marshal.Utils    ( toBool, fromBool )
-import Common                   ( Entity(..), Image(..), Tag(..), ID, (<$$>) )
+
+
 
 ------------------------------------------------------------------------- Types
 
@@ -169,9 +174,10 @@ toImage (DBImage id title fav hash ext w h created modified size) =
 toTag :: DBTag -> Entity Tag
 toTag (DBTag id name) = Entity id (Tag name)
 
--- | Applies the given function within a database transaction in the test 
--- | database.
-withDatabase :: (Connection -> IO a) -> IO a
-withDatabase f = withConnection "test.db" $ \conn -> do
-    execute_ conn "PRAGMA foreign_keys = ON;"
-    withTransaction conn (f conn)
+-- | Applies the given function within a database transaction.
+withDatabase :: (Connection -> IO a) -> App a
+withDatabase f = do
+    database <- asks configDatabaseConnection
+    liftIO $ withConnection database $ \conn -> do
+        execute_ conn "PRAGMA foreign_keys = ON;"
+        withTransaction conn $ f conn
