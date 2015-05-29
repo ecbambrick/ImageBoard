@@ -2,12 +2,13 @@ module System.IO.Metadata where
 
 import qualified Data.ByteString as Byte
 
+import Codec.Picture        (DynamicImage(..), Image(..), readImage)
+import Codec.Picture.Types  (dynamicMap)
+import Control.Exception    (ErrorCall(..), throwIO)
 import Crypto.Hash.MD5      (hash)
 import Data.Functor         ((<$>))
 import Text.Printf          (printf)
-import Codec.Picture        (DynamicImage(..), Image(..), readImage)
-import Codec.Picture.Types  (dynamicMap)
-import System.IO            (IOMode(..), withFile, hFileSize)
+import System.IO            (IOMode(..), hFileSize, withFile)
 
 -- | Returns the MD5 hash of the given file as a hexidecimal string.
 getHash :: FilePath -> IO String
@@ -22,6 +23,6 @@ getSize path = withFile path ReadMode hFileSize
 getDimensions :: FilePath -> IO (Int, Int)
 getDimensions path = do
     image <- readImage path
-    return $ case image of
-        Left err -> undefined
-        Right im -> (dynamicMap imageWidth im, dynamicMap imageHeight im)
+    case image of
+        Left  e -> throwIO $ ErrorCall e
+        Right i -> return (dynamicMap imageWidth i, dynamicMap imageHeight i)
