@@ -37,7 +37,8 @@ instance Functor Entity where
 -- | A tag can be attached to an image as additional meta data. An ID of 
 -- | nothing indicates a tag that has not yet been persisted.
 data Tag = Tag 
-    { tagName :: String } deriving (Eq, Show, Data, Typeable)
+    { tagName :: String
+    } deriving (Eq, Show, Data, Typeable)
 
 -- | An Image contains the meta data of an image file that has been uploaded. 
 -- | An ID of nothing indicates an image that has not yet been persisted.
@@ -50,7 +51,9 @@ data Image = Image
     , imageHeight       :: Int
     , imageCreated      :: DateTime
     , imageModified     :: DateTime
-    , imageFileSize     :: Int } deriving (Eq, Show, Data, Typeable)
+    , imageFileSize     :: Int
+    , imageTags         :: [Tag] 
+    } deriving (Eq, Show, Data, Typeable)
 
 ----------------------------------------------------------------------- Utility
 

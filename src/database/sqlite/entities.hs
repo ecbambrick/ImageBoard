@@ -162,13 +162,13 @@ clearTags conn id = execute conn deleteCmd [id]
 
 -- | Transforms an Image into a DBImage.
 fromImage :: Image -> DBImage
-fromImage (Image title fav hash ext w h created modified size) =
+fromImage (Image title fav hash ext w h created modified size _) =
     (DBImage 0 title (fromBool fav) hash ext w h created modified size)
 
 -- | Transforms a DBImage into an Entity Image.
 toImage :: DBImage -> Entity Image
 toImage (DBImage id title fav hash ext w h created modified size) =
-    Entity id (Image title (toBool fav) hash ext w h created modified size)
+    Entity id (Image title (toBool fav) hash ext w h created modified size [])
 
 -- | Transforms a DBTag into an Entity Tag.
 toTag :: DBTag -> Entity Tag
