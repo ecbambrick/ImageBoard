@@ -29,7 +29,10 @@ type ID = Int64
 type DateTime = String
 
 -- | A database entity with an ID.
-data Entity a = Entity ID a deriving (Eq, Show)
+data Entity a = Entity 
+    { entityID   :: ID 
+    , entityData :: a 
+    } deriving (Eq, Show, Data, Typeable)
 
 instance Functor Entity where
     fmap f (Entity id x) = Entity id (f x)
