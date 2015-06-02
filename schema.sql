@@ -3,8 +3,8 @@ CREATE TABLE post (
     id              INTEGER     PRIMARY KEY AUTOINCREMENT,
     title           TEXT,
     is_favourite    INTEGER     NOT NULL,
-    created         TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modified        TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created         INTEGER     NOT NULL DEFAULT (strftime('%s', 'now')),
+    modified        INTEGER     NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 
 DROP TABLE IF EXISTS image;
