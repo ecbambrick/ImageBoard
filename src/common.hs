@@ -1,11 +1,17 @@
+{-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts   #-}
+
 module Common where
 
-import Happstack.Server     (ServerPartT)
-import Control.Monad.Reader (ReaderT)
-import Control.Applicative  ((<$>), (<*>))
-import Data.Data            (Data, Typeable)
-import Data.Int             (Int64)
+import Control.Applicative      ( (<$>), (<*>) )
+import Control.Monad.Reader     ( MonadReader, ReaderT, ask, asks, runReaderT )
+import Control.Monad.Trans      ( MonadIO, liftIO )
+import Data.Data                ( Data, Typeable )
+import Data.Int                 ( Int64 )
+import Database.SQLite.Simple   ( Connection, execute_, withConnection
+                                , withTransaction )
+import Happstack.Server         ( ServerPartT )
 
 ----------------------------------------------------------------------- Control
 
@@ -13,12 +19,19 @@ import Data.Int             (Int64)
 -- | settings.
 type App = ReaderT Config (ServerPartT IO)
 
--- | Configuration settings.
-data Config = Config 
-    { configPort                :: Int
-    , configDatabaseConnection  :: String
-    , configStoragePath         :: FilePath
-    , configDiskQuota           :: Int64 }
+-- | Database transaction monad which allows access to an open database 
+-- | connection.
+type Transaction = ReaderT Connection IO
+
+-- | Runs a transaction with the database connection string defined by the
+-- | application's configuration settings.
+runDB :: (MonadIO m, MonadReader Config m) => Transaction a -> m a
+runDB f = do
+    db <- asks configDatabaseConnection
+    liftIO $ withConnection db $ \conn -> do
+        withTransaction conn $ do
+            execute_ conn "PRAGMA foreign_keys = ON;"
+            runReaderT f conn
 
 -------------------------------------------------------------------------- Data
 
@@ -27,6 +40,13 @@ type ID = Int64
 
 -- | The date and time as a string.
 type DateTime = String
+
+-- | Configuration settings.
+data Config = Config 
+    { configPort                :: Int
+    , configDatabaseConnection  :: String
+    , configStoragePath         :: FilePath
+    , configDiskQuota           :: Int64 }
 
 -- | A database entity with an ID.
 data Entity a = Entity 
