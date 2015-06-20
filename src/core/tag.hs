@@ -1,8 +1,8 @@
 module Core.Tag where
 
-import Common                   (Config(..), Tag(..), Entity(..), App)
-import Database.SQLite.Entities (selectTags)
+import Common            ( Tag(..), Entity(..), App, runDB )
+import DataSource.SQLite ( selectTags )
 
 -- | Returns the list of all tag entities.
 get :: App [Entity Tag]
-get = withDatabase selectTags
+get = runDB selectTags
