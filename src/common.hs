@@ -9,6 +9,7 @@ import Control.Monad.Reader     ( MonadReader, ReaderT, ask, asks, runReaderT )
 import Control.Monad.Trans      ( MonadIO, liftIO )
 import Data.Data                ( Data, Typeable )
 import Data.Int                 ( Int64 )
+import Data.Time                ( UTCTime )
 import Database.SQLite.Simple   ( Connection, execute_, withConnection
                                 , withTransaction )
 import Happstack.Server         ( ServerPartT )
@@ -37,9 +38,6 @@ runDB f = do
 
 -- | The primary key of a database entity.
 type ID = Int64
-
--- | The date and time as a string.
-type DateTime = String
 
 -- | Configuration settings.
 data Config = Config 
@@ -72,8 +70,8 @@ data Image = Image
     , imageExtension    :: String
     , imageWidth        :: Int
     , imageHeight       :: Int
-    , imageCreated      :: DateTime
-    , imageModified     :: DateTime
+    , imageCreated      :: UTCTime
+    , imageModified     :: UTCTime
     , imageFileSize     :: Int
     , imageTags         :: [Tag] 
     } deriving (Eq, Show, Data, Typeable)
