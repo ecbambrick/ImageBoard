@@ -2,9 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module DataSource.SQLite
-    ( deleteImage, insertImage, selectImage, selectImages, selectTags
-    , selectTagsByImage, updateImage, attachTag, attachTags, clearTags
-    , cleanTags ) where
+    ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
+    , selectTags, selectTagsByImage, updateImage, attachTag, attachTags
+    , clearTags, cleanTags ) where
                                 
 import Common                   ( Config(..), Entity(..), Image(..), Tag(..)
                                 , ID, App, (<$$>), Transaction(..) )
@@ -99,6 +99,14 @@ selectImages = do
                     \INNER JOIN image i ON i.post_id = p.id \
                     \ORDER BY p.id;"
 
+-- | Returns whether or not an image already exists with the given hash.
+selectHashExists :: String -> Transaction Bool
+selectHashExists hash = do
+    conn <- ask
+    [results] <- lift $ query conn command [hash] :: Transaction [Int]
+    return (results > 0)
+    where command = "SELECT COUNT(*) FROM image WHERE hash = ?"
+
 -- | Updates the image in the database.
 updateImage :: Entity Image -> Transaction ()
 updateImage (Entity id image) = do
@@ -170,9 +178,7 @@ attachTag postID name = do
 -- | Associates the image with the given ID with all tags that map to the given
 -- | list of names. If any tag does not eixsts, it is added to the database.
 attachTags :: ID -> [String] -> Transaction ()
-attachTags postID names = do
-    conn <- ask
-    mapM_ (attachTag postID) names
+attachTags postID tags = mapM_ (attachTag postID) tags
 
 -- | Disassociates all tags from the image with the given ID.
 clearTags :: ID -> Transaction ()

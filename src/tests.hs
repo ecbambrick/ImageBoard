@@ -23,6 +23,7 @@ main = runTestTT $ TestList
     , selectImagesTest
     , deleteImageTest
     , updateImageTest
+    , selectHashExistsTest
     , attachTagTest
     , attachTagsTest
     , selectTagsTest
@@ -120,6 +121,24 @@ selectImagesTest = testDatabase $ do
         []                       @=? noResults
         [image1, image2, image3] @=? allImages
 
+-- | Tests the selectHashExists function
+selectHashExistsTest :: Test 
+selectHashExistsTest = testDatabase $ do
+    result1 <- selectHashExists "h1"
+
+    insertImage (Image "t1" True  "h1" "e1" 1 2 (time 1) (time 2) 3 [])
+    insertImage (Image "t2" False "h2" "e2" 4 5 (time 3) (time 4) 6 [])
+    
+    result2 <- selectHashExists "h0"
+    result3 <- selectHashExists "h1"
+    result4 <- selectHashExists "h2"
+
+    lift $ do
+        result1 @=? False
+        result2 @=? False
+        result3 @=? True
+        result4 @=? True
+    
 -- | Tests the updateImage function.
 updateImageTest :: Test
 updateImageTest = testDatabase $ do
