@@ -73,7 +73,6 @@ data Image = Image
     , imageCreated      :: UTCTime
     , imageModified     :: UTCTime
     , imageFileSize     :: Int
-    , imageTags         :: [Tag] 
     } deriving (Eq, Show, Data, Typeable)
 
 ----------------------------------------------------------------------- Utility

@@ -36,9 +36,9 @@ main = runTestTT $ TestList
 -- | Tests the deleteImage function.
 deleteImageTest :: Test
 deleteImageTest = testDatabase $ do
-    id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 4) 8 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 2) (time 5) 5 [])
-    id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 3) (time 6) 6 [])
+    id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 4) 8)
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 2) (time 5) 5)
+    id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 3) (time 6) 6)
     
     numResults1 <- selectImageCount
     
@@ -63,8 +63,8 @@ deleteImageTest = testDatabase $ do
 -- | Tests the insertImage function.
 insertImageTest :: Test
 insertImageTest = testDatabase $ do
-    let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 []
-    let image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 []
+    let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8
+    let image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5
     
     id1 <- insertImage image1
     id2 <- insertImage image2
@@ -81,9 +81,9 @@ insertImageTest = testDatabase $ do
 -- | Tests the selectImage function.
 selectImageTest :: Test
 selectImageTest = testDatabase $ do
-    let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 []
-        image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 []
-        image3 = Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 []
+    let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8
+        image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5
+        image3 = Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6
     
     id1 <- insertImage image1
     id2 <- insertImage image2
@@ -108,9 +108,9 @@ selectImagesTest :: Test
 selectImagesTest = testDatabase $ do
     noResults <- selectImages
 
-    id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 [])
-    id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 [])
+    id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8)
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5)
+    id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6)
     
     (Just image1) <- selectImage id1
     (Just image2) <- selectImage id2
@@ -126,8 +126,8 @@ selectHashExistsTest :: Test
 selectHashExistsTest = testDatabase $ do
     result1 <- selectHashExists "h1"
 
-    insertImage (Image "t1" True  "h1" "e1" 1 2 (time 1) (time 2) 3 [])
-    insertImage (Image "t2" False "h2" "e2" 4 5 (time 3) (time 4) 6 [])
+    insertImage (Image "t1" True  "h1" "e1" 1 2 (time 1) (time 2) 3)
+    insertImage (Image "t2" False "h2" "e2" 4 5 (time 3) (time 4) 6)
     
     result2 <- selectHashExists "h0"
     result3 <- selectHashExists "h1"
@@ -142,9 +142,9 @@ selectHashExistsTest = testDatabase $ do
 -- | Tests the updateImage function.
 updateImageTest :: Test
 updateImageTest = testDatabase $ do
-    let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 []
-        image2 = Image "t2" True  "h2" "e2" 3 5 (time 3) (time 4) 9 []
-        image3 = Image "t3" True  "h3" "e3" 1 2 (time 5) (time 6) 4 []
+    let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8
+        image2 = Image "t2" True  "h2" "e2" 3 5 (time 3) (time 4) 9
+        image3 = Image "t3" True  "h3" "e3" 1 2 (time 5) (time 6) 4
         
     id <- insertImage image1
     
@@ -170,8 +170,8 @@ updateImageTest = testDatabase $ do
 -- Tests the selectTags function.
 selectTagsTest :: Test
 selectTagsTest = testDatabase $ do
-    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6 [])
+    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
     attachTags id1 ["test", "hello", "goodbye"]
     attachTags id2 ["another", "couple", "test"]
@@ -193,8 +193,8 @@ selectTagsTest = testDatabase $ do
 -- Tests the selectTagsByImage function.
 selectTagsByImageTest :: Test
 selectTagsByImageTest = testDatabase $ do
-    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6 [])
+    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
     attachTags id1 ["test", "hello", "goodbye"]
     attachTags id2 ["another", "couple", "test"]
@@ -212,8 +212,8 @@ selectTagsByImageTest = testDatabase $ do
 -- Tests the cleanTags function.
 cleanTagsTest :: Test
 cleanTagsTest = testDatabase $ do
-    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6 [])
+    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
     attachTags id1 ["test", "hello", "goodbye"]
     attachTags id2 ["another", "couple", "test"]
@@ -240,8 +240,8 @@ cleanTagsTest = testDatabase $ do
 -- Tests the attachTag function.
 attachTagTest :: Test
 attachTagTest = testDatabase $ do
-    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6 [])
+    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
     attachTag id1 "test1"
     attachTag 999 "test2" -- nothing should happen
@@ -258,8 +258,8 @@ attachTagTest = testDatabase $ do
 -- Tests the attachTags function.
 attachTagsTest :: Test
 attachTagsTest = testDatabase $ do
-    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6 [])
+    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
     attachTags id1 ["test1", "test2", "test3"]
     
@@ -277,8 +277,8 @@ attachTagsTest = testDatabase $ do
 -- | Tests the clearTags function.
 clearTagsTest :: Test
 clearTagsTest = testDatabase $ do
-    id1 <- insertImage $ Image "" True "" "" 1 1 (time 1) (time 1) 1 []
-    id2 <- insertImage $ Image "" True "" "" 1 1 (time 1) (time 1) 1 []
+    id1 <- insertImage $ Image "" True "" "" 1 1 (time 1) (time 1) 1
+    id2 <- insertImage $ Image "" True "" "" 1 1 (time 1) (time 1) 1
     
     attachTags id1 ["test1", "test2", "test3"]
     attachTags id2 ["test1", "test2", "test3"]
