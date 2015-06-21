@@ -3,8 +3,8 @@
 
 module DataSource.SQLite
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
-    , selectTags, selectTagsByImage, updateImage, attachTag, attachTags
-    , clearTags, cleanTags ) where
+    , selectTags, selectTagsByImage, updateImage, attachTags, clearTags
+    , cleanTags ) where
                                 
 import Common                   ( Config(..), Entity(..), Image(..), Tag(..)
                                 , ID, App, (<$$>), Transaction(..) )
@@ -153,32 +153,28 @@ cleanTags = do
 
 ----------------------------------------------------------------- Relationships
 
--- | Associates the image with the given ID with the tag with the given name.
--- | If the tag name does not exist, it is added to the database.
-attachTag :: ID -> String -> Transaction ()
-attachTag postID name = do
+-- | Associates the image with the given ID with all tags that map to the given
+-- | list of names. If any tag does not eixsts, it is added to the database.
+attachTags :: [String] -> ID -> Transaction ()
+attachTags tags postID = do
     conn <- ask
-    lift $ do
-        postExists <- not . null <$> getPost conn
-        when postExists $ do
-            tagID <- getTagID conn name
-            case tagID of
-                Nothing -> insert conn name >>= attach conn postID
-                Just id -> attach conn postID id
-    where
-        getTagID c a = listToMaybe <$> query c selectCmd [a] :: IO (Maybe ID)
-        insert c a   = execute c insertCmd [a] >> lastInsertRowId c
+    mapM_ (attachTag conn postID) tags
+    where 
+        attachTag conn postID name = lift $ do
+            postExists <- not . null <$> getPost conn
+            when postExists $ do
+                tagID <- getTagID conn name
+                case tagID of
+                    Nothing -> insert conn name >>= attach conn postID
+                    Just id -> attach conn postID id
         attach c a b = execute c attachCmd (a, b)
+        getTagID c a = listToMaybe <$> query c selectCmd [a] :: IO (Maybe ID)
         getPost c    = query c getPstCmd [postID] :: IO [ID]
+        insert c a   = execute c insertCmd [a] >> lastInsertRowId c
         selectCmd    = "SELECT id FROM tag WHERE name = ?;"
         insertCmd    = "INSERT INTO tag (name) VALUES (?);"
         attachCmd    = "INSERT INTO post_tag (post_id, tag_id) VALUES (?, ?);"
-        getPstCmd    = "SELECT id FROM post WHERE id = ?";
-
--- | Associates the image with the given ID with all tags that map to the given
--- | list of names. If any tag does not eixsts, it is added to the database.
-attachTags :: ID -> [String] -> Transaction ()
-attachTags postID tags = mapM_ (attachTag postID) tags
+        getPstCmd    = "SELECT id FROM post WHERE id = ?;"
 
 -- | Disassociates all tags from the image with the given ID.
 clearTags :: ID -> Transaction ()

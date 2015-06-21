@@ -24,7 +24,6 @@ main = runTestTT $ TestList
     , deleteImageTest
     , updateImageTest
     , selectHashExistsTest
-    , attachTagTest
     , attachTagsTest
     , selectTagsTest
     , selectTagsByImageTest
@@ -173,8 +172,8 @@ selectTagsTest = testDatabase $ do
     id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
     id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
-    attachTags id1 ["test", "hello", "goodbye"]
-    attachTags id2 ["another", "couple", "test"]
+    attachTags ["test", "hello", "goodbye"]  id1 
+    attachTags ["another", "couple", "test"] id2 
     
     results @ [(Entity _ (Tag name1)),
                (Entity _ (Tag name2)),
@@ -196,8 +195,8 @@ selectTagsByImageTest = testDatabase $ do
     id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
     id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
-    attachTags id1 ["test", "hello", "goodbye"]
-    attachTags id2 ["another", "couple", "test"]
+    attachTags ["test", "hello", "goodbye"]  id1
+    attachTags ["another", "couple", "test"] id2
     
     results @ [(Entity _ (Tag name1)),
                (Entity _ (Tag name2)),
@@ -215,8 +214,8 @@ cleanTagsTest = testDatabase $ do
     id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
     id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
-    attachTags id1 ["test", "hello", "goodbye"]
-    attachTags id2 ["another", "couple", "test"]
+    attachTags ["test", "hello", "goodbye"]  id1
+    attachTags ["another", "couple", "test"] id2
     
     deleteImage id1
 
@@ -237,31 +236,13 @@ cleanTagsTest = testDatabase $ do
 
 ------------------------------------------------------------ Relationship Tests
 
--- Tests the attachTag function.
-attachTagTest :: Test
-attachTagTest = testDatabase $ do
-    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
-    
-    attachTag id1 "test1"
-    attachTag 999 "test2" -- nothing should happen
-    
-    [(Entity _ (Tag name))] <- selectTagsByImage id1
-    noResults1              <- selectTagsByImage id2
-    noResults2              <- selectTagsByImage 999
-    
-    lift $ do
-        name            @=? "test1"
-        null noResults1 @=? True
-        null noResults2 @=? True
-
 -- Tests the attachTags function.
 attachTagsTest :: Test
 attachTagsTest = testDatabase $ do
     id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5)
     id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6)
     
-    attachTags id1 ["test1", "test2", "test3"]
+    attachTags ["test1", "test2", "test3"] id1
     
     [(Entity _ (Tag name1)),
      (Entity _ (Tag name2)),
@@ -280,8 +261,8 @@ clearTagsTest = testDatabase $ do
     id1 <- insertImage $ Image "" True "" "" 1 1 (time 1) (time 1) 1
     id2 <- insertImage $ Image "" True "" "" 1 1 (time 1) (time 1) 1
     
-    attachTags id1 ["test1", "test2", "test3"]
-    attachTags id2 ["test1", "test2", "test3"]
+    attachTags ["test1", "test2", "test3"] id1
+    attachTags ["test1", "test2", "test3"] id2
     
     clearTags id2
     clearTags 999 -- nothing should happen
