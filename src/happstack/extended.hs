@@ -15,7 +15,7 @@ import Data.Textual             ( splitOn )
 import Data.Data                ( Data )
 import Happstack.Server         ( Method(..), FilterMonad, Response
                                 , ServerMonad, dirs, method, nullDir
-                                , toResponseBS )
+                                , seeOther, toResponse, toResponseBS )
 import Text.Hastache            ( encodeStr, hastacheStr, defaultConfig )
 import Text.Hastache.Context    ( mkGenericContext )
 
@@ -29,6 +29,10 @@ get = (>>) (method GET)
 -- | Guards against the POST method.
 post :: (ServerMonad m, MonadPlus m) => m a -> m a
 post = (>>) (method POST)
+
+-- | Respond with 303 See Other and an empty message body.
+redirect :: (FilterMonad Response m) => String -> m Response
+redirect url = seeOther url $ toResponse LazyText.empty
 
 -- | Renders the given byte string as html.
 render :: LazyChar8.ByteString -> Response
