@@ -33,6 +33,14 @@ isFalse :: Property Bool -> Validation
 isFalse (Property name True) = Invalid [Error name "True" "expected false"]
 isFalse (Property _ False)   = Valid
 
+-- | Returns valid if the given property is a valid image file type; otherwise,
+-- | invalid.
+isValidImageFileType :: Property String -> Validation
+isValidImageFileType (Property name x)
+    | elem x isValidType = Valid
+    | otherwise          = Invalid [Error name x "invalid file type"]
+    where isValidType = ["jpg", "jpeg", "png", "gif", "webm"]
+
 -- | Returns valid if the given property is a valid tag name; otherwise, 
 -- | invalid.
 isValidTag :: Property String -> Validation
