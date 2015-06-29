@@ -33,6 +33,12 @@ isFalse :: Property Bool -> Validation
 isFalse (Property name True) = Invalid [Error name "True" "expected false"]
 isFalse (Property _ False)   = Valid
 
+-- | Returns valid if the given property is positive; otherwise, invalid.
+isPositive :: (Show a, Num a, Ord a) => Property a -> Validation
+isPositive (Property name x)
+    | x > 0     = Valid
+    | otherwise = Invalid [Error name (show x) "non-positive number"]
+
 -- | Returns valid if the given property is a valid image file type; otherwise,
 -- | invalid.
 isValidImageFileType :: Property String -> Validation
