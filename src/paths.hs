@@ -18,7 +18,11 @@ absoluteImagesDir :: (MonadReader Config m) => m FilePath
 absoluteImagesDir = do
     storagePath <- asks configStoragePath
     return $ storagePath </> relativeImagesDir
-    
+
+-- | Returns the relative url of the given image
+imageURL :: Image -> FilePath
+imageURL image = replace "\\" "/" ("/" ++ relativeImagePath image)
+
 -- | Returns the relative file path of the given image
 relativeImagePath :: Image -> FilePath
 relativeImagePath image = relativeImagesDir </> take 2 hash </> hash <.> ext
@@ -28,7 +32,3 @@ relativeImagePath image = relativeImagesDir </> take 2 hash </> hash <.> ext
 -- | Returns the relative path of the storage directory for images.
 relativeImagesDir :: FilePath
 relativeImagesDir = "images"
-
--- | Returns the relative url of the given image
-relativeImageURL :: Image -> FilePath
-relativeImageURL image = replace "\\" "/" $ relativeImagePath image
