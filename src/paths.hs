@@ -32,3 +32,7 @@ relativeImagePath image = relativeImagesDir </> take 2 hash </> hash <.> ext
 -- | Returns the relative path of the storage directory for images.
 relativeImagesDir :: FilePath
 relativeImagesDir = "images"
+
+-- | Returns the path of the template with the given name.
+templatePath :: String -> FilePath
+templatePath name = ".." </> "templates" </> name <.> "html"
