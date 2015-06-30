@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<head>
+    <title>Image Board</title>
+</head>
+<body>
+    <form name="upload" action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="uploadedFile" />
+        <input type="text" name="tags" />
+        <button type="submit">Upload</button>
+    </form>
+    <hr/>
+    {{#images}}
+    <a href="{{path}}">
+        <img src="{{path}}" width=125 height=125 />
+    </a>
+    {{/images}}
+</body>
