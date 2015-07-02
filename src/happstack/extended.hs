@@ -19,12 +19,13 @@ import Happstack.Server         ( Method(..), FilterMonad, Response
 import Text.Hastache            ( encodeStr, hastacheStr, defaultConfig )
 import Text.Hastache.Context    ( mkGenericContext )
 
--- | A route to guard against when routing requests.
-data Route = Root | Any | Path String
-
 -- | Guards against the GET method.
 get :: (ServerMonad m, MonadPlus m) => m a -> m a
 get = (>>) (method GET)
+
+-- | Guards against any route.
+other :: (ServerMonad m, MonadPlus m) => m a -> m a 
+other = id
 
 -- | Guards against the POST method.
 post :: (ServerMonad m, MonadPlus m) => m a -> m a
@@ -51,8 +52,10 @@ renderMustache filePath context = do
     result   <- liftIO $ hastacheStr defaultConfig template $ mkGenericContext context
     return $ render $ LazyChar8.pack $ LazyText.unpack result
 
--- | Guard against a route.
-url :: (ServerMonad m, MonadPlus m) => Route -> m a -> m a 
-url Root        = (>>) nullDir
-url Any         = id
-url (Path path) = dirs path
+-- | Guards against an empty route.
+root :: (ServerMonad m, MonadPlus m) => m a -> m a 
+root = (>>) nullDir
+
+-- | Guards against a route with the specified path.
+uri :: (ServerMonad m, MonadPlus m) => String -> m a -> m a 
+uri = dirs
