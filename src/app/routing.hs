@@ -1,20 +1,20 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module Routing ( index, upload ) where
+module App.Routing ( index, upload ) where
 
 import qualified Data.Text.Lazy as LazyText
-import qualified Core.Image as Image
+import qualified App.Core.Image as Image
 
-import Common               ( Image(..), Entity(..), App, (<$$>), fromEntity )
+import App.Common           ( Image(..), Entity(..), App, (<$$>), fromEntity )
+import App.Paths            ( imageURL, templatePath )
+import App.Validation       ( Validation(..) )
 import Control.Applicative  ( (<$>) )
-import Core.Validation      ( Validation(..) )
 import Data.Data            ( Data, Typeable )
 import Data.Textual         ( splitOn )
 import Happstack.Extended   ( redirect, renderMustache )
 import Happstack.Server     ( ContentType(..), Response, badRequest, lookFile
                             , lookText, ok, toResponse )
-import Paths                ( imageURL, templatePath )
 
 -------------------------------------------------------------------------- Data
 

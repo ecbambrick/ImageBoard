@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module DataSource.SQLite
+module App.DataSource.SQLite
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
     , selectTags, selectTagsByImage, updateImage, attachTags, clearTags
     , cleanTags ) where
                                 
-import Common                   ( Config(..), Entity(..), Image(..), Tag(..)
+import App.Common               ( Config(..), Entity(..), Image(..), Tag(..)
                                 , ID, App, (<$$>), Transaction(..) )
 import Control.Applicative      ( (<$>), (<*>) )
 import Control.Monad            ( when )

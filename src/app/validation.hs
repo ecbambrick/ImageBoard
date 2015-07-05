@@ -1,4 +1,4 @@
-module Core.Validation where
+module App.Validation where
 
 import Text.Printf  (printf)
 import Data.Char    (isAlphaNum, isSpace)

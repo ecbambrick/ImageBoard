@@ -1,8 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Paths where
+module App.Paths where
 
-import Common               ( Config(..), Image(..) )
+import App.Common           ( Config(..), Image(..) )
 import Control.Monad.Reader ( MonadReader, asks )
 import Data.Textual         ( replace )
 import System.FilePath      ( (</>), (<.>) )

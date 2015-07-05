@@ -1,6 +1,8 @@
 ﻿{-# LANGUAGE OverloadedStrings #-}
 
-import Common               ( Config(..), App )
+import App.Common           ( Config(..), App )
+import App.Paths            ( absoluteImagesDir )
+import App.Routing          ( index, upload )
 import Control.Applicative  ( (<$>), (<*>), (<|>), pure )
 import Control.Monad.Reader ( asks, msum, runReaderT )
 import Control.Monad.Trans  ( liftIO )
@@ -9,8 +11,6 @@ import Happstack.Extended   ( get, other, post, render, root, uri )
 import Happstack.Server     ( BodyPolicy, Browsing(..), Response, decodeBody
                             , defaultBodyPolicy, notFound, nullConf
                             , serveDirectory, simpleHTTP )
-import Paths                ( absoluteImagesDir )
-import Routing              ( index, upload )
 import System.Directory     ( getTemporaryDirectory )
 
 -- | Main.

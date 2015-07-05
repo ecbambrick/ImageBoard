@@ -1,24 +1,24 @@
-module Core.Image ( get, insert ) where
+module App.Core.Image ( get, insert ) where
 
-import qualified Core.Tag as Tag
+import qualified App.Core.Tag as Tag
 
-import Common               ( Config(..), Tag(..), Image(..), Entity, App
-                            , runDB )
-import Control.Monad        ( when )
-import Control.Monad.Trans  ( liftIO )
-import Control.Monad.Reader ( asks )
-import Core.Validation      ( Property(..), Validation(..), isFalse, isPositive
-                            , isValidImageFileType, isValid )
-import Data.Functor         ( (<$>) )
-import Data.Monoid          ( (<>), mconcat )
-import Data.Textual         ( strip, toLower )
-import Data.Time            ( getCurrentTime )
-import DataSource.SQLite    ( attachTags, insertImage, selectHashExists
-                            , selectImages )
-import Paths                ( absoluteImagePath )
-import System.Directory     ( copyFile, createDirectoryIfMissing )
-import System.FilePath      ( takeBaseName, takeDirectory, takeExtension )
-import System.IO.Metadata   ( getHash, getDimensions, getSize )
+import App.Common            ( Config(..), Tag(..), Image(..), Entity, App
+                             , runDB )
+import App.DataSource.SQLite ( attachTags, insertImage, selectHashExists
+                             , selectImages )
+import App.Paths             ( absoluteImagePath )
+import App.Validation        ( Property(..), Validation(..), isFalse, isPositive
+                             , isValidImageFileType, isValid )
+import Control.Monad         ( when )
+import Control.Monad.Trans   ( liftIO )
+import Control.Monad.Reader  ( asks )
+import Data.Functor          ( (<$>) )
+import Data.Monoid           ( (<>), mconcat )
+import Data.Textual          ( strip, toLower )
+import Data.Time             ( getCurrentTime )
+import System.Directory      ( copyFile, createDirectoryIfMissing )
+import System.FilePath       ( takeBaseName, takeDirectory, takeExtension )
+import System.IO.Metadata    ( getHash, getDimensions, getSize )
 
 -- | Returns the list of all image entities.
 get :: App [Entity Image]

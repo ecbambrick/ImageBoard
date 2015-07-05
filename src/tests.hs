@@ -2,8 +2,9 @@
 
 import qualified Data.Text.IO as Text
 
-import Common                   ( Entity(..), Image(..), Tag(..), Transaction
+import App.Common               ( Entity(..), Image(..), Tag(..), Transaction
                                 , (<$$>), fromEntity )
+import App.DataSource.SQLite
 import Control.Monad            ( when )
 import Control.Monad.Reader     ( runReaderT, ask )
 import Control.Monad.Trans      ( lift )
@@ -13,7 +14,6 @@ import Data.Text                ( splitOn )
 import Data.Time.Clock          ( UTCTime(..) )
 import Data.Time.Extended       ( fromSeconds )
 import Database.SQLite.Simple   ( Query(..), execute_, query_, withConnection )
-import DataSource.SQLite
 import Test.HUnit               ( Test(..), Assertion, (@=?), runTestTT
                                 , assertFailure )
 

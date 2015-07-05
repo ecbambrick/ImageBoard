@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts   #-}
 
-module Common where
+module App.Common where
 
 import Control.Applicative      ( (<$>), (<*>) )
 import Control.Monad.Reader     ( MonadReader, ReaderT, ask, asks, runReaderT )
