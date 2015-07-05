@@ -1,21 +1,21 @@
 ﻿{-# LANGUAGE OverloadedStrings #-}
 
-import Common                 ( Config(..), App(..) )
-import Control.Applicative    ( (<$>), (<*>), (<|>) )
-import Control.Monad.IO.Class ( liftIO )
-import Control.Monad.Reader   ( asks, msum, runReaderT )
-import Data.Configurator      ( Worth(..), load, lookupDefault, require )
-import Happstack.Extended     ( Route(..), get, post, render, url )
-import Happstack.Server       ( Browsing(..), Response, decodeBody
-                              , defaultBodyPolicy, notFound, nullConf
-                              , serveDirectory, simpleHTTP )
-import System.Directory       ( getTemporaryDirectory )
+import Common               ( Config(..), App )
+import Control.Applicative  ( (<$>), (<*>), (<|>), pure )
+import Control.Monad.Reader ( asks, msum, runReaderT )
+import Control.Monad.Trans  ( liftIO )
+import Data.Configurator    ( Worth(..), load, lookupDefault, require )
+import Happstack.Extended   ( get, other, post, render, root, uri )
+import Happstack.Server     ( BodyPolicy, Browsing(..), Response, decodeBody
+                            , defaultBodyPolicy, notFound, nullConf
+                            , serveDirectory, simpleHTTP )
+import Paths                ( absoluteImagesDir )
+import Routing              ( index, upload )
+import System.Directory     ( getTemporaryDirectory )
 
 -- | Main.
 main :: IO ()
-main = do
-    config <- getConfig
-    simpleHTTP nullConf $ runReaderT serve config
+main = simpleHTTP nullConf . runReaderT (setBody >> setRoutes) =<< getConfig
 
 -- | Returns the configuration settings loaded from 'app.cfg'.
 getConfig :: IO Config
@@ -26,12 +26,18 @@ getConfig = do
            <*> require                config "storage_path"
            <*> lookupDefault 10000000 config "disk_quota"
 
--- | Sets the request body policy and prepares the routes.
-serve :: App Response
-serve = do
-    tmpDir      <- liftIO $ getTemporaryDirectory
-    size        <- asks configDiskQuota
-    storagePath <- asks configStoragePath
-    decodeBody (defaultBodyPolicy tmpDir size 1000 1000)
-    msum [ url (Path "images") $ serveDirectory DisableBrowsing [] storagePath
-         , url Any             $ notFound (render "404") ]
+-- | Sets the request body policy.
+setBody :: App ()
+setBody = decodeBody =<< defaultBodyPolicy <$> liftIO getTemporaryDirectory
+                                           <*> asks configDiskQuota
+                                           <*> pure 1000
+                                           <*> pure 1000
+
+-- | Sets the routes.
+setRoutes :: App Response
+setRoutes = do
+    imagesDir <- absoluteImagesDir
+    msum [ uri "images" $ serveDirectory DisableBrowsing [] imagesDir
+         , uri "upload" $ post upload
+         , root         $ get index
+         , other        $ notFound (render "404") ]
