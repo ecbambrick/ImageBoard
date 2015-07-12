@@ -4,6 +4,7 @@
 
 module App.Common where
 
+import App.Expression           ( Expression )
 import Control.Applicative      ( (<$>), (<*>) )
 import Control.Monad.Reader     ( MonadReader, ReaderT, ask, asks, runReaderT )
 import Control.Monad.Trans      ( MonadIO, liftIO )
@@ -38,6 +39,9 @@ runDB f = do
 
 -- | The primary key of a database entity.
 type ID = Int64
+
+-- | The criteria with which to fetch entities.
+data Criteria = All | Filtered Expression
 
 -- | Configuration settings.
 data Config = Config 
