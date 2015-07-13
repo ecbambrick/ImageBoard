@@ -52,10 +52,11 @@ isValidImageFileType (Property name x)
 isValidTag :: Property String -> Validation
 isValidTag (Property name x)
     | null x            = Invalid [Error name x "empty"]
+    | head x == '-'     = Invalid [Error name x "begins with '-'"]
     | all isSpace x     = Invalid [Error name x "only whitespace"]
     | all isValidChar x = Valid
     | otherwise         = Invalid [Error name x "invalid characters"]
-    where isValidChar x = isAlphaNum x || elem x "._- "
+    where isValidChar x = isAlphaNum x || elem x ".- "
 
 ----------------------------------------------------------------------- Utility
 
