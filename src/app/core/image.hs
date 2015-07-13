@@ -33,7 +33,7 @@ insert fromPath tagNames = case fileType of
     Invalid e -> return (Invalid e)
     where
         fileType = isValidImageFileType (Property "extension" ext)
-        ext      = tail $ takeExtension fromPath
+        ext      = getExtension fromPath
         insert'  = do
             hash        <- liftIO $ getHash fromPath
             now         <- liftIO $ getCurrentTime
@@ -57,5 +57,14 @@ insert fromPath tagNames = case fileType of
             
             return results
 
+-- | Returns valid if all fields of the given image are valid; otherwise 
+-- | invalid. Any validation that requires access to the database is ignored.
 validate :: Image -> Validation
 validate (Image _ _ _ _ _ _ _ _ size) = isPositive (Property "size" size)
+
+----------------------------------------------------------------------- Utility
+
+-- | Returns the file extension of the given path, excluding the period.
+getExtension :: FilePath -> String
+getExtension path = if null extension then "" else map toLower (tail extension)
+    where extension = takeExtension path

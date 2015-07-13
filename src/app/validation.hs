@@ -43,9 +43,9 @@ isPositive (Property name x)
 -- | invalid.
 isValidImageFileType :: Property String -> Validation
 isValidImageFileType (Property name x)
-    | elem x isValidType = Valid
-    | otherwise          = Invalid [Error name x "invalid file type"]
-    where isValidType = ["jpg", "jpeg", "png", "gif", "webm"]
+    | elem x validTypes = Valid
+    | otherwise         = Invalid [Error name x "invalid file type"]
+    where validTypes = ["jpg", "jpeg", "png", "gif"]
 
 -- | Returns valid if the given property is a valid tag name; otherwise, 
 -- | invalid.
