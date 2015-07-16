@@ -3,18 +3,21 @@
 
 module App.DataSource.SQLite
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
-    , selectTags, selectTagsByImage, updateImage, attachTags, clearTags
-    , cleanTags ) where
+    , selectImagesByExpression, selectTags, selectTagsByImage, updateImage
+    , attachTags, clearTags, cleanTags ) where
                                 
 import App.Common               ( Config(..), Entity(..), Image(..), Tag(..)
                                 , ID, App, (<$$>), Transaction(..) )
+import App.Expression           ( Token(..), Expression )
 import Control.Applicative      ( (<$>), (<*>) )
 import Control.Monad            ( when )
 import Control.Monad.Trans      ( lift )
 import Control.Monad.Reader     ( ask, runReaderT, ReaderT )
 import Data.Int                 ( Int64 )
+import Data.List                ( intercalate )
 import Data.Maybe               ( listToMaybe )
 import Data.Text                ( pack )
+import Data.Textual             ( toLower, replace )
 import Data.Time.Extended       ( fromSeconds, toSeconds )
 import Database.SQLite.Simple   ( FromRow(..), Query(..), Connection
                                 , lastInsertRowId, execute, execute_, field
@@ -98,6 +101,20 @@ selectImages = do
                     \FROM post p \
                     \INNER JOIN image i ON i.post_id = p.id \
                     \ORDER BY p.id;"
+
+-- | Returns a list of all images from the database with tags that satisfy the
+-- | given expression.
+selectImagesByExpression :: Expression -> Transaction [Entity Image]
+selectImagesByExpression expr = do
+    conn <- ask
+    lift $ toImage <$$> query_ conn (Query $ pack command)
+    where command = "SELECT DISTINCT p.id, p.title, p.is_favourite, i.hash, \
+                    \i.extension, i.width, i.height, p.created, p.modified, \
+                    \i.file_size \
+                    \FROM post p \
+                    \INNER JOIN image i ON i.post_id = p.id "
+                    ++ generateWhere expr ++
+                    "ORDER BY p.id;"
 
 -- | Returns whether or not an image already exists with the given hash.
 selectHashExists :: String -> Transaction Bool
@@ -204,3 +221,18 @@ toImage (DBImage id title fav hash ext w h created modified size) =
 -- | Transforms a DBTag into an Entity Tag.
 toTag :: DBTag -> Entity Tag
 toTag (DBTag id name) = Entity id (Tag name)
+
+-- | Converts the given expression to a SQL where clause.
+generateWhere :: Expression -> String
+generateWhere []   = ""
+generateWhere expr = "WHERE " ++ intercalate " AND " (map tagLike expr) ++ " "
+    where
+        tagLike token = case token of
+            Included x -> "EXISTS ("     ++ findTag (escape x) ++ ") "
+            Excluded x -> "NOT EXISTS (" ++ findTag (escape x) ++ ") "
+        escape = toLower . replace "'" "''"
+        findTag x = "SELECT 1 \
+                    \FROM post_tag pt \
+                    \INNER JOIN tag t \
+                    \ON pt.tag_id = t.id AND pt.post_id = p.id \
+                    \WHERE t.name LIKE '" ++ x ++ "%'"

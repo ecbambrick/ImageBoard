@@ -5,6 +5,7 @@ import qualified Data.Text.IO as Text
 import App.Common               ( Entity(..), Image(..), Tag(..), Transaction
                                 , (<$$>), fromEntity )
 import App.DataSource.SQLite
+import App.Expression           ( parse )
 import Control.Monad            ( when )
 import Control.Monad.Reader     ( runReaderT, ask )
 import Control.Monad.Trans      ( lift )
@@ -21,6 +22,7 @@ main = runTestTT $ TestList
     [ insertImageTest
     , selectImageTest
     , selectImagesTest
+    , selectImagesByExpressionTest
     , deleteImageTest
     , updateImageTest
     , selectHashExistsTest
@@ -120,7 +122,51 @@ selectImagesTest = testDatabase $ do
         []                       @=? noResults
         [image1, image2, image3] @=? allImages
 
--- | Tests the selectHashExists function
+-- | Tests the selectImagesByExpression function.
+selectImagesByExpressionTest :: Test
+selectImagesByExpressionTest = testDatabase $ do
+    id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8)
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5)
+    id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6)
+    id4 <- insertImage (Image "t4" False "h4" "e4" 4 2 (time 7) (time 8) 9)
+    
+    (Just image1) <- selectImage id1
+    (Just image2) <- selectImage id2
+    (Just image3) <- selectImage id3
+    (Just image4) <- selectImage id4
+    
+    attachTags ["test", "hello", "goodbye"]  id1
+    attachTags ["another", "couple", "test"] id2
+    attachTags ["hello", "blahblah", "test"] id3
+    
+    let (Right expr1) = parse "test"
+        (Right expr2) = parse "hello"
+        (Right expr3) = parse "goodbye"
+        (Right expr4) = parse "test hello"
+        (Right expr5) = parse "-test"
+        (Right expr6) = parse "test -hello"
+        (Right expr7) = parse "random"
+        
+    results1 <- selectImagesByExpression expr1
+    results2 <- selectImagesByExpression expr2
+    results3 <- selectImagesByExpression expr3
+    results4 <- selectImagesByExpression expr4
+    results5 <- selectImagesByExpression expr5
+    results6 <- selectImagesByExpression expr6
+    results7 <- selectImagesByExpression expr7
+    results8 <- selectImagesByExpression []
+    
+    lift $ do
+        results1 @=? [image1, image2, image3]
+        results2 @=? [image1, image3]
+        results3 @=? [image1]
+        results4 @=? [image1, image3]
+        results5 @=? [image4]
+        results6 @=? [image2]
+        results7 @=? []
+        results8 @=? [image1, image2, image3, image4]
+
+-- | Tests the selectHashExists function.
 selectHashExistsTest :: Test 
 selectHashExistsTest = testDatabase $ do
     result1 <- selectHashExists "h1"
