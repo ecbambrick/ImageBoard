@@ -2,10 +2,11 @@ module App.Core.Image ( get, insert ) where
 
 import qualified App.Core.Tag as Tag
 
-import App.Common            ( Config(..), Tag(..), Image(..), Entity, App
-                             , runDB )
+import App.Common            ( Config(..), Criteria(..), Tag(..), Image(..)
+                             , Entity, App, runDB )
+import App.Expression        ( Token(..) )
 import App.DataSource.SQLite ( attachTags, insertImage, selectHashExists
-                             , selectImages )
+                             , selectImages, selectImagesByExpression )
 import App.Paths             ( absoluteImagePath )
 import App.Validation        ( Property(..), Validation(..), isFalse, isPositive
                              , isValidImageFileType, isValid )
@@ -20,9 +21,10 @@ import System.Directory      ( copyFile, createDirectoryIfMissing )
 import System.FilePath       ( takeBaseName, takeDirectory, takeExtension )
 import System.IO.Metadata    ( getHash, getDimensions, getSize )
 
--- | Returns the list of all image entities.
-get :: App [Entity Image]
-get = runDB selectImages
+-- | Returns the list of image entities that satisfy the given criteria.
+get :: Criteria -> App [Entity Image]
+get (Filtered expression) = runDB $ selectImagesByExpression expression
+get (All)                 = runDB $ selectImages
 
 -- | Inserts a new image into the database/filesystem based on the the file 
 -- | with the given path and the given tags. Returns valid if the insertion was
@@ -66,5 +68,5 @@ validate (Image _ _ _ _ _ _ _ _ size) = isPositive (Property "size" size)
 
 -- | Returns the file extension of the given path, excluding the period.
 getExtension :: FilePath -> String
-getExtension path = if null extension then "" else map toLower (tail extension)
+getExtension path = if null extension then "" else toLower (tail extension)
     where extension = takeExtension path

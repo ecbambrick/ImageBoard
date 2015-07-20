@@ -6,7 +6,8 @@ module App.Routing ( index, upload ) where
 import qualified Data.Text.Lazy as LazyText
 import qualified App.Core.Image as Image
 
-import App.Common           ( Image(..), Entity(..), App, (<$$>), fromEntity )
+import App.Common           ( Criteria(..), Image(..), Entity(..), App, (<$$>)
+                            , fromEntity )
 import App.Paths            ( imageURL, templatePath )
 import App.Validation       ( Validation(..) )
 import Control.Applicative  ( (<$>) )
@@ -29,7 +30,7 @@ data IndexImage = IndexImage { path :: FilePath } deriving (Data, Typeable)
 -- | Renders an upload form along with the current images as thumbnails.
 index :: App Response
 index = ok =<< renderMustache (templatePath "index")
-           =<< toIndexData <$> Image.get
+           =<< toIndexData <$> Image.get All
 
 -- | Persists an uploaded image along with its tags to the file system and 
 -- | database. Afterwards, redirects to the index or displays a list of errors.
