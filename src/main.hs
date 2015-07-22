@@ -2,7 +2,7 @@
 
 import App.Common           ( Config(..), App )
 import App.Paths            ( absoluteImagesDir )
-import App.Routing          ( index, upload )
+import App.Routing          ( index, search, upload )
 import Control.Applicative  ( (<$>), (<*>), (<|>), pure )
 import Control.Monad.Reader ( asks, msum, runReaderT )
 import Control.Monad.Trans  ( liftIO )
@@ -39,5 +39,6 @@ setRoutes = do
     imagesDir <- absoluteImagesDir
     msum [ uri "images" $ serveDirectory DisableBrowsing [] imagesDir
          , uri "upload" $ post upload
+         , uri "search" $ get search
          , root         $ get index
          , other        $ notFound (render "404") ]
