@@ -14,6 +14,7 @@ import Control.Monad         ( when )
 import Control.Monad.Trans   ( liftIO )
 import Control.Monad.Reader  ( asks )
 import Data.Functor          ( (<$>) )
+import Data.List             ( nub )
 import Data.Monoid           ( (<>), mconcat )
 import Data.Textual          ( strip, toLower )
 import Data.Time             ( getCurrentTime )
@@ -45,7 +46,7 @@ insert fromPath tagNames = case fileType of
             storagePath <- asks   $ configStoragePath
 
             let title   = takeBaseName fromPath
-                tags    = filter (not . null) $ toLower <$> strip <$> tagNames
+                tags    = cleanTags tagNames
                 image   = Image title False hash ext w h now now size
                 results = validate image
                           <> isFalse (Property "duplicate" isDuplicate)
@@ -70,3 +71,7 @@ validate (Image _ _ _ _ _ _ _ _ size) = isPositive (Property "size" size)
 getExtension :: FilePath -> String
 getExtension path = if null extension then "" else toLower (tail extension)
     where extension = takeExtension path
+
+-- | Sanitizes the given list of tag names.
+cleanTags :: [String] -> [String]
+cleanTags = filter (not . null) . nub . map (toLower . strip)

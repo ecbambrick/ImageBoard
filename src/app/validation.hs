@@ -30,33 +30,34 @@ instance Monoid Validation where
 
 -- | Returns valid if the given property is false; otherwise, invalid.
 isFalse :: Property Bool -> Validation
+isFalse (Property  _  False) = Valid
 isFalse (Property name True) = Invalid [Error name "True" "expected false"]
-isFalse (Property _ False)   = Valid
 
 -- | Returns valid if the given property is positive; otherwise, invalid.
 isPositive :: (Show a, Num a, Ord a) => Property a -> Validation
 isPositive (Property name x)
-    | x > 0     = Valid
-    | otherwise = Invalid [Error name (show x) "non-positive number"]
+    | x <= 0    = Invalid [Error name (show x) "non-positive number"]
+    | otherwise = Valid
 
 -- | Returns valid if the given property is a valid image file type; otherwise,
 -- | invalid.
 isValidImageFileType :: Property String -> Validation
 isValidImageFileType (Property name x)
-    | elem x validTypes = Valid
-    | otherwise         = Invalid [Error name x "invalid file type"]
-    where validTypes = ["jpg", "jpeg", "png", "gif"]
+    | isInvalidType x     = Invalid [Error name x "invalid file type"]
+    | otherwise           = Valid
+    where isInvalidType x = notElem x ["jpg", "jpeg", "png", "gif"]
+    
 
 -- | Returns valid if the given property is a valid tag name; otherwise, 
 -- | invalid.
 isValidTag :: Property String -> Validation
 isValidTag (Property name x)
-    | null x            = Invalid [Error name x "empty"]
-    | head x == '-'     = Invalid [Error name x "begins with '-'"]
-    | all isSpace x     = Invalid [Error name x "only whitespace"]
-    | all isValidChar x = Valid
-    | otherwise         = Invalid [Error name x "invalid characters"]
-    where isValidChar x = isAlphaNum x || elem x ".- "
+    | null x             = Invalid [Error name x "empty"]
+    | head x == '-'      = Invalid [Error name x "begins with '-'"]
+    | all isSpace x      = Invalid [Error name x "only whitespace"]
+    | any isInvalidTag x = Invalid [Error name x "invalid characters"]
+    | otherwise          = Valid
+    where isInvalidTag x = not (isAlphaNum x || elem x ".- ")
 
 ----------------------------------------------------------------------- Utility
 

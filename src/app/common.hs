@@ -85,6 +85,6 @@ data Image = Image
 (<$$>) :: (Functor f1, Functor f2) => (a -> b) -> f2 (f1 a) -> f2 (f1 b)
 (<$$>) = fmap . fmap
 
--- | Returns the enclosed type from an entity.
+-- | Returns the enclosed value from an entity.
 fromEntity :: Entity a -> a
 fromEntity (Entity _ x) = x

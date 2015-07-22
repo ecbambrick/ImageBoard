@@ -119,8 +119,8 @@ selectImagesTest = testDatabase $ do
     allImages     <- selectImages
     
     lift $ do
-        []                       @=? noResults
-        [image1, image2, image3] @=? allImages
+        noResults @=? []
+        allImages @=? [image1, image2, image3]
 
 -- | Tests the selectImagesByExpression function.
 selectImagesByExpressionTest :: Test
