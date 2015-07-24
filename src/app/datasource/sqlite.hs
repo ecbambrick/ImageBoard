@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase        #-}
 
 module App.DataSource.SQLite
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
@@ -17,7 +18,7 @@ import Data.Int                 ( Int64 )
 import Data.List                ( intercalate )
 import Data.Maybe               ( listToMaybe )
 import Data.Text                ( pack )
-import Data.Textual             ( toLower, replace )
+import Data.Textual             ( toLower, trim, replace )
 import Data.Time.Extended       ( fromSeconds, toSeconds )
 import Database.SQLite.Simple   ( FromRow(..), Query(..), Connection
                                 , lastInsertRowId, execute, execute_, field
@@ -227,12 +228,15 @@ generateWhere :: Expression -> String
 generateWhere []   = ""
 generateWhere expr = "WHERE " ++ intercalate " AND " (map tagLike expr) ++ " "
     where
-        tagLike token = case token of
-            Included x -> "EXISTS ("     ++ findTag (escape x) ++ ") "
-            Excluded x -> "NOT EXISTS (" ++ findTag (escape x) ++ ") "
-        escape = toLower . replace "'" "''"
+        tagLike = \case
+            Included x ->     "EXISTS (" ++ findTag (escape x) ++ ")"
+            Excluded x -> "NOT EXISTS (" ++ findTag (escape x) ++ ")"
+        escape = toLower . trim
+                         . replace "%" "\\%" 
+                         . replace "_" "\\_" 
+                         . replace "'" "''"       
         findTag x = "SELECT 1 \
                     \FROM post_tag pt \
                     \INNER JOIN tag t \
                     \ON pt.tag_id = t.id AND pt.post_id = p.id \
-                    \WHERE t.name LIKE '" ++ x ++ "%'"
+                    \WHERE t.name LIKE '" ++ x ++ "%' ESCAPE '\\'"
