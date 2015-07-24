@@ -1,38 +1,41 @@
-module App.Expression ( Token(..), Expression, parse ) where
+﻿module App.Expression ( Token(..), Expression, parse ) where
 
 import qualified Text.Parsec as Parsec
 
-import Control.Applicative  ( (<$>), (<*>), (<*), (*>), (<|>) )
+import Control.Applicative  ( (<$>), (<*>), (<|>) )
+import Data.Either          ( rights )
 import Data.List            ( delete, nub )
-import Text.Parsec          ( ParsecT, ParseError, Stream, many, many1, char
-                            , noneOf, spaces )
+import Data.Textual         ( trim, splitOn )
+import Text.Parsec          ( ParseError, many1, noneOf, oneOf, spaces )
 
 -------------------------------------------------------------------------- Data
 
 -- | A search expression containing tokens to search by.
 type Expression = [Token]
 
--- | An expression token; included tokens must exist to satisfy the expression
+-- | An expression token. Included tokens must exist to satisfy the expression
 -- | while excluded tokens must not exist to satisfy the expression.
-data Token = Included String | Excluded String deriving (Show, Eq, Ord)
+data Token = Included String | Excluded String deriving (Show, Eq)
 
 ----------------------------------------------------------------------- Parsing
 
--- | Parses the given string and returns a parse error or an expression.
-parse :: String -> Either ParseError Expression
-parse x = neutralize <$> nub <$> Parsec.parse rules "" x
+-- | Parses the given comma separated string and returns an expression.
+-- | i.e. "a,   -b  ,  ,,c" -> [Included "a",Excluded "b",Included "c"]
+parse :: String -> Expression
+parse x = neutralize $ nub $ rights $ tokenize <$> splitOn "," x
+
+-- | Converts the given string to a token, or nothing if the string is invalid.
+-- | If the first non-space character is a dash, an excluded token will be 
+-- | returned; otherwise, an included token will be returned.
+tokenize :: String -> Either ParseError Token
+tokenize = Parsec.parse rules ""
     where
-        rules    = wrapBy (excluded <|> included) spaces
-        excluded = char '-' >> token >>= return . Excluded
-        included = token >>= return . Included
-        token    = (:) <$> noneOf "_ -" <*> many (noneOf " ")
+        rules    = spaces >> (excluded <|> included)
+        excluded = many1 (oneOf "- ") >> token >>= return . Excluded . trim
+        included = token >>= return . Included . trim
+        token    = many1 (noneOf ",") 
 
 ----------------------------------------------------------------------- Utility
-
--- | Parses one or more occurrences of the given rule, separated by the given
--- | separator, with any leading/trailing instances of the separator.
-wrapBy :: Stream s m t => ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a] 
-wrapBy rule separator = many1 (separator *> rule <* separator)
 
 -- | Neutralizes any conflicting tokens in the expression. If an included token
 -- | and excluded token both contain the same string, both are removed.
@@ -42,12 +45,7 @@ neutralize = recurse []
     where
         recurse memo [] = memo
         recurse memo (x:xs)
-            | elem y xs = recurse (memo) (delete y xs)
-            | otherwise = recurse (x:memo) (xs)
-            where y = oppose x
-
--- | Returns the opposite of the given token. If an included token is passed in,
--- | an excluded token is returned and vice-versa.
-oppose :: Token -> Token
-oppose (Included x) = (Excluded x)
-oppose (Excluded x) = (Included x)
+            | elem (opposite x) xs = recurse memo (delete (opposite x) xs)
+            | otherwise            = recurse (memo ++ [x]) xs
+        opposite (Included x) = (Excluded x)
+        opposite (Excluded x) = (Included x)

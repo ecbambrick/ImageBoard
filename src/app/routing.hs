@@ -43,9 +43,7 @@ search :: App Response
 search = do
     query <- look "q"
     
-    case parse query of
-        Left  e -> redirectToIndex
-        Right x -> renderIndex query (Filtered x)
+    renderIndex query (Filtered (parse query))
 
 -- | Persists an uploaded image along with its tags to the file system and 
 -- | database. Afterwards, redirects to the index or displays a list of errors.
