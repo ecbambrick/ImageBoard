@@ -101,7 +101,7 @@ selectImages = do
                     \i.file_size \
                     \FROM post p \
                     \INNER JOIN image i ON i.post_id = p.id \
-                    \ORDER BY p.id;"
+                    \ORDER BY p.created DESC;"
 
 -- | Returns a list of all images from the database with tags that satisfy the
 -- | given expression.
@@ -115,7 +115,7 @@ selectImagesByExpression expr = do
                     \FROM post p \
                     \INNER JOIN image i ON i.post_id = p.id "
                     ++ generateWhere expr ++
-                    "ORDER BY p.id;"
+                    "ORDER BY p.created DESC;"
 
 -- | Returns whether or not an image already exists with the given hash.
 selectHashExists :: String -> Transaction Bool
