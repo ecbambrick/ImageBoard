@@ -1,15 +1,16 @@
 ﻿{-# LANGUAGE OverloadedStrings #-}
 
+import qualified App.Routing as Route
+
 import App.Common           ( Config(..), App )
 import App.Paths            ( absoluteImagesDir )
-import App.Routing          ( index, search, upload )
 import Control.Applicative  ( (<$>), (<*>), (<|>), pure )
 import Control.Monad.Reader ( asks, msum, runReaderT )
 import Control.Monad.Trans  ( liftIO )
 import Data.Configurator    ( Worth(..), load, lookupDefault, require )
 import Happstack.Extended   ( get, other, post, render, root, uri )
 import Happstack.Server     ( BodyPolicy, Browsing(..), Response, decodeBody
-                            , defaultBodyPolicy, notFound, nullConf
+                            , defaultBodyPolicy, notFound, nullConf, path
                             , serveDirectory, simpleHTTP )
 import System.Directory     ( getTemporaryDirectory )
 
@@ -37,8 +38,9 @@ setBody = decodeBody =<< defaultBodyPolicy <$> liftIO getTemporaryDirectory
 setRoutes :: App Response
 setRoutes = do
     imagesDir <- absoluteImagesDir
-    msum [ uri "images" $ serveDirectory DisableBrowsing [] imagesDir
-         , uri "upload" $ post upload
-         , uri "search" $ get search
-         , root         $ get index
-         , other        $ notFound (render "404") ]
+    msum [ uri "images"        $ serveDirectory DisableBrowsing [] imagesDir
+         , uri "upload" $ post $ Route.upload
+         , uri "search" $ get  $ Route.search
+         , uri "image"  $ path $ Route.image
+         , root         $ get  $ Route.index
+         , other               $ notFound (render "404") ]
