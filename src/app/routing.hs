@@ -23,6 +23,7 @@ import Happstack.Server     ( Response, badRequest, look, lookFile, ok
 data ImageContext = ImageContext
     { identifier :: ID
     , path       :: String
+    , tagNames   :: [String]
     } deriving (Data, Typeable)
     
 -- | The context data required for the index.
@@ -41,7 +42,8 @@ toIndexContext query images = IndexContext
 toImageContext :: Entity Image -> ImageContext
 toImageContext (Entity id image) = ImageContext
     { identifier = id
-    , path       = imageURL image }
+    , path       = imageURL image
+    , tagNames   = imageTagNames image }
 
 ---------------------------------------------------------------------- Handlers
 
@@ -49,11 +51,10 @@ toImageContext (Entity id image) = ImageContext
 image :: ID -> App Response
 image id = do
     context <- toImageContext <$$> Image.getSingle id
-    results <- case context of 
+    
+    case context of 
         Nothing      -> badRequest $ toResponse "Invalid ID"
-        Just context -> renderMustache (templatePath "image") context
-        
-    ok results
+        Just context -> ok =<< renderMustache (templatePath "image") context
 
 -- | Renders the index page with all images.
 index :: App Response
