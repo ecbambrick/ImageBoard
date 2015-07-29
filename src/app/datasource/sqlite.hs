@@ -8,7 +8,7 @@ module App.DataSource.SQLite
     , attachTags, clearTags, cleanTags ) where
                                 
 import App.Common               ( Config(..), Entity(..), Image(..), Tag(..)
-                                , ID, App, (<$$>), Transaction(..) )
+                                , ID, App, (<$$>), Transaction(..), fromEntity )
 import App.Expression           ( Token(..), Expression )
 import Control.Applicative      ( (<$>), (<*>) )
 import Control.Monad            ( when )
@@ -82,8 +82,13 @@ insertImage image = do
 -- | nothing is returned.
 selectImage :: ID -> Transaction (Maybe (Entity Image))
 selectImage id = do
-    conn <- ask
-    lift $ listToMaybe <$> toImage <$$> query conn command [id]
+    conn  <- ask
+    image <- lift $ listToMaybe <$> toImage <$$> query conn command [id]
+    
+    case image of
+        Nothing    -> return Nothing
+        Just image -> Just <$> withTags image
+    
     where command = "SELECT p.id, p.title, p.is_favourite, i.hash, \
                     \i.extension, i.width, i.height, p.created, p.modified, \
                     \i.file_size \
@@ -94,8 +99,11 @@ selectImage id = do
 -- | Returns a list of all images from the database.
 selectImages :: Transaction [Entity Image]
 selectImages = do
-    conn <- ask
-    lift $ toImage <$$> query_ conn command
+    conn   <- ask
+    images <- lift $ toImage <$$> query_ conn command
+
+    sequence (withTags <$> images)
+    
     where command = "SELECT p.id, p.title, p.is_favourite, i.hash, \
                     \i.extension, i.width, i.height, p.created, p.modified, \
                     \i.file_size \
@@ -107,8 +115,11 @@ selectImages = do
 -- | given expression.
 selectImagesByExpression :: Expression -> Transaction [Entity Image]
 selectImagesByExpression expr = do
-    conn <- ask
-    lift $ toImage <$$> query_ conn (Query $ pack command)
+    conn   <- ask
+    images <- lift $ toImage <$$> query_ conn (Query $ pack command)
+    
+    sequence (withTags <$> images)
+    
     where command = "SELECT DISTINCT p.id, p.title, p.is_favourite, i.hash, \
                     \i.extension, i.width, i.height, p.created, p.modified, \
                     \i.file_size \
@@ -205,7 +216,7 @@ clearTags id = do
 
 -- | Transforms an Image into a DBImage.
 fromImage :: Image -> DBImage
-fromImage (Image title fav hash ext w h created modified size) =
+fromImage (Image title fav hash ext w h created modified size []) =
     (DBImage 0 title (fromBool fav) hash ext w h created' modified' size)
     where
         created'  = toSeconds created
@@ -214,7 +225,7 @@ fromImage (Image title fav hash ext w h created modified size) =
 -- | Transforms a DBImage into an Entity Image.
 toImage :: DBImage -> Entity Image
 toImage (DBImage id title fav hash ext w h created modified size) =
-    Entity id (Image title (toBool fav) hash ext w h created' modified' size)
+    Entity id (Image title (toBool fav) hash ext w h created' modified' size [])
     where
         created'  = fromSeconds created
         modified' = fromSeconds modified
@@ -240,3 +251,9 @@ generateWhere expr = "WHERE " ++ intercalate " AND " (map tagLike expr) ++ " "
                     \INNER JOIN tag t \
                     \ON pt.tag_id = t.id AND pt.post_id = p.id \
                     \WHERE t.name LIKE '" ++ x ++ "%' ESCAPE '\\'"
+
+-- | Adds the list of tag names to the given image entity.
+withTags :: Entity Image -> Transaction (Entity Image)
+withTags (Entity id image) = do
+    tagNames <- tagName . fromEntity <$$> selectTagsByImage id
+    return (Entity id image { imageTagNames = tagNames })

@@ -55,7 +55,7 @@ insert fromPath tagNames = case fileType of
 
             let title   = takeBaseName fromPath
                 tags    = cleanTags tagNames
-                image   = Image title False hash ext w h now now size
+                image   = Image title False hash ext w h now now size []
                 results = validate image
                           <> isFalse (Property "duplicate" isDuplicate)
                           <> mconcat (Tag.validate . Tag <$> tags)
@@ -71,7 +71,7 @@ insert fromPath tagNames = case fileType of
 -- | Returns valid if all fields of the given image are valid; otherwise 
 -- | invalid. Any validation that requires access to the database is ignored.
 validate :: Image -> Validation
-validate (Image _ _ _ _ _ _ _ _ size) = isPositive (Property "size" size)
+validate Image { imageFileSize = size } = isPositive (Property "size" size)
 
 ----------------------------------------------------------------------- Utility
 

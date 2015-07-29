@@ -74,6 +74,7 @@ data Image = Image
     , imageCreated      :: UTCTime
     , imageModified     :: UTCTime
     , imageFileSize     :: Int
+    , imageTagNames     :: [String]
     } deriving (Eq, Show, Data, Typeable)
 
 ----------------------------------------------------------------------- Utility
@@ -81,6 +82,8 @@ data Image = Image
 -- | Maps a function over a nested functor.
 (<$$>) :: (Functor f1, Functor f2) => (a -> b) -> f2 (f1 a) -> f2 (f1 b)
 (<$$>) = fmap . fmap
+
+infixl 5 <$$>
 
 -- | Returns the enclosed value from an entity.
 fromEntity :: Entity a -> a
