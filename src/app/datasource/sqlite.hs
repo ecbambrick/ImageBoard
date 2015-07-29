@@ -10,7 +10,7 @@ module App.DataSource.SQLite
 import App.Common               ( Config(..), Entity(..), Image(..), Tag(..)
                                 , ID, App, (<$$>), Transaction(..), fromEntity )
 import App.Expression           ( Token(..), Expression )
-import Control.Applicative      ( (<$>), (<*>) )
+import Control.Applicative      ( (<$>), (<*>), pure )
 import Control.Monad            ( when )
 import Control.Monad.Trans      ( lift )
 import Control.Monad.Reader     ( ask, runReaderT, ReaderT )
@@ -26,13 +26,7 @@ import Database.SQLite.Simple   ( FromRow(..), Query(..), Connection
                                 , withTransaction )
 import Foreign.Marshal.Utils    ( toBool, fromBool )
 
-------------------------------------------------------------------------- Types
-
--- | A database-specific representation of an image.
-data DBImage = DBImage ID String Int String String Int Int Integer Integer Int
-
--- | A database-specific representation of a tag.
-data DBTag = DBTag ID String
+--------------------------------------------------------------------- Instances
 
 instance FromRow Int64 where
     fromRow = field
@@ -40,12 +34,27 @@ instance FromRow Int64 where
 instance FromRow Int where
     fromRow = field
     
-instance FromRow DBTag where
-    fromRow = DBTag <$> field <*> field
-    
-instance FromRow DBImage where
-    fromRow = DBImage <$> field <*> field <*> field <*> field <*> field
-                      <*> field <*> field <*> field <*> field <*> field
+instance FromRow (Entity Tag) where
+    fromRow = do
+        entity <- Entity <$> field
+        tag    <- Tag    <$> field
+
+        return $ entity tag
+
+instance FromRow (Entity Image) where
+    fromRow = do
+        entity <- Entity <$> field
+        image  <- Image  <$> field      <*> bool field <*> field
+                         <*> field      <*> field      <*> field
+                         <*> time field <*> time field <*> field <*> pure []
+                         
+        return $ entity image
+        
+        where
+            intToBool :: Int -> Bool
+            intToBool = toBool
+            bool = fmap intToBool
+            time = fmap fromSeconds
 
 ------------------------------------------------------------------------ Images
 
@@ -61,12 +70,20 @@ insertImage :: Image -> Transaction ID
 insertImage image = do
     conn <- ask
     
-    let (DBImage _ title fav hash ext w h c m size) = fromImage image
+    let title       =             imageTitle        image
+        hash        =             imageHash         image
+        ext         =             imageExtension    image
+        width       =             imageWidth        image
+        height      =             imageHeight       image
+        size        =             imageFileSize     image
+        created     = toSeconds $ imageCreated      image
+        modified    = toSeconds $ imageModified     image
+        isFavourite = fromBool  $ imageIsFavourite  image :: Int
     
     lift $ do
-        execute conn postCommand (title, fav, c, m)
+        execute conn postCommand (title, isFavourite, created, modified)
         postID <- lastInsertRowId conn
-        execute conn imageCommand (postID, hash, w, h, size, ext)
+        execute conn imageCommand (postID, hash, width, height, size, ext)
         return postID
         
     where
@@ -83,7 +100,7 @@ insertImage image = do
 selectImage :: ID -> Transaction (Maybe (Entity Image))
 selectImage id = do
     conn  <- ask
-    image <- lift $ listToMaybe <$> toImage <$$> query conn command [id]
+    image <- lift $ listToMaybe <$> query conn command [id]
     
     case image of
         Nothing    -> return Nothing
@@ -100,7 +117,7 @@ selectImage id = do
 selectImages :: Transaction [Entity Image]
 selectImages = do
     conn   <- ask
-    images <- lift $ toImage <$$> query_ conn command
+    images <- lift $ query_ conn command
 
     sequence (withTags <$> images)
     
@@ -116,7 +133,7 @@ selectImages = do
 selectImagesByExpression :: Expression -> Transaction [Entity Image]
 selectImagesByExpression expr = do
     conn   <- ask
-    images <- lift $ toImage <$$> query_ conn (Query $ pack command)
+    images <- lift $ query_ conn (Query $ pack command)
     
     sequence (withTags <$> images)
     
@@ -140,8 +157,14 @@ selectHashExists hash = do
 updateImage :: Entity Image -> Transaction ()
 updateImage (Entity id image) = do
     conn <- ask
-    let (DBImage _ title fav _ _ _ _ _ modified size) = fromImage image
-    lift $ execute conn command (title, fav, modified, id)
+    
+    let title       =             imageTitle       image
+        size        =             imageFileSize    image
+        modified    = toSeconds $ imageModified    image
+        isFavourite = fromBool  $ imageIsFavourite image :: Int
+    
+    lift $ execute conn command (title, isFavourite, modified, id)
+    
     where command = "UPDATE post SET \
                     \title = ?, \
                     \is_favourite = ?, \
@@ -154,14 +177,14 @@ updateImage (Entity id image) = do
 selectTags :: Transaction [Entity Tag]
 selectTags = do
     conn <- ask
-    lift $ toTag <$$> query_ conn command
+    lift $ query_ conn command
     where command = "SELECT id, name FROM tag ORDER BY name;"
 
 -- | Returns a list of all tags associated to the image with the given ID.
 selectTagsByImage :: ID -> Transaction [Entity Tag]
 selectTagsByImage id = do
     conn <- ask
-    lift $ toTag <$$> query conn command [id]
+    lift $ query conn command [id]
     where command = "SELECT t.id, t.name \
                     \FROM tag t \
                     \INNER JOIN post_tag pt ON pt.tag_id = t.id \
@@ -213,26 +236,6 @@ clearTags id = do
     where deleteCmd = "DELETE FROM post_tag WHERE post_id = ?;"
 
 ----------------------------------------------------------------------- Utility
-
--- | Transforms an Image into a DBImage.
-fromImage :: Image -> DBImage
-fromImage (Image title fav hash ext w h created modified size []) =
-    (DBImage 0 title (fromBool fav) hash ext w h created' modified' size)
-    where
-        created'  = toSeconds created
-        modified' = toSeconds modified
-
--- | Transforms a DBImage into an Entity Image.
-toImage :: DBImage -> Entity Image
-toImage (DBImage id title fav hash ext w h created modified size) =
-    Entity id (Image title (toBool fav) hash ext w h created' modified' size [])
-    where
-        created'  = fromSeconds created
-        modified' = fromSeconds modified
-
--- | Transforms a DBTag into an Entity Tag.
-toTag :: DBTag -> Entity Tag
-toTag (DBTag id name) = Entity id (Tag name)
 
 -- | Converts the given expression to a SQL where clause.
 generateWhere :: Expression -> String
