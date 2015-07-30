@@ -7,7 +7,7 @@ import qualified App.Core.Image as Image
 import App.Common           ( Entity(..), Image(..), Tag(..), App, ID, (<$$>)
                             , fromEntity )
 import App.Expression       ( parse )
-import App.Paths            ( imageURL, templatePath )
+import App.Paths            ( imageURL, thumbURL, templatePath )
 import App.Validation       ( Validation(..) )
 import Data.Data            ( Data, Typeable )
 import Data.Functor         ( (<$>) )
@@ -23,6 +23,7 @@ import Happstack.Server     ( Response, badRequest, look, lookFile, ok
 data ImageContext = ImageContext
     { identifier :: ID
     , path       :: String
+    , thumb      :: String
     , tagNames   :: [String]
     } deriving (Data, Typeable)
     
@@ -43,6 +44,7 @@ toImageContext :: Entity Image -> ImageContext
 toImageContext (Entity id image) = ImageContext
     { identifier = id
     , path       = imageURL image
+    , thumb      = thumbURL image
     , tagNames   = imageTagNames image }
 
 ---------------------------------------------------------------------- Handlers

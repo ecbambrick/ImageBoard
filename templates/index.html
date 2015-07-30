@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
     <title>Image Board</title>
 </head>
 <body>
@@ -21,7 +22,7 @@
     <hr style="clear: both"/>
     {{#images}}
     <a href="/image/{{identifier}}">
-        <img src="{{path}}" width=125 height=125 />
+        <img src="{{thumb}}" />
     </a>
     {{/images}}
 </body>

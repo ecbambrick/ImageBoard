@@ -3,7 +3,7 @@
 import qualified App.Routing as Route
 
 import App.Common           ( Config(..), App )
-import App.Paths            ( absoluteImagesDir )
+import App.Paths            ( absoluteImagesDir, absoluteThumbsDir )
 import Control.Applicative  ( (<$>), (<*>), (<|>), pure )
 import Control.Monad.Reader ( asks, msum, runReaderT )
 import Control.Monad.Trans  ( liftIO )
@@ -38,7 +38,9 @@ setBody = decodeBody =<< defaultBodyPolicy <$> liftIO getTemporaryDirectory
 setRoutes :: App Response
 setRoutes = do
     imagesDir <- absoluteImagesDir
+    thumbsDir <- absoluteThumbsDir
     msum [ uri "images"        $ serveDirectory DisableBrowsing [] imagesDir
+         , uri "thumbs"        $ serveDirectory DisableBrowsing [] thumbsDir
          , uri "upload" $ post $ Route.upload
          , uri "search" $ get  $ Route.search
          , uri "image"  $ path $ Route.image

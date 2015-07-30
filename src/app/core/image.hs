@@ -2,26 +2,30 @@ module App.Core.Image ( getAll, getFiltered, getSingle, insert ) where
 
 import qualified App.Core.Tag as Tag
 
-import App.Common            ( Config(..), Tag(..), Image(..), App, Entity, ID
-                             , runDB )
-import App.Expression        ( Expression, Token(..) )
-import App.DataSource.SQLite ( attachTags, insertImage, selectHashExists
-                             , selectImage, selectImages
-                             , selectImagesByExpression )
-import App.Paths             ( absoluteImagePath )
-import App.Validation        ( Property(..), Validation(..), isFalse, isPositive
-                             , isValidImageFileType, isValid )
-import Control.Monad         ( when )
-import Control.Monad.Trans   ( liftIO )
-import Control.Monad.Reader  ( asks )
-import Data.Functor          ( (<$>) )
-import Data.List             ( nub )
-import Data.Monoid           ( (<>), mconcat )
-import Data.Textual          ( strip, toLower )
-import Data.Time             ( getCurrentTime )
-import System.Directory      ( copyFile, createDirectoryIfMissing )
-import System.FilePath       ( takeBaseName, takeDirectory, takeExtension )
-import System.IO.Metadata    ( getHash, getDimensions, getSize )
+import App.Common               ( Config(..), Tag(..), Image(..), App, Entity
+                                , ID, runDB )
+import App.Expression           ( Expression, Token(..) )
+import App.DataSource.SQLite    ( attachTags, insertImage, selectHashExists
+                                , selectImage, selectImages
+                                , selectImagesByExpression )
+import App.Paths                ( absoluteImagePath, absoluteThumbPath )
+import App.Validation           ( Property(..), Validation(..), isFalse
+                                , isPositive, isValidImageFileType, isValid )
+import Control.Concurrent.Async ( async, wait )
+import Control.Monad            ( when )
+import Control.Monad.Trans      ( liftIO )
+import Control.Monad.Reader     ( asks )
+import Data.Functor             ( (<$>) )
+import Data.List                ( nub )
+import Data.Monoid              ( (<>), mconcat )
+import Data.Textual             ( strip, toLower )
+import Data.Time                ( getCurrentTime )
+import System.Directory         ( copyFile, createDirectoryIfMissing )
+import System.FilePath          ( takeBaseName, takeDirectory, takeExtension
+                                , replaceExtension )
+import System.IO.Metadata       ( getHash, getDimensions, getSize )
+import System.Process           ( runCommand, waitForProcess )
+import Text.Printf              ( printf )
 
 -- | Returns the list of all image entities.
 getAll :: App [Entity Image]
@@ -61,10 +65,12 @@ insert fromPath tagNames = case fileType of
                           <> mconcat (Tag.validate . Tag <$> tags)
                          
             when (isValid results) $ do
-                toPath <- absoluteImagePath image
+                toPath    <- absoluteImagePath image
+                thumbPath <- absoluteThumbPath image
                 runDB  $ insertImage image >>= attachTags tags
                 liftIO $ createDirectoryIfMissing True $ takeDirectory toPath
                 liftIO $ copyFile fromPath toPath
+                liftIO $ thumbnail 256 toPath thumbPath
             
             return results
 
@@ -83,3 +89,23 @@ getExtension path = if null extension then "" else toLower (tail extension)
 -- | Sanitizes the given list of tag names.
 cleanTags :: [String] -> [String]
 cleanTags = filter (not . null) . nub . map (toLower . strip)
+
+-- | Generates a thumbnail of the given size from the first given file path to 
+-- | the second given file path.
+thumbnail :: Int -> FilePath -> FilePath -> IO ()
+thumbnail size from to = do
+    createDirectoryIfMissing True $ takeDirectory to
+    runCommand cmd >>= waitForProcess
+    return ()
+    where 
+        cmd  = printf text (size*2) (size*2) size size size size
+        text = unwords 
+            [ "convert"
+            , "-define jpeg:size=%dx%d"
+            , "-background white"
+            , "-format jpg"
+            , "-thumbnail \"%dx%d^\""
+            , "-gravity center"
+            , "-extent %dx%d"
+            , if takeExtension from == ".gif" then from ++ "[0]" else from
+            , replaceExtension to "jpg" ]
