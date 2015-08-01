@@ -22,10 +22,10 @@ data Token = Included String | Excluded String deriving (Show, Eq)
 -- | Parses the given comma separated string and returns an expression.
 -- | i.e. "a,   -b  ,  ,,c" -> [Included "a",Excluded "b",Included "c"]
 parse :: String -> Expression
-parse x = neutralize $ nub $ rights $ tokenize <$> splitOn "," x
+parse = neutralize . nub . rights . map tokenize . splitOn ","
 
 -- | Converts the given string to a token, or nothing if the string is invalid.
--- | If the first non-space character is a dash, an excluded token will be 
+-- | If the first non-space character is a dash, an excluded token will be
 -- | returned; otherwise, an included token will be returned.
 tokenize :: String -> Either ParseError Token
 tokenize = Parsec.parse rules ""
@@ -33,7 +33,7 @@ tokenize = Parsec.parse rules ""
         rules    = spaces >> (excluded <|> included)
         excluded = many1 (oneOf "- ") >> token >>= return . Excluded . trim
         included = token >>= return . Included . trim
-        token    = many1 (noneOf ",") 
+        token    = many1 (noneOf ",")
 
 ----------------------------------------------------------------------- Utility
 
@@ -46,6 +46,6 @@ neutralize = recurse []
         recurse memo [] = memo
         recurse memo (x:xs)
             | elem (opposite x) xs = recurse memo (delete (opposite x) xs)
-            | otherwise            = recurse (memo ++ [x]) xs
+            | otherwise            = recurse (x:memo) xs
         opposite (Included x) = (Excluded x)
         opposite (Excluded x) = (Included x)
