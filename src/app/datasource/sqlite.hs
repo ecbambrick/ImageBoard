@@ -7,8 +7,9 @@ module App.DataSource.SQLite
     , selectImagesByExpression, selectTags, selectTagsByImage, updateImage
     , attachTags, clearTags, cleanTags ) where
                                 
-import App.Common               ( Config(..), Entity(..), Image(..), Tag(..)
-                                , ID, App, (<$$>), Transaction(..), fromEntity )
+import App.Common               ( Entity(..), Image(..), Tag(..)
+                                , Transaction(..), ID, App, (<$$>), fromEntity )
+import App.Config               ( Config(..) )
 import App.Expression           ( Token(..), Expression )
 import Control.Applicative      ( (<$>), (<*>), pure )
 import Control.Monad            ( when )

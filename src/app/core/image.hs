@@ -2,8 +2,8 @@ module App.Core.Image ( getAll, getFiltered, getSingle, insert ) where
 
 import qualified App.Core.Tag as Tag
 
-import App.Common               ( Config(..), Tag(..), Image(..), App, Entity
-                                , ID, runDB )
+import App.Common               ( Tag(..), Image(..), App, Entity, ID, runDB )
+import App.Config               ( Config(..) )
 import App.Expression           ( Expression, Token(..) )
 import App.DataSource.SQLite    ( attachTags, insertImage, selectHashExists
                                 , selectImage, selectImages
@@ -42,13 +42,13 @@ getSingle = runDB . selectImage
 -- | Inserts a new image into the database/filesystem based on the the file 
 -- | with the given path and the given tags. Returns valid if the insertion was
 -- | sucessful; otherwise invalid.
-insert :: FilePath -> [String] -> App Validation
-insert fromPath tagNames = case fileType of
+insert :: FilePath -> String -> [String] -> App Validation
+insert fromPath fileName tagNames = case fileType of
     Valid     -> insert'
     Invalid e -> return (Invalid e)
     where
         fileType = isValidImageFileType (Property "extension" ext)
-        ext      = getExtension fromPath
+        ext      = getExtension fileName
         insert'  = do
             hash        <- liftIO $ getHash fromPath
             now         <- liftIO $ getCurrentTime
@@ -57,7 +57,7 @@ insert fromPath tagNames = case fileType of
             isDuplicate <- runDB  $ selectHashExists hash
             storagePath <- asks   $ configStoragePath
 
-            let title   = takeBaseName fromPath
+            let title   = takeBaseName fileName
                 tags    = cleanTags tagNames
                 image   = Image title False hash ext w h now now size []
                 results = validate image

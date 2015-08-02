@@ -1,48 +1,67 @@
 ﻿{-# LANGUAGE OverloadedStrings #-}
 
-import qualified App.Routing as Route
+module Main where
 
-import App.Common           ( Config(..), App )
-import App.Paths            ( absoluteImagesDir, absoluteThumbsDir )
-import Control.Applicative  ( (<$>), (<*>), (<|>), pure )
-import Control.Monad.Reader ( asks, msum, runReaderT )
-import Control.Monad.Trans  ( liftIO )
-import Data.Configurator    ( Worth(..), load, lookupDefault, require )
-import Happstack.Extended   ( get, other, post, render, root, uri )
-import Happstack.Server     ( BodyPolicy, Browsing(..), Response, decodeBody
-                            , defaultBodyPolicy, notFound, nullConf, path
-                            , serveDirectory, simpleHTTP )
-import System.Directory     ( getTemporaryDirectory )
+import qualified App.Core.Image as Image
 
--- | Main.
+import App.Common                    ( (<$$>), runApplication )
+import App.Config                    ( Config(..) )
+import App.Expression                ( Expression(..), parse )
+import App.Validation                ( Validation(..) )
+import Control.Applicative           ( (<$>) )
+import Control.Monad.Reader          ( asks, local )
+import Control.Monad.Trans           ( lift )
+import Data.Monoid                   ( mconcat )
+import Data.Text                     ( pack )
+import App.Template                  ( render, toIndexContext, toImageContext )
+import Data.Textual                  ( splitOn )
+import Network.Wai.Middleware.Static ( (<|>), addBase, hasPrefix, isNotAbsolute
+                                     , noDots, staticPolicy )
+import Web.Spock                     ( (<//>), get, html, middleware, text
+                                     , post, redirect, root, var )
+import Web.Spock.Extended            ( getFile, getParam )
+
+-- Main.
 main :: IO ()
-main = simpleHTTP nullConf . runReaderT (setBody >> setRoutes) =<< getConfig
-
--- | Returns the configuration settings loaded from 'app.cfg'.
-getConfig :: IO Config
-getConfig = do
-    config <- load [Required "app.cfg"]
-    Config <$> lookupDefault 8000     config "port"
-           <*> require                config "database"
-           <*> require                config "storage_path"
-           <*> lookupDefault 10000000 config "disk_quota"
-
--- | Sets the request body policy.
-setBody :: App ()
-setBody = decodeBody =<< defaultBodyPolicy <$> liftIO getTemporaryDirectory
-                                           <*> asks configDiskQuota
-                                           <*> pure 1000
-                                           <*> pure 1000
-
--- | Sets the routes.
-setRoutes :: App Response
-setRoutes = do
-    imagesDir <- absoluteImagesDir
-    thumbsDir <- absoluteThumbsDir
-    msum [ uri "images"        $ serveDirectory DisableBrowsing [] imagesDir
-         , uri "thumbs"        $ serveDirectory DisableBrowsing [] thumbsDir
-         , uri "upload" $ post $ Route.upload
-         , uri "search" $ get  $ Route.search
-         , uri "image"  $ path $ Route.image
-         , root         $ get  $ Route.index
-         , other               $ notFound (render "404") ]
+main = runApplication $ do
+    storagePath <- lift $ asks configStoragePath
+    
+    -- Enables access to thumbnails and images in the storage path.
+    middleware $ staticPolicy $ mconcat
+        [ noDots 
+        , isNotAbsolute 
+        , hasPrefix "thumbs" <|> hasPrefix "images"
+        , addBase storagePath ]
+    
+    -- Upload an image along with its tags.
+    post "upload" $ do
+        (name, _, path) <- getFile "uploadedFile"
+        tags            <- splitOn "," <$> getParam "tags"
+        results         <- Image.insert path name tags
+        
+        case results of
+            Valid     -> redirect "/"
+            Invalid e -> text $ pack (show e)
+    
+    -- Renders the index page with all images.
+    get root $ do
+        context <- toIndexContext "" <$> Image.getAll
+        results <- render "index" context
+        
+        html results
+    
+    -- Renders the image details page for the image with the given ID.
+    get ("image" <//> var) $ \id -> do
+        image <- Image.getSingle id
+        
+        case image of
+            Nothing    -> redirect "/"
+            Just image -> html =<< render "image" (toImageContext image)
+    
+    -- Renders the index page with images that match the query parameter.
+    get "search" $ do
+        query   <- getParam "q"
+        context <- toIndexContext query <$> Image.getFiltered (parse query)
+        results <- render "index" context
+        
+        html results

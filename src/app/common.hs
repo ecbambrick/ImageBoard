@@ -1,25 +1,32 @@
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module App.Common where
 
+import App.Config               ( Config(..), loadConfig )
 import App.Expression           ( Expression )
-import Control.Applicative      ( (<$>), (<*>) )
-import Control.Monad.Reader     ( MonadReader, ReaderT, ask, asks, runReaderT )
-import Control.Monad.Trans      ( MonadIO, liftIO )
-import Data.Data                ( Data, Typeable )
+import Control.Monad.Reader     ( MonadReader, ReaderT, ask, asks, local
+                                , runReaderT )
+import Control.Monad.Trans      ( MonadIO, lift, liftIO )
 import Data.Int                 ( Int64 )
 import Data.Time                ( UTCTime )
 import Database.SQLite.Simple   ( Connection, execute_, withConnection
                                 , withTransaction )
-import Happstack.Server         ( ServerPartT )
+import Web.Spock                ( SpockT, ActionT, runSpock, spockT )
 
 ----------------------------------------------------------------------- Control
 
 -- | Main application monad which allows read-only access to configuration 
 -- | settings.
-type App = ReaderT Config (ServerPartT IO)
+type App = ActionT (ReaderT Config IO)
+
+instance (MonadReader r m) => MonadReader r (ActionT m) where
+    ask       = lift ask
+    local f m = runReaderT (lift m) . f =<< ask
 
 -- | Database transaction monad which allows access to an open database 
 -- | connection.
@@ -35,23 +42,22 @@ runDB f = do
             execute_ conn "PRAGMA foreign_keys = ON;"
             runReaderT f conn
 
+-- | Runs the application with the settings from the config file.
+runApplication :: SpockT (ReaderT Config IO) () -> IO ()
+runApplication routes = do
+    config <- loadConfig
+    runSpock (configPort config) $ spockT (flip runReaderT config) routes
+
 -------------------------------------------------------------------------- Data
 
 -- | The primary key of a database entity.
 type ID = Int64
 
--- | Configuration settings.
-data Config = Config 
-    { configPort                :: Int
-    , configDatabaseConnection  :: String
-    , configStoragePath         :: FilePath
-    , configDiskQuota           :: Int64 }
-
 -- | A database entity with an ID.
 data Entity a = Entity 
     { entityID   :: ID 
     , entityData :: a 
-    } deriving (Eq, Show, Data, Typeable)
+    } deriving (Eq, Show)
 
 instance Functor Entity where
     fmap f (Entity id x) = Entity id (f x)
@@ -60,7 +66,7 @@ instance Functor Entity where
 -- | nothing indicates a tag that has not yet been persisted.
 data Tag = Tag 
     { tagName :: String
-    } deriving (Eq, Show, Data, Typeable)
+    } deriving (Eq, Show)
 
 -- | An Image contains the meta data of an image file that has been uploaded. 
 -- | An ID of nothing indicates an image that has not yet been persisted.
@@ -75,7 +81,7 @@ data Image = Image
     , imageModified     :: UTCTime
     , imageFileSize     :: Int
     , imageTagNames     :: [String]
-    } deriving (Eq, Show, Data, Typeable)
+    } deriving (Eq, Show)
 
 ----------------------------------------------------------------------- Utility
 
