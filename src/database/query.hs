@@ -15,7 +15,7 @@ type Name = String
 type Alias = Int
 type QueryResult a = (a, (Int, QueryData))
 
-data Join    = BaseTable | InnerJoin Filter deriving (Show)
+data Join    = BaseTable | InnerJoin (Maybe Filter) deriving (Show)
 data Field   = Field Name Name deriving (Show)
 data Table   = Table Name Alias Join deriving (Show)
 data Mapping = Mapping Field Value deriving (Show)
@@ -67,7 +67,9 @@ instance ToSQL Order where
 
 instance ToSQL Table where
     toSQL (Table name i BaseTable)          = "FROM " ++ name ++ " f" ++ show i
-    toSQL (Table name i (InnerJoin filter)) = "INNER JOIN " ++ name ++ " f" ++ show i ++ " ON " ++ toSQL filter
+    toSQL (Table name i (InnerJoin filter)) = "INNER JOIN " ++ name ++ " f" ++ show i ++ case filter of
+        Nothing     -> ""
+        Just filter -> " ON " ++ toSQL filter
     
 instance ToSQL Filter where
     toSQL (Not filter)         = "NOT " ++ toSQL filter
@@ -102,17 +104,22 @@ instance ToSQL Select where
 
 --------------------------------------------------------------- Query Functions
 
-from :: String -> Query FieldMapper
-from = state . addTable BaseTable
+table :: String -> Query FieldMapper
+table = state . addTable
 
-innerJoin :: String -> (FieldMapper -> Query Filter) -> Query FieldMapper
-innerJoin name mapper = do
-    i      <- gets fst
-    filter <- mapper (Field ("f" ++ show i))
-    
-    state $ \(i, q) -> 
-        ( Field ("f" ++ show i)
-        , (i+1, q { queryTables = queryTables q ++ [Table name i (InnerJoin filter)] } ))
+on :: Query FieldMapper -> (FieldMapper -> Query Filter) -> Query FieldMapper
+on mapper filter = do
+    mapper' <- mapper
+    filter' <- fmap Just (filter mapper')
+    state $ \(i,q) ->
+        let prevTables = init (queryTables q)
+            lastTable  = last (queryTables q)
+            name       = tableName lastTable
+            nextTable  = [Table name (i-1) (InnerJoin filter')]
+            
+        in ( Field ("f" ++ show (i-1))
+           , (i, q { queryTables = prevTables ++ nextTable } ))
+    where tableName (Table name _ _) = name
     
 get' :: [Field] -> Query ()
 get' = state . addValues
@@ -172,10 +179,14 @@ select q = Select (queryValues  q')
 
 emptyQuery = QueryData [] [] [] [] []
 
-addTable :: Join -> String -> (Int, QueryData) -> QueryResult FieldMapper
-addTable join name (i, q) = 
-    ( Field ("f" ++ show i)
-    , (i+1, q { queryTables = queryTables q ++ [Table name i join] } ))
+addTable :: String -> (Int, QueryData) -> QueryResult FieldMapper
+addTable name (i, q) = 
+    let existingTables = queryTables q
+        newTable       = Table name i $ if null existingTables
+                             then BaseTable
+                             else InnerJoin Nothing
+    in ( Field ("f" ++ show i)
+       , (i+1, q { queryTables = existingTables ++ [newTable] } ))
 
 addMapping :: Mapping -> (Int, QueryData) -> QueryResult ()
 addMapping mapping (i, q) = ((), (i, q { queryMappings = queryMappings q ++ [mapping] }))
