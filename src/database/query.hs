@@ -3,7 +3,7 @@
 
 module Database.Query where
 
-import Control.Monad.State ( State, execState, state )
+import Control.Monad.State ( State, execState, state, gets )
 import Data.List           ( intercalate )
 
 ------------------------------------------------------------------------- Types
@@ -105,19 +105,20 @@ instance ToSQL Select where
 from :: String -> Query FieldMapper
 from = state . addTable BaseTable
 
-innerJoin :: String -> (FieldMapper -> Filter) -> Query FieldMapper
-innerJoin name mapper = state $ \(i, q) -> 
-    ( Field ("f" ++ show i)
-    , (i+1, q { queryTables = queryTables q ++ [Table name i (InnerJoin (mapper (Field ("f" ++ show i))))] } ))
+innerJoin :: String -> (FieldMapper -> Query Filter) -> Query FieldMapper
+innerJoin name mapper = do
+    i      <- gets fst
+    filter <- mapper (Field ("f" ++ show i))
     
-get :: [Field] -> Query ()
-get = state . addValues
+    state $ \(i, q) -> 
+        ( Field ("f" ++ show i)
+        , (i+1, q { queryTables = queryTables q ++ [Table name i (InnerJoin filter)] } ))
+    
+get' :: [Field] -> Query ()
+get' = state . addValues
 
-wherever :: Filter -> Query ()
-wherever = state . addFilter
-
-ignoring :: Filter -> Query ()
-ignoring = wherever . Not
+wherever :: Query Filter -> Query ()
+wherever = (>>= state . addFilter)
 
 asc :: Field -> Query ()
 asc = state . addOrder . Asc
@@ -138,15 +139,25 @@ with name val field = state $ addFilter (Equals (field name) (toSQL val))
 
 -------------------------------------------------------------- Filter Functions
 
-(.=) :: (ToSQL a) => Field -> a -> Filter
-(.=) field val = Equals field (toSQL val)
+(.=) :: (ToSQL a) => Field -> a -> Query Filter
+(.=) field val = return $ Equals field (toSQL val)
 
-like :: Field -> String -> Filter
-like field val = Like field (escape val)
+like :: Field -> String -> Query Filter
+like field val = return $ Like field (escape val)
     where escape = (++ " ESCAPE '\\'") . toSQL
 
-exists :: Query a -> Filter
-exists = Exists . select
+exists :: Query a -> Query Filter
+exists q = do
+    i  <- gets fst
+    
+    let (i', q') = execState q (i+1, emptyQuery)
+    
+    let thing = Exists $ Select (queryValues  q') 
+                                (queryTables  q')
+                                (queryFilters q')
+                                (queryOrders  q')
+    
+    state $ \(i,q) -> (thing, (i'+1, q))
 
 ------------------------------------------------------ Transformation Functions
 
@@ -155,11 +166,11 @@ select q = Select (queryValues  q')
                   (queryTables  q')
                   (queryFilters q')
                   (queryOrders  q')
-    where (i, q') = execState q emptyQuery
+    where (i, q') = execState q (0, emptyQuery)
 
 ----------------------------------------------------------------------- Utility
 
-emptyQuery = (0, QueryData [] [] [] [] [])
+emptyQuery = QueryData [] [] [] [] []
 
 addTable :: Join -> String -> (Int, QueryData) -> QueryResult FieldMapper
 addTable join name (i, q) = 
