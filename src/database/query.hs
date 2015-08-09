@@ -9,13 +9,15 @@ import Data.List           ( intercalate )
 ------------------------------------------------------------------------- Types
 
 type FieldMapper = String -> Field
-type Query = State QueryData
+type Query = State (Int, QueryData)
 type Value = String
 type Name = String
+type Alias = Int
+type QueryResult a = (a, (Int, QueryData))
 
 data Join    = BaseTable | InnerJoin Filter deriving (Show)
 data Field   = Field Name Name deriving (Show)
-data Table   = Table Name Join deriving (Show)
+data Table   = Table Name Alias Join deriving (Show)
 data Mapping = Mapping Field Value deriving (Show)
 data Order   = Asc Field | Desc Field | Random deriving (Show)
 
@@ -64,8 +66,8 @@ instance ToSQL Order where
     toSQL (Random)     = "RANDOM()"
 
 instance ToSQL Table where
-    toSQL (Table name BaseTable)          = "FROM " ++ name
-    toSQL (Table name (InnerJoin filter)) = "INNER JOIN " ++ name ++ " ON " ++ toSQL filter
+    toSQL (Table name i BaseTable)          = "FROM " ++ name ++ " f" ++ show i
+    toSQL (Table name i (InnerJoin filter)) = "INNER JOIN " ++ name ++ " f" ++ show i ++ " ON " ++ toSQL filter
     
 instance ToSQL Filter where
     toSQL (Not filter)         = "NOT " ++ toSQL filter
@@ -86,7 +88,7 @@ instance ToSQL Select where
                 | null selectValues && length selectTables == 1 = "*"
                 | null selectValues = intercalate ", " $ map selectAll selectTables
                 | otherwise         = intercalate ", " $ map toSQL selectValues
-                where selectAll (Table name _) = name ++ ".*"
+                where selectAll (Table name i _) = "f" ++ show i ++ ".*"
         
             fromClause = intercalate "\n" $ map toSQL selectTables
             
@@ -104,7 +106,9 @@ from :: String -> Query FieldMapper
 from = state . addTable BaseTable
 
 innerJoin :: String -> (FieldMapper -> Filter) -> Query FieldMapper
-innerJoin name mapper = state $ addTable (InnerJoin (mapper (Field name))) name
+innerJoin name mapper = state $ \(i, q) -> 
+    ( Field ("f" ++ show i)
+    , (i+1, q { queryTables = queryTables q ++ [Table name i (InnerJoin (mapper (Field ("f" ++ show i))))] } ))
     
 get :: [Field] -> Query ()
 get = state . addValues
@@ -151,28 +155,28 @@ select q = Select (queryValues  q')
                   (queryTables  q')
                   (queryFilters q')
                   (queryOrders  q')
-    where q' = execState q emptyQuery
+    where (i, q') = execState q emptyQuery
 
 ----------------------------------------------------------------------- Utility
 
-emptyQuery = QueryData [] [] [] [] []
+emptyQuery = (0, QueryData [] [] [] [] [])
 
-addTable :: Join -> String -> QueryData -> (FieldMapper, QueryData)
-addTable join name q = 
-    ( Field name
-    , q { queryTables = queryTables q ++ [Table name join] } )
+addTable :: Join -> String -> (Int, QueryData) -> QueryResult FieldMapper
+addTable join name (i, q) = 
+    ( Field ("f" ++ show i)
+    , (i+1, q { queryTables = queryTables q ++ [Table name i join] } ))
 
-addMapping :: Mapping -> QueryData -> ((), QueryData)
-addMapping mapping q = ((), q { queryMappings = queryMappings q ++ [mapping] })
+addMapping :: Mapping -> (Int, QueryData) -> QueryResult ()
+addMapping mapping (i, q) = ((), (i, q { queryMappings = queryMappings q ++ [mapping] }))
 
-addOrder :: Order -> QueryData -> ((), QueryData)
-addOrder order q = ((), q { queryOrders = queryOrders q ++ [order] })
+addOrder :: Order -> (Int, QueryData) -> QueryResult ()
+addOrder order (i, q) = ((), (i, q { queryOrders = queryOrders q ++ [order] }))
 
-addValues :: [Field] -> QueryData -> ((), QueryData)
-addValues values q = ((), q { queryValues = queryValues q ++ values })
+addValues :: [Field] -> (Int, QueryData) -> QueryResult ()
+addValues values (i, q) = ((), (i, q { queryValues = queryValues q ++ values }))
 
-addFilter :: Filter -> QueryData -> ((), QueryData)
-addFilter filter q = ((), q { queryFilters = queryFilters q ++ [filter] })
+addFilter :: Filter -> (Int, QueryData) -> QueryResult ()
+addFilter filter (i, q) = ((), (i, q { queryFilters = queryFilters q ++ [filter] }))
 
-setOrder :: Order -> QueryData -> ((), QueryData)
-setOrder order q = ((), q { queryOrders = [order] })
+setOrder :: Order -> (Int, QueryData) -> QueryResult ()
+setOrder order (i, q) = ((), (i, q { queryOrders = [order] }))
