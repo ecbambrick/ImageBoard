@@ -25,6 +25,7 @@ data Filter = Not Filter
             | Equals Field Value
             | Exists Select
             | Like Field String
+            | And Filter Filter
             deriving (Show)
 
 data QueryData = QueryData
@@ -76,6 +77,7 @@ instance ToSQL Filter where
     toSQL (Equals field value) = toSQL field ++ " = " ++ value
     toSQL (Like field value)   = toSQL field ++ " LIKE " ++ value
     toSQL (Exists select)      = "EXISTS (" ++ toSQL select ++ ")"
+    toSQL (And x y)            = toSQL x ++ " AND " ++ toSQL y
     
 instance ToSQL Select where
     toSQL (Select _ [] _ _) = ""
@@ -87,8 +89,7 @@ instance ToSQL Select where
         where 
         
             selectClause
-                | null selectValues && length selectTables == 1 = "*"
-                | null selectValues = intercalate ", " $ map selectAll selectTables
+                | null selectValues = "*"
                 | otherwise         = intercalate ", " $ map toSQL selectValues
                 where selectAll (Table name i _) = "f" ++ show i ++ ".*"
         
@@ -148,6 +149,13 @@ with name val field = state $ addFilter (Equals (field name) (toSQL val))
 
 (.=) :: (ToSQL a) => Field -> a -> Query Filter
 (.=) field val = return $ Equals field (toSQL val)
+
+infixr 2 .&
+(.&) :: Query Filter -> Query Filter -> Query Filter
+(.&) f1 f2 = do
+    f1' <- f1
+    f2' <- f2
+    return (And f1' f2') 
 
 like :: Field -> String -> Query Filter
 like field val = return $ Like field (escape val)
