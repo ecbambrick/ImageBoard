@@ -4,22 +4,27 @@
 module Database.Query where
 
 import Control.Monad.State ( State, execState, state, gets )
-import Data.List           ( intercalate )
 
 ------------------------------------------------------------------------- Types
 
 type FieldMapper = String -> Field
 type Query = State (Int, QueryData)
-type Value = String
 type Name = String
 type Alias = Int
 type QueryResult a = (a, (Int, QueryData))
 
-data Join    = BaseTable | InnerJoin (Maybe Filter) deriving (Show)
-data Field   = Field Name Name deriving (Show)
-data Table   = Table Name Alias Join deriving (Show)
-data Mapping = Mapping Field Value deriving (Show)
-data Order   = Asc Field | Desc Field | Random deriving (Show)
+data Join     = BaseTable | InnerJoin (Maybe Filter) deriving (Show)
+data Field    = Field Alias Name deriving (Show)
+data Table    = Table Name Alias Join deriving (Show)
+data Mapping  = Mapping Field Value deriving (Show)
+data Order    = Asc Field | Desc Field | Random deriving (Show)
+data Likeness = Likeness String
+
+data Value = SQLInt  Int
+           | SQLStr  String
+           | SQLBool Bool
+           | SQLObj  Field
+           deriving (Show)
 
 data Filter = Not Filter
             | Equals Field Value
@@ -41,67 +46,15 @@ data Select = Select
     , selectFilters  :: [Filter]
     , selectOrders   :: [Order] } deriving (Show)
 
-------------------------------------------------------------------------- ToSQL
+----------------------------------------------------------------------- ToValue
 
-replace :: Char -> String -> String -> String
-replace _ _ [] = []
-replace from to (x:xs)
-    | x == from = to  ++ replace from to xs
-    | otherwise = [x] ++ replace from to xs
+class ToValue a where 
+    toValue :: a -> Value
 
-class ToSQL a where
-    toSQL :: a -> Value 
-
-instance ToSQL Int where
-    toSQL = show
-
-instance ToSQL [Char] where
-    toSQL x = "'" ++ replace '\'' "''" x ++ "'"
-
-instance ToSQL Field where
-    toSQL (Field table field) = table ++ "." ++ field
-
-instance ToSQL Order where
-    toSQL (Asc field)  = toSQL field ++ " ASC"
-    toSQL (Desc field) = toSQL field ++ " DESC"
-    toSQL (Random)     = "RANDOM()"
-
-instance ToSQL Table where
-    toSQL (Table name i BaseTable)          = "FROM " ++ name ++ " f" ++ show i
-    toSQL (Table name i (InnerJoin filter)) = "INNER JOIN " ++ name ++ " f" ++ show i ++ case filter of
-        Nothing     -> ""
-        Just filter -> " ON " ++ toSQL filter
-    
-instance ToSQL Filter where
-    toSQL (Not filter)         = "NOT " ++ toSQL filter
-    toSQL (Equals field value) = toSQL field ++ " = " ++ value
-    toSQL (Like field value)   = toSQL field ++ " LIKE " ++ value
-    toSQL (Exists select)      = "EXISTS (" ++ toSQL select ++ ")"
-    toSQL (And x y)            = toSQL x ++ " AND " ++ toSQL y
-    
-instance ToSQL Select where
-    toSQL Select {..} = intercalate "\n" $ filter (not . null)
-        [ "SELECT " ++ selectClause
-        , fromClause
-        , whereClause
-        , orderClause ]
-        where 
-        
-            selectClause
-                | null selectTables = "1"
-                | null selectValues = "*"
-                | otherwise         = intercalate ", " $ map toSQL selectValues
-                where selectAll (Table name i _) = "f" ++ show i ++ ".*"
-        
-            fromClause = intercalate "\n" $ map toSQL selectTables
-            
-            whereClause = if null selectFilters
-                then ""
-                else "WHERE " ++ (intercalate "\nAND " $ map toSQL selectFilters)
-            
-            orderClause = if null selectOrders
-                then ""
-                else "ORDER BY " ++ intercalate ", " (map toSQL selectOrders)
+instance ToValue Int    where toValue = SQLInt
+instance ToValue String where toValue = SQLStr
+instance ToValue Field  where toValue = SQLObj 
+instance ToValue Bool   where toValue = SQLBool
 
 --------------------------------------------------------------- Query Functions
 
@@ -118,7 +71,7 @@ on mapper filter = do
             name       = tableName lastTable
             nextTable  = [Table name (i-1) (InnerJoin filter')]
             
-        in ( Field ("f" ++ show (i-1))
+        in ( Field (i-1)
            , (i, q { queryTables = prevTables ++ nextTable } ))
     where tableName (Table name _ _) = name
     
@@ -137,18 +90,13 @@ desc = state . addOrder . Desc
 randomOrder :: Query ()
 randomOrder = state (setOrder Random)
 
-(.<-) :: (ToSQL a) => Field -> a -> Query ()
-(.<-) field val = state $ addMapping $ Mapping field (toSQL val)
-
--------------------------------------------------------------- Helper Functions
-
-with :: (ToSQL a) => String -> a -> FieldMapper -> Query ()
-with name val field = state $ addFilter (Equals (field name) (toSQL val))
+(.<-) :: Field -> String -> Query ()
+(.<-) field val = state $ addMapping $ Mapping field (toValue val)
 
 -------------------------------------------------------------- Filter Functions
 
-(.=) :: (ToSQL a) => Field -> a -> Query Filter
-(.=) field val = return $ Equals field (toSQL val)
+(.=) :: (ToValue a) => Field -> a -> Query Filter
+(.=) field val = return $ Equals field (toValue val)
 
 infixr 2 .&
 (.&) :: Query Filter -> Query Filter -> Query Filter
@@ -158,8 +106,7 @@ infixr 2 .&
     return (And f1' f2') 
 
 like :: Field -> String -> Query Filter
-like field val = return $ Like field (escape val)
-    where escape = (++ " ESCAPE '\\'") . toSQL
+like field val = return $ Like field val
 
 exists :: Query a -> Query Filter
 exists q = do
@@ -174,15 +121,6 @@ exists q = do
     
     state $ \(i,q) -> (thing, (i', q))
 
------------------------------------------------------- Transformation Functions
-
-select :: Query a -> Select
-select q = Select (queryValues  q') 
-                  (queryTables  q')
-                  (queryFilters q')
-                  (queryOrders  q')
-    where (i, q') = execState q (0, emptyQuery)
-
 ----------------------------------------------------------------------- Utility
 
 emptyQuery = QueryData [] [] [] [] []
@@ -193,7 +131,7 @@ addTable name (i, q) =
         newTable       = Table name i $ if null existingTables
                              then BaseTable
                              else InnerJoin Nothing
-    in ( Field ("f" ++ show i)
+    in ( Field i
        , (i+1, q { queryTables = existingTables ++ [newTable] } ))
 
 addMapping :: Mapping -> (Int, QueryData) -> QueryResult ()
