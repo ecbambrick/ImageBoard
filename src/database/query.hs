@@ -80,7 +80,6 @@ instance ToSQL Filter where
     toSQL (And x y)            = toSQL x ++ " AND " ++ toSQL y
     
 instance ToSQL Select where
-    toSQL (Select _ [] _ _) = ""
     toSQL Select {..} = intercalate "\n" $ filter (not . null)
         [ "SELECT " ++ selectClause
         , fromClause
@@ -89,6 +88,7 @@ instance ToSQL Select where
         where 
         
             selectClause
+                | null selectTables = "1"
                 | null selectValues = "*"
                 | otherwise         = intercalate ", " $ map toSQL selectValues
                 where selectAll (Table name i _) = "f" ++ show i ++ ".*"
@@ -165,14 +165,14 @@ exists :: Query a -> Query Filter
 exists q = do
     i  <- gets fst
     
-    let (i', q') = execState q (i+1, emptyQuery)
+    let (i', q') = execState q (i, emptyQuery)
     
     let thing = Exists $ Select (queryValues  q') 
                                 (queryTables  q')
                                 (queryFilters q')
                                 (queryOrders  q')
     
-    state $ \(i,q) -> (thing, (i'+1, q))
+    state $ \(i,q) -> (thing, (i', q))
 
 ------------------------------------------------------ Transformation Functions
 
