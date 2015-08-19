@@ -16,7 +16,7 @@ type QueryResult a = (a, (Int, QueryData))
 data Join     = BaseTable | InnerJoin (Maybe Filter) deriving (Show)
 data Field    = Field Alias Name deriving (Show)
 data Table    = Table Name Alias Join deriving (Show)
-data Mapping  = Mapping Field Value deriving (Show)
+data Mapping  = Mapping Name Value deriving (Show)
 data Order    = Asc Field | Desc Field | Random deriving (Show)
 data Likeness = Likeness String
 
@@ -35,7 +35,6 @@ data Filter = Not Filter
 
 data QueryData = QueryData
     { queryValues   :: [Field]
-    , queryMappings :: [Mapping]
     , queryTables   :: [Table]
     , queryFilters  :: [Filter]
     , queryOrders   :: [Order] } deriving (Show)
@@ -90,8 +89,8 @@ desc = state . addOrder . Desc
 randomOrder :: Query ()
 randomOrder = state (setOrder Random)
 
-(.<-) :: Field -> String -> Query ()
-(.<-) field val = state $ addMapping $ Mapping field (toValue val)
+(.<-) :: (ToValue a) => String -> a -> Mapping
+(.<-) field val = Mapping field (toValue val)
 
 -------------------------------------------------------------- Filter Functions
 
@@ -123,7 +122,7 @@ exists q = do
 
 ----------------------------------------------------------------------- Utility
 
-emptyQuery = QueryData [] [] [] [] []
+emptyQuery = QueryData [] [] [] []
 
 addTable :: String -> (Int, QueryData) -> QueryResult FieldMapper
 addTable name (i, q) = 
@@ -133,9 +132,6 @@ addTable name (i, q) =
                              else InnerJoin Nothing
     in ( Field i
        , (i+1, q { queryTables = existingTables ++ [newTable] } ))
-
-addMapping :: Mapping -> (Int, QueryData) -> QueryResult ()
-addMapping mapping (i, q) = ((), (i, q { queryMappings = queryMappings q ++ [mapping] }))
 
 addOrder :: Order -> (Int, QueryData) -> QueryResult ()
 addOrder order (i, q) = ((), (i, q { queryOrders = queryOrders q ++ [order] }))
