@@ -22,7 +22,8 @@ instance ToSQLite Value where
     toSQLite (SQLBool x) = if x then "1" else "0"
 
 instance ToSQLite Field where
-    toSQLite (Field table field) = "[" ++ alias table ++ "].[" ++ field ++ "]"
+    toSQLite (AliasedField table field) = "[" ++ alias table ++ "].[" ++ field ++ "]"
+    toSQLite (NamedField    name field) = "[" ++ name ++ "].[" ++ field ++ "]"
 
 instance ToSQLite Order where
     toSQLite (Asc field)  = unwords [toSQLite field, "ASC"]
@@ -30,6 +31,7 @@ instance ToSQLite Order where
     toSQLite (Random)     = "RANDOM()"
 
 instance ToSQLite Filter where
+    toSQLite (All)                = "1 = 1"
     toSQLite (Not filter)         = unwords ["NOT", toSQLite filter]
     toSQLite (Equals field value) = unwords [toSQLite field, "=", toSQLite value]
     toSQLite (Like field value)   = unwords [toSQLite field, "LIKE", toSQLite $ Likeness value]
@@ -37,7 +39,7 @@ instance ToSQLite Filter where
     toSQLite (And x y)            = unwords [toSQLite x, "AND", toSQLite y]
 
 instance ToSQLite Table where
-    toSQLite (Table name i BaseTable)          = unwords ["FROM", name, alias i]
+    toSQLite (Table name i BaseTable)          = unwords ["FROM", "["++name++"]", "["++alias i++"]"]
     toSQLite (Table name i (InnerJoin filter)) = unwords ["INNER JOIN", name, alias i, parse filter]
         where parse x = case x of
                           Nothing -> ""
@@ -82,11 +84,24 @@ select q = toSQLite $ Select values tables filters orders
           orders  = queryOrders  q'
 
 insert :: Name -> [Mapping] -> String
-insert table values = unwords ["INSERT INTO", table, "(", a, ") VALUES (", b, ")"]
+insert table values = concat ["INSERT INTO [", table, "] (", a, ") VALUES (", b, ")"]
     where a = intercalate ", " $ map mappingField values
           b = intercalate ", " $ map (toSQLite . mappingValue) values
 
+update :: Name -> (FieldMapper -> Query Filter) -> [Mapping] -> String
+update _ _ [] = "-- no set values given"
+update table filter values = concat ["UPDATE [", table, "] SET ", intercalate ", " $ map f values, " WHERE ", toSQLite filter']
+    where filter' = parseFilter (filter (NamedField table))
+          f (Mapping field value) = "[" ++ field ++ "] = " ++ toSQLite value
+
+delete :: Name -> (FieldMapper -> Query Filter) -> String
+delete table filter = concat ["DELETE FROM [", table, "]", " WHERE ", toSQLite filter']
+    where filter' = parseFilter (filter (NamedField table))
+
 ----------------------------------------------------------------------- Utility
+
+parseFilter :: Query Filter -> Filter
+parseFilter x = head $ queryFilters $ snd $ execState (wherever x) (0, emptyQuery)
 
 replace :: Char -> String -> String -> String
 replace _ _ [] = []

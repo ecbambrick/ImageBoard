@@ -14,11 +14,13 @@ type Alias = Int
 type QueryResult a = (a, (Int, QueryData))
 
 data Join     = BaseTable | InnerJoin (Maybe Filter) deriving (Show)
-data Field    = Field Alias Name deriving (Show)
 data Table    = Table Name Alias Join deriving (Show)
 data Mapping  = Mapping Name Value deriving (Show)
 data Order    = Asc Field | Desc Field | Random deriving (Show)
 data Likeness = Likeness String
+
+data Field = AliasedField Alias Name
+           | NamedField Name Name deriving (Show)
 
 data Value = SQLInt  Int
            | SQLStr  String
@@ -26,7 +28,8 @@ data Value = SQLInt  Int
            | SQLObj  Field
            deriving (Show)
 
-data Filter = Not Filter
+data Filter = All
+            | Not Filter
             | Equals Field Value
             | Exists Select
             | Like Field String
@@ -73,7 +76,7 @@ on mapper filter = do
             name       = tableName lastTable
             nextTable  = [Table name (i-1) (InnerJoin filter')]
             
-        in ( Field (i-1)
+        in ( AliasedField (i-1)
            , (i, q { queryTables = prevTables ++ nextTable } ))
     where tableName (Table name _ _) = name
     
@@ -123,6 +126,9 @@ exists q = do
     
     state $ \(i,q) -> (thing, (i', q))
 
+everything :: Query Filter
+everything = state $ \x -> (All, x)
+
 ----------------------------------------------------------------------- Utility
 
 emptyQuery = QueryData [] [] [] []
@@ -133,7 +139,7 @@ addTable name (i, q) =
         newTable       = Table name i $ if null existingTables
                              then BaseTable
                              else InnerJoin Nothing
-    in ( Field i
+    in ( AliasedField i
        , (i+1, q { queryTables = existingTables ++ [newTable] } ))
 
 addOrder :: Order -> (Int, QueryData) -> QueryResult ()
