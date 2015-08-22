@@ -57,6 +57,9 @@ instance ToValue Bool   where toValue = SQLBool
 
 --------------------------------------------------------------- Query Functions
 
+mappingField (Mapping field _) = field
+mappingValue (Mapping _ value) = value
+
 table :: String -> Query FieldMapper
 table = state . addTable
 

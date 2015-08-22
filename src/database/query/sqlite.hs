@@ -44,7 +44,7 @@ instance ToSQLite Table where
                           Just x  -> unwords ["ON", toSQLite x]
 
 instance ToSQLite Select where
-    toSQLite Select {..} = intercalate "\n" $ filter (not . null)
+    toSQLite Select {..} = unlines $ filter (not . null)
         [ "SELECT " ++ selectClause
         , fromClause
         , whereClause
@@ -68,13 +68,23 @@ instance ToSQLite Select where
                 then ""
                 else "ORDER BY " ++ intercalate ", " (map toSQLite selectOrders)
 
+---------------------------------------------------------------------- Builders
+
+tableName :: Table -> String
+tableName (Table name _ _) = name
+
 select :: Query a -> String
 select q = toSQLite $ Select values tables filters orders
     where (_, q') = execState q (0, emptyQuery)
-          values  = (queryValues  q') 
-          tables  = (queryTables  q')
-          filters = (queryFilters q')
-          orders  = (queryOrders  q')
+          values  = queryValues  q' 
+          tables  = queryTables  q'
+          filters = queryFilters q'
+          orders  = queryOrders  q'
+
+insert :: Name -> [Mapping] -> String
+insert table values = unwords ["INSERT INTO", table, "(", a, ") VALUES (", b, ")"]
+    where a = intercalate ", " $ map mappingField values
+          b = intercalate ", " $ map (toSQLite . mappingValue) values
 
 ----------------------------------------------------------------------- Utility
 
