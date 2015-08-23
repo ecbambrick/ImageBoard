@@ -31,7 +31,7 @@ data Value = SQLInt  Int
 data Filter = All
             | Not Filter
             | Equals Field Value
-            | Exists Select
+            | Exists QueryData
             | Like Field String
             | And Filter Filter
             deriving (Show)
@@ -41,12 +41,6 @@ data QueryData = QueryData
     , queryTables   :: [Table]
     , queryFilters  :: [Filter]
     , queryOrders   :: [Order] } deriving (Show)
-
-data Select = Select
-    { selectValues   :: [Field]
-    , selectTables   :: [Table]
-    , selectFilters  :: [Filter]
-    , selectOrders   :: [Order] } deriving (Show)
 
 ----------------------------------------------------------------------- ToValue
 
@@ -119,15 +113,15 @@ exists q = do
     
     let (i', q') = execState q (i, emptyQuery)
     
-    let thing = Exists $ Select (queryValues  q') 
-                                (queryTables  q')
-                                (queryFilters q')
-                                (queryOrders  q')
+    let thing = Exists $ QueryData (queryValues  q') 
+                                   (queryTables  q')
+                                   (queryFilters q')
+                                   (queryOrders  q')
     
     state $ \(i,q) -> (thing, (i', q))
 
-everything :: Query Filter
-everything = state $ \x -> (All, x)
+anything :: Query Filter
+anything = return All
 
 ----------------------------------------------------------------------- Utility
 

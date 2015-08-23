@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module Database.Query.SQlite where
+module Database.Query.SQLite where
 
 import Control.Monad.State ( execState )
 import Data.List           ( intercalate )
@@ -35,7 +35,7 @@ instance ToSQLite Filter where
     toSQLite (Not filter)         = unwords ["NOT", toSQLite filter]
     toSQLite (Equals field value) = unwords [toSQLite field, "=", toSQLite value]
     toSQLite (Like field value)   = unwords [toSQLite field, "LIKE", toSQLite $ Likeness value]
-    toSQLite (Exists select)      = unwords ["EXISTS (", toSQLite select, ")"]
+    toSQLite (Exists select)      = concat  ["EXISTS (", toSQLite select, ")"]
     toSQLite (And x y)            = unwords [toSQLite x, "AND", toSQLite y]
 
 instance ToSQLite Table where
@@ -45,8 +45,8 @@ instance ToSQLite Table where
                           Nothing -> ""
                           Just x  -> unwords ["ON", toSQLite x]
 
-instance ToSQLite Select where
-    toSQLite Select {..} = unlines $ filter (not . null)
+instance ToSQLite QueryData where
+    toSQLite QueryData {..} = unlines $ filter (not . null)
         [ "SELECT " ++ selectClause
         , fromClause
         , whereClause
@@ -55,20 +55,20 @@ instance ToSQLite Select where
         where 
         
             selectClause
-                | null selectTables = "1"
-                | null selectValues = "*"
-                | otherwise         = intercalate ", " $ map toSQLite selectValues
+                | null queryTables = "1"
+                | null queryValues = "*"
+                | otherwise         = intercalate ", " $ map toSQLite queryValues
                 where selectAll (Table name i _) = "f" ++ show i ++ ".*"
         
-            fromClause = intercalate "\n" $ map toSQLite selectTables
+            fromClause = intercalate "\n" $ map toSQLite queryTables
             
-            whereClause = if null selectFilters
+            whereClause = if null queryFilters
                 then ""
-                else "WHERE " ++ (intercalate "\nAND " $ map toSQLite selectFilters)
+                else "WHERE " ++ (intercalate "\nAND " $ map toSQLite queryFilters)
             
-            orderClause = if null selectOrders
+            orderClause = if null queryOrders
                 then ""
-                else "ORDER BY " ++ intercalate ", " (map toSQLite selectOrders)
+                else "ORDER BY " ++ intercalate ", " (map toSQLite queryOrders)
 
 ---------------------------------------------------------------------- Builders
 
@@ -76,12 +76,7 @@ tableName :: Table -> String
 tableName (Table name _ _) = name
 
 select :: Query a -> String
-select q = toSQLite $ Select values tables filters orders
-    where (_, q') = execState q (0, emptyQuery)
-          values  = queryValues  q' 
-          tables  = queryTables  q'
-          filters = queryFilters q'
-          orders  = queryOrders  q'
+select q = toSQLite $ snd $ execState q (0, emptyQuery)
 
 insert :: Name -> [Mapping] -> String
 insert table values = concat ["INSERT INTO [", table, "] (", a, ") VALUES (", b, ")"]
