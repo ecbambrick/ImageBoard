@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE GADTs             #-}
 
 module Database.Query where
 
@@ -21,12 +21,6 @@ data Field = AliasedField Int String
            | NamedField String String
            deriving (Show)
 
-data Value = SQLInt  Int
-           | SQLStr  String
-           | SQLBool Bool
-           | SQLObj  Field
-           deriving (Show)
-
 data Where = All
            | Not Where
            | Equals Field Value
@@ -42,14 +36,28 @@ data QueryData = QueryData
     , queryOrders   :: [OrderBy] 
     } deriving (Show)
 
------------------------------------------------------------------------ ToValue
+------------------------------------------------------------------------- Value
 
+data Value where
+    SQLNumber  :: (Show a, Num a) => a -> Value
+    SQLString  :: String -> Value
+    SQLBool    :: Bool -> Value
+    SQLObject  :: Field -> Value
+
+instance Show Value where
+    show (SQLNumber x) = "SQLNumber " ++ show x
+    show (SQLString x) = "SQLString " ++ show x
+    show (SQLBool   x) = "SQLBool "   ++ show x
+    show (SQLObject x) = "SQLObject " ++ show x
+    
 class ToValue a where 
     toValue :: a -> Value
 
-instance ToValue Int    where toValue = SQLInt
-instance ToValue String where toValue = SQLStr
-instance ToValue Field  where toValue = SQLObj 
+instance ToValue Int    where toValue = SQLNumber
+instance ToValue Float  where toValue = SQLNumber
+instance ToValue Double where toValue = SQLNumber
+instance ToValue String where toValue = SQLString
+instance ToValue Field  where toValue = SQLObject
 instance ToValue Bool   where toValue = SQLBool
 
 --------------------------------------------------------------- Query Functions

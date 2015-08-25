@@ -13,10 +13,10 @@ class ToSQLite a where
     toSQLite :: a -> String
 
 instance ToSQLite Value where
-    toSQLite (SQLInt  x) = show x
-    toSQLite (SQLStr  x) = escape x
-    toSQLite (SQLObj  x) = toSQLite x
-    toSQLite (SQLBool x) = if x then "1" else "0"
+    toSQLite (SQLNumber x) = show x
+    toSQLite (SQLString x) = escape x
+    toSQLite (SQLObject x) = toSQLite x
+    toSQLite (SQLBool   x) = if x then "1" else "0"
 
 instance ToSQLite Field where
     toSQLite (AliasedField table field) = "[" ++ alias table ++ "].[" ++ field ++ "]"
