@@ -81,14 +81,19 @@ instance ToValue Bool   where toValue = SQLBool
 
 ------------------------------------------------------------- Mapping functions
 
+-- Maps a table column with the given name to the given value.
 (.<-) :: (ToValue a) => String -> a -> Mapping
 (.<-) field val = Mapping field (toValue val)
 
 --------------------------------------------------------------- Query Functions
 
+-- Selects from the table with the given name and returns a function to map
+-- the table to column names.
 table :: String -> Query Table
 table = state . addTable
 
+-- Joins the given table based on the given filter and returns the table 
+-- mapping function.
 on :: Query Table -> (Table -> Filter) -> Query Table
 on mapper filter = do
     mapper' <- mapper
@@ -102,27 +107,34 @@ on mapper filter = do
         in ( AliasedField (i-1)
            , (i, q { queryTables = prevTables ++ nextTable } ))
     where tableName (From name _ _) = name
-    
-get' :: [Field] -> Query ()
-get' = state . addValues
 
+-- Selects only the given list of columns for the query.
+retrieve :: [Field] -> Query ()
+retrieve = state . addValues
+
+-- Adds the given filter to the query.
 wherever :: Filter -> Query ()
 wherever = (>>= state . addFilter)
 
+-- Orders the query by the given column in ascending order.
 asc :: Field -> Query ()
 asc = state . addOrder . Asc
 
+-- Orders the query by the given column in descending order.
 desc :: Field -> Query ()
 desc = state . addOrder . Desc
 
+-- Orders the query randomly.
 randomOrder :: Query ()
 randomOrder = state (setOrder Random)
 
 -------------------------------------------------------------- Filter Functions
 
+-- Filters out results where the given field does not equal the given value.
 (.=) :: (ToValue a) => Field -> a -> Filter
 (.=) field val = return $ Equals field (toValue val)
 
+-- Filters out results that do not satisfy both of the given filters.
 infixr 2 .&
 (.&) :: Filter -> Filter -> Filter
 (.&) f1 f2 = do
@@ -130,9 +142,12 @@ infixr 2 .&
     f2' <- f2
     return (And f1' f2') 
 
+-- Filters out results where the given field is not like the given value where
+-- the value is a SQL 'like' string.
 like :: Field -> String -> Filter
 like field val = return $ Like field val
 
+-- Filters out results where the given query does not return any results.
 exists :: Query a -> Filter
 exists q = do
     i  <- gets fst
@@ -146,13 +161,20 @@ exists q = do
     
     state $ \(i,q) -> (thing, (i', q))
 
+-- Does not filter an results.
 anything :: Filter
 anything = return All
 
 ----------------------------------------------------------------------- Utility
 
+-- An empty query.
 emptyQuery = QueryData [] [] [] []
 
+-- Gets the name of the given table .
+tableName :: From -> String
+tableName (From name _ _) = name
+
+-- Adds the table with the given name to the given query data.
 addTable :: String -> (Int, QueryData) -> QueryResult Table
 addTable name (i, q) = 
     let existingTables = queryTables q
@@ -162,14 +184,18 @@ addTable name (i, q) =
     in ( AliasedField i
        , (i+1, q { queryTables = existingTables ++ [newTable] } ))
 
+-- Adds the given ordering to the given query data.
 addOrder :: OrderBy -> (Int, QueryData) -> QueryResult ()
 addOrder order (i, q) = ((), (i, q { queryOrders = queryOrders q ++ [order] }))
 
+-- Adds the given list of values to the given query data.
 addValues :: [Field] -> (Int, QueryData) -> QueryResult ()
 addValues values (i, q) = ((), (i, q { queryValues = queryValues q ++ values }))
 
+-- Adds the given filter to the given query data.
 addFilter :: Where -> (Int, QueryData) -> QueryResult ()
 addFilter filter (i, q) = ((), (i, q { queryFilters = queryFilters q ++ [filter] }))
 
+-- Replaces the given query data's orderings with the given ordering.
 setOrder :: OrderBy -> (Int, QueryData) -> QueryResult ()
 setOrder order (i, q) = ((), (i, q { queryOrders = [order] }))

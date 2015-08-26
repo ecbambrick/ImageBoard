@@ -69,9 +69,6 @@ instance ToSQLite QueryData where
 
 ---------------------------------------------------------------------- Builders
 
-tableName :: From -> String
-tableName (From name _ _) = name
-
 select :: Query a -> String
 select q = toSQLite $ snd $ execState q (0, emptyQuery)
 
