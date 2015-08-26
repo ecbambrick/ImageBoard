@@ -77,7 +77,7 @@ select q = toSQLite $ snd $ execState q (0, emptyQuery)
 
 insert :: String -> [Mapping] -> String
 insert table values = concat ["INSERT INTO [", table, "] (", a, ") VALUES (", b, ")"]
-    where a = intercalate ", " $ map mappingField values
+    where a = intercalate ", " $ map mappingColumn values
           b = intercalate ", " $ map (toSQLite . mappingValue) values
 
 update :: String -> (Table -> Filter) -> [Mapping] -> String

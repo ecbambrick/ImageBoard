@@ -20,7 +20,10 @@ type Table = String -> Field
 type QueryResult a = (a, (Int, QueryData))
 
 -- A mapping between a column name and a value.
-data Mapping = Mapping String Value deriving (Show)
+data Mapping = Mapping 
+    { mappingColumn :: String
+    , mappingValue  :: Value 
+    } deriving (Show)
 
 -- A SQL value.
 data Value where
@@ -149,10 +152,6 @@ anything = return All
 ----------------------------------------------------------------------- Utility
 
 emptyQuery = QueryData [] [] [] []
-
-mappingField (Mapping field _) = field
-
-mappingValue (Mapping _ value) = value
 
 addTable :: String -> (Int, QueryData) -> QueryResult Table
 addTable name (i, q) = 
