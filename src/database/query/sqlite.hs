@@ -7,7 +7,7 @@ import Control.Monad.State ( execState )
 import Data.List           ( intercalate )
 import Database.Query
 
---------------------------------------------------------------- String Building
+--------------------------------------------------------------- String building
 
 class ToSQLite a where
     toSQLite :: a -> String
@@ -15,29 +15,29 @@ class ToSQLite a where
 instance ToSQLite Value where
     toSQLite (SQLNumber x) = show x
     toSQLite (SQLString x) = escape x
-    toSQLite (SQLObject x) = toSQLite x
+    toSQLite (SQLColumn x) = toSQLite x
     toSQLite (SQLBool   x) = if x then "1" else "0"
 
-instance ToSQLite Field where
-    toSQLite (AliasedField table field) = "[" ++ alias table ++ "].[" ++ field ++ "]"
-    toSQLite (NamedField    name field) = "[" ++ name ++ "].[" ++ field ++ "]"
+instance ToSQLite Column where
+    toSQLite (AliasedColumn table column) = "[" ++ alias table ++ "].[" ++ column ++ "]"
+    toSQLite (NamedColumn    name column) = "[" ++ name ++ "].[" ++ column ++ "]"
 
 instance ToSQLite OrderBy where
-    toSQLite (Asc field)  = unwords [toSQLite field, "ASC"]
-    toSQLite (Desc field) = unwords [toSQLite field, "DESC"]
-    toSQLite (Random)     = "RANDOM()"
+    toSQLite (Asc column)  = unwords [toSQLite column, "ASC"]
+    toSQLite (Desc column) = unwords [toSQLite column, "DESC"]
+    toSQLite (Random)      = "RANDOM()"
 
 instance ToSQLite Where where
-    toSQLite (All)                = "1 = 1"
-    toSQLite (Not filter)         = unwords ["NOT", toSQLite filter]
-    toSQLite (Equals field value) = unwords [toSQLite field, "=", toSQLite value]
-    toSQLite (Like field value)   = unwords [toSQLite field, "LIKE", escape value, "ESCAPE '\\'"]
-    toSQLite (Exists select)      = concat  ["EXISTS (", toSQLite select, ")"]
-    toSQLite (And x y)            = unwords [toSQLite x, "AND", toSQLite y]
+    toSQLite (All)                 = "1 = 1"
+    toSQLite (Not filter)          = unwords ["NOT", toSQLite filter]
+    toSQLite (Equals column value) = unwords [toSQLite column, "=", toSQLite value]
+    toSQLite (Like column value)   = unwords [toSQLite column, "LIKE", escape value, "ESCAPE '\\'"]
+    toSQLite (Exists select)       = concat  ["EXISTS (", toSQLite select, ")"]
+    toSQLite (And x y)             = unwords [toSQLite x, "AND", toSQLite y]
 
 instance ToSQLite From where
     toSQLite (From name i BaseTable)          = unwords ["FROM", "["++name++"]", "["++alias i++"]"]
-    toSQLite (From name i (InnerJoin filter)) = unwords ["INNER JOIN", name, alias i, parse filter]
+    toSQLite (From name i (InnerJoin filter)) = unwords ["INNER JOIN", "["++name++"]", "["++alias i++"]", parse filter]
         where parse x = case x of
                           Nothing -> ""
                           Just x  -> unwords ["ON", toSQLite x]
@@ -57,15 +57,15 @@ instance ToSQLite QueryData where
                 | otherwise         = intercalate ", " $ map toSQLite queryValues
                 where selectAll (From name i _) = "f" ++ show i ++ ".*"
         
-            fromClause = intercalate "\n" $ map toSQLite queryTables
+            fromClause = intercalate "\n" $ map toSQLite (reverse queryTables)
             
             whereClause = if null queryFilters
                 then ""
-                else "WHERE " ++ (intercalate "\nAND " $ map toSQLite queryFilters)
+                else "WHERE " ++ (intercalate "\nAND " $ map toSQLite (reverse queryFilters))
             
             orderClause = if null queryOrders
                 then ""
-                else "ORDER BY " ++ intercalate ", " (map toSQLite queryOrders)
+                else "ORDER BY " ++ intercalate ", " (map toSQLite (reverse queryOrders))
 
 ---------------------------------------------------------------------- Builders
 
@@ -80,12 +80,12 @@ insert table values = concat ["INSERT INTO [", table, "] (", a, ") VALUES (", b,
 update :: String -> (Table -> Filter) -> [Mapping] -> String
 update _ _ [] = "-- no set values given"
 update table filter values = concat ["UPDATE [", table, "] SET ", intercalate ", " $ map f values, " WHERE ", toSQLite filter']
-    where filter' = parseFilter (filter (NamedField table))
-          f (Mapping field value) = "[" ++ field ++ "] = " ++ toSQLite value
+    where filter' = parseFilter (filter (NamedColumn table))
+          f (Mapping column value) = "[" ++ column ++ "] = " ++ toSQLite value
 
 delete :: String -> (Table -> Filter) -> String
 delete table filter = concat ["DELETE FROM [", table, "]", " WHERE ", toSQLite filter']
-    where filter' = parseFilter (filter (NamedField table))
+    where filter' = parseFilter (filter (NamedColumn table))
 
 ----------------------------------------------------------------------- Utility
 
