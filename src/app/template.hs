@@ -22,6 +22,28 @@ data ImageContext = ImageContext
     , thumb      :: String
     , tagNames   :: [String]
     } deriving (Data, Typeable)
+
+-- | Returns the image context data for the given image.
+toImageContext :: Entity Image -> ImageContext
+toImageContext (Entity id image) = ImageContext
+    { identifier = id
+    , path       = imageURL image
+    , thumb      = thumbURL image
+    , tagNames   = imageTagNames image }
+
+-- | The context data required for the image page.
+data ImageSetContext = ImageSetContext
+    { main     :: ImageContext
+    , previous :: ImageContext
+    , next     :: ImageContext
+    } deriving (Data, Typeable)
+
+-- | Returns the image set context for the given set of three images.
+toImageSetContext :: Entity Image -> Entity Image -> Entity Image -> ImageSetContext
+toImageSetContext image1 image2 image3 = ImageSetContext
+    { main     = toImageContext image1
+    , previous = toImageContext image2
+    , next     = toImageContext image3 }
     
 -- | The context data required for the index.
 data IndexContext = IndexContext
@@ -34,14 +56,6 @@ toIndexContext :: String -> [Entity Image] -> IndexContext
 toIndexContext query images = IndexContext
     { query  = query
     , images = fmap toImageContext images }
-
--- | Returns the image context data for the given image.
-toImageContext :: Entity Image -> ImageContext
-toImageContext (Entity id image) = ImageContext
-    { identifier = id
-    , path       = imageURL image
-    , thumb      = thumbURL image
-    , tagNames   = imageTagNames image }
 
 --------------------------------------------------------------------- Rendering
 

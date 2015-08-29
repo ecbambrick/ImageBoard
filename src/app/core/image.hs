@@ -1,4 +1,5 @@
-module App.Core.Image ( getAll, getFiltered, getSingle, insert ) where
+module App.Core.Image 
+    ( getAll, getFiltered, getSingle, getNext, getPrevious, insert ) where
 
 import qualified App.Core.Tag as Tag
 
@@ -7,7 +8,8 @@ import App.Config               ( Config(..) )
 import App.Expression           ( Expression, Token(..) )
 import App.DataSource.SQLite    ( attachTags, insertImage, selectHashExists
                                 , selectImage, selectImages
-                                , selectImagesByExpression )
+                                , selectImagesByExpression, selectNextImage
+                                , selectPreviousImage )
 import App.Paths                ( absoluteImagePath, absoluteThumbPath )
 import App.Validation           ( Property(..), Validation(..), isFalse
                                 , isPositive, isValidImageFileType, isValid )
@@ -38,6 +40,16 @@ getFiltered = runDB . selectImagesByExpression
 -- | Returns the image with the given ID or nothing if not found.
 getSingle :: ID -> App (Maybe (Entity Image))
 getSingle = runDB . selectImage
+
+-- | Returns the image following the image with the given ID or nothing if no
+-- | images exist.
+getNext :: ID -> App (Maybe (Entity Image))
+getNext = runDB . selectNextImage
+
+-- | Returns the image preceeding the image with the given ID or nothing if no
+-- | images exist.
+getPrevious :: ID -> App (Maybe (Entity Image))
+getPrevious = runDB . selectPreviousImage
 
 -- | Inserts a new image into the database/filesystem based on the the file 
 -- | with the given path and the given tags. Returns valid if the insertion was

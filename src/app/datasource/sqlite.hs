@@ -4,8 +4,8 @@
 
 module App.DataSource.SQLite
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
-    , selectImagesByExpression, selectTags, selectTagsByImage, updateImage
-    , attachTags, clearTags, cleanTags ) where
+    , selectImagesByExpression, selectNextImage, selectPreviousImage, selectTags
+    , selectTagsByImage, updateImage, attachTags, clearTags, cleanTags ) where
                                 
 import App.Common               ( Entity(..), Image(..), Tag(..)
                                 , Transaction(..), ID, App, (<$$>), fromEntity )
@@ -153,6 +153,80 @@ selectHashExists hash = do
     [results] <- lift $ query conn command [hash] :: Transaction [Int]
     return (results > 0)
     where command = "SELECT COUNT(*) FROM image WHERE hash = ?"
+
+selectNextImage :: ID -> Transaction (Maybe (Entity Image))
+selectNextImage id = do
+    conn     <- ask
+    modified <- lift $ listToMaybe <$> query conn command0 [id] :: Transaction (Maybe Int)
+    
+    case modified of 
+        Nothing -> return Nothing
+        Just m  -> do
+            nextImage  <- lift $ listToMaybe <$> query  conn command1 [m]
+            firstImage <- lift $ listToMaybe <$> query_ conn command2
+            
+            case (nextImage, firstImage) of
+                (Just image, _) -> Just <$> withTags image
+                (_, Just image) -> Just <$> withTags image
+                (_, _)          -> return Nothing
+    
+    where
+    
+        command0 = "SELECT modified FROM post WHERE id = ?"
+        
+        command1 = "SELECT p.id, p.title, p.is_favourite, i.hash, \
+                   \i.extension, i.width, i.height, p.created, p.modified, \
+                   \i.file_size \
+                   \FROM post p \
+                   \INNER JOIN image i ON i.post_id = p.id \
+                   \WHERE p.modified < ? \
+                   \ORDER BY p.modified DESC \
+                   \LIMIT 1;"
+                   
+        command2 = "SELECT p.id, p.title, p.is_favourite, i.hash, \
+                   \i.extension, i.width, i.height, p.created, p.modified, \
+                   \i.file_size \
+                   \FROM post p \
+                   \INNER JOIN image i ON i.post_id = p.id \
+                   \ORDER BY p.modified DESC \
+                   \LIMIT 1;"
+
+selectPreviousImage :: ID -> Transaction (Maybe (Entity Image))
+selectPreviousImage id = do
+    conn     <- ask
+    modified <- lift $ listToMaybe <$> query conn command0 [id] :: Transaction (Maybe Int)
+    
+    case modified of 
+        Nothing -> return Nothing
+        Just m  -> do
+            nextImage  <- lift $ listToMaybe <$> query  conn command1 [m]
+            firstImage <- lift $ listToMaybe <$> query_ conn command2
+            
+            case (nextImage, firstImage) of
+                (Just image, _) -> Just <$> withTags image
+                (_, Just image) -> Just <$> withTags image
+                (_, _)          -> return Nothing
+    
+    where
+    
+        command0 = "SELECT modified FROM post WHERE id = ?"
+        
+        command1 = "SELECT p.id, p.title, p.is_favourite, i.hash, \
+                   \i.extension, i.width, i.height, p.created, p.modified, \
+                   \i.file_size \
+                   \FROM post p \
+                   \INNER JOIN image i ON i.post_id = p.id \
+                   \WHERE p.modified > ? \
+                   \ORDER BY p.modified ASC \
+                   \LIMIT 1;"
+                   
+        command2 = "SELECT p.id, p.title, p.is_favourite, i.hash, \
+                   \i.extension, i.width, i.height, p.created, p.modified, \
+                   \i.file_size \
+                   \FROM post p \
+                   \INNER JOIN image i ON i.post_id = p.id \
+                   \ORDER BY p.modified ASC \
+                   \LIMIT 1;"
 
 -- | Updates the image in the database.
 updateImage :: Entity Image -> Transaction ()
