@@ -31,12 +31,14 @@ instance ToSQLite OrderBy where
     toSQLite (Random)      = "RANDOM()"
 
 instance ToSQLite Where where
-    toSQLite (All)                 = "true"
-    toSQLite (Not filter)          = "NOT" <+> toSQLite filter
-    toSQLite (Exists select)       = "EXISTS (" ++ toSQLite select ++ ")"
-    toSQLite (Equals column value) = toSQLite column <==> toSQLite value
-    toSQLite (Like column value)   = toSQLite column <~=> liken value
-    toSQLite (And x y)             = toSQLite x      <&&> toSQLite y
+    toSQLite (All)                  = "true"
+    toSQLite (Not filter)           = "NOT" <+> toSQLite filter
+    toSQLite (Exists select)        = "EXISTS (" ++ toSQLite select ++ ")"
+    toSQLite (Equals column value)  = toSQLite column <=> toSQLite value
+    toSQLite (Greater column value) = toSQLite column <>> toSQLite value
+    toSQLite (Less column value)    = toSQLite column <<> toSQLite value
+    toSQLite (Like column value)    = toSQLite column <~> liken value
+    toSQLite (And x y)              = toSQLite x      <&> toSQLite y
 
 instance ToSQLite From where
     toSQLite (From name i join) = case join of
@@ -106,7 +108,7 @@ update table filter mappings
     
     where filter'   = parse $ filter (NamedColumn table)
           mappings' = intercalate ", " (map format mappings)
-          format (Mapping column value) = wrap column <==> toSQLite value
+          format (Mapping column value) = wrap column <=> toSQLite value
 
 ----------------------------------------------------------------------- Utility
 
@@ -127,16 +129,24 @@ update table filter mappings
 (<!>) x y = x ++ " ON " ++ y
 
 -- | Joins the two given strings with " = ".
-(<==>) :: String -> String -> String
-(<==>) x y = x ++ " = " ++ y
+(<=>) :: String -> String -> String
+(<=>) x y = x ++ " = " ++ y
 
 -- | Joins the two given strings with " LIKE ".
-(<~=>) :: String -> String -> String
-(<~=>) x y = x ++ " LIKE " ++ y
+(<~>) :: String -> String -> String
+(<~>) x y = x ++ " LIKE " ++ y
+
+-- | Joins the two given strings with " > ".
+(<>>) :: String -> String -> String
+(<>>) x y = x ++ " > " ++ y
+
+-- | Joins the two given strings with " < ".
+(<<>) :: String -> String -> String
+(<<>) x y = x ++ " < " ++ y
 
 -- | Joins the two given strings with " AND ".
-(<&&>) :: String -> String -> String
-(<&&>) x y = x ++ " AND " ++ y
+(<&>) :: String -> String -> String
+(<&>) x y = x ++ " AND " ++ y
 
 -- | Converts the given number to a table alias.
 alias :: Int -> String

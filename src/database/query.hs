@@ -56,10 +56,12 @@ data OrderBy = Asc Column | Desc Column | Random deriving (Show)
 -- | The 'where' clause of a query.
 data Where = All
            | Not Where
-           | Equals Column Value
-           | Exists QueryData
-           | Like Column String
            | And Where Where
+           | Exists QueryData
+           | Equals Column Value
+           | Greater Column Value
+           | Less Column Value
+           | Like Column String
            deriving (Show)
 
 -- | The data for a query.
@@ -129,10 +131,24 @@ randomOrder = state (setOrder Random)
 (.=) :: (ToValue a) => Column -> a -> Filter
 (.=) column value = return $ Equals column (toValue value)
 
+-- | Filters out results where the value for the given column is less than
+-- | the given value.
+(.>) :: (ToValue a) => Column -> a -> Filter
+(.>) column value = return $ Greater column (toValue value)
+
+-- | Filters out results where the value for the given column is greater than 
+-- | the given value.
+(.<) :: (ToValue a) => Column -> a -> Filter
+(.<) column value = return $ Less column (toValue value)
+
 -- | Filters out results that do not satisfy both of the given filters.
-(.&) :: Filter -> Filter -> Filter
+(.&) :: Filter -> Filter -> Filter; infixr 2 .&
 (.&) filter1 filter2 = And <$> filter1 <*> filter2
-infixr 2 .&
+
+-- | Returns a function that takes a table and then filters out results where
+-- | the given column for that table does not equal the given value.
+(*=) :: (ToValue a) => String -> a -> (Table -> Filter)
+(*=) name value = \x -> x name .= value
 
 -- | Filters out results where the value for the given column does not match
 -- | the given pattern.
