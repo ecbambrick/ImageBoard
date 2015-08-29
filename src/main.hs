@@ -8,12 +8,13 @@ import App.Common                    ( (<$$>), runApplication )
 import App.Config                    ( Config(..) )
 import App.Expression                ( Expression(..), parse )
 import App.Validation                ( Validation(..) )
-import Control.Applicative           ( (<$>) )
+import Control.Applicative           ( (<$>), (<*>) )
 import Control.Monad.Reader          ( asks, local )
 import Control.Monad.Trans           ( lift )
 import Data.Monoid                   ( mconcat )
 import Data.Text                     ( pack )
-import App.Template                  ( render, toIndexContext, toImageContext )
+import App.Template                  ( render, toIndexContext, toImageContext
+                                     , toImageSetContext )
 import Data.Textual                  ( splitOn )
 import Network.Wai.Middleware.Static ( (<|>), addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
@@ -24,7 +25,7 @@ import Web.Spock.Extended            ( getFile, getParam )
 -- Main.
 main :: IO ()
 main = runApplication $ do
-    storagePath <- lift $ asks configStoragePath
+    storagePath <- lift (asks configStoragePath)
     
     -- Enables access to thumbnails and images in the storage path.
     middleware $ staticPolicy $ mconcat
@@ -50,14 +51,6 @@ main = runApplication $ do
         
         html results
     
-    -- Renders the image details page for the image with the given ID.
-    get ("image" <//> var) $ \id -> do
-        image <- Image.getSingle id
-        
-        case image of
-            Nothing    -> redirect "/"
-            Just image -> html =<< render "image" (toImageContext image)
-    
     -- Renders the index page with images that match the query parameter.
     get "search" $ do
         query   <- getParam "q"
@@ -65,3 +58,15 @@ main = runApplication $ do
         results <- render "index" context
         
         html results
+    
+    -- Renders the image details page for the image with the given ID.
+    get ("image" <//> var) $ \id -> do
+        image    <- Image.getSingle   id
+        previous <- Image.getPrevious id
+        next     <- Image.getNext     id
+        
+        let context = toImageSetContext <$> image <*> previous <*> next
+        
+        case context of
+            Nothing      -> redirect "/"
+            Just context -> html =<< render "image" context
