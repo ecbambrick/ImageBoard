@@ -64,10 +64,10 @@ data Where = All
 
 -- | The data for a query.
 data QueryData = QueryData
-    { queryValues   :: [Column]
-    , queryTables   :: [From]
-    , queryFilters  :: [Where]
-    , queryOrders   :: [OrderBy] 
+    { querySelect  :: [Column]
+    , queryFrom    :: [From]
+    , queryWhere   :: [Where]
+    , queryOrderBy :: [OrderBy] 
     } deriving (Show)
 
 -- | Converts a normal value to a SQL value.
@@ -94,10 +94,10 @@ on queryMapper queryFilter = do
     mapper <- queryMapper
     filter <- Just <$> queryFilter mapper
     state $ \(i,q) ->
-        let ([(From name _ _)], xs) = splitAt 1 (queryTables q)
+        let ([(From name _ _)], xs) = splitAt 1 (queryFrom q)
             x                       = From name (i - 1) (InnerJoin filter)
             
-        in (AliasedColumn (i-1), (i, q { queryTables = x:xs }))
+        in (AliasedColumn (i-1), (i, q { queryFrom = x:xs }))
 
 -- | Adds the given list of columns to the columns that are returned by the 
 -- | query.
@@ -164,31 +164,31 @@ emptyQuery = QueryData [] [] [] []
 -- | Adds the given filter to the given query data when called by a state 
 -- | monad.
 addFilter :: Where -> (Int, QueryData) -> QueryResult ()
-addFilter filter (i, q) = ((), (i, q { queryFilters = x:xs }))
-    where xs = queryFilters q
+addFilter filter (i, q) = ((), (i, q { queryWhere = x:xs }))
+    where xs = queryWhere q
           x  = filter
 
 -- | Adds the given ordering to the given query data when called by a state 
 -- | monad.
 addOrder :: OrderBy -> (Int, QueryData) -> QueryResult ()
-addOrder order (i, q) = ((), (i, q { queryOrders = x:xs }))
-    where xs = queryOrders q
+addOrder order (i, q) = ((), (i, q { queryOrderBy = x:xs }))
+    where xs = queryOrderBy q
           x  = order
 
 -- | Adds the table with the given name to the given query data when called by 
 -- | a state monad.
 addTable :: String -> (Int, QueryData) -> QueryResult Table
-addTable name (i, q) = (AliasedColumn i, (i + 1, q { queryTables = x:xs }))
-    where xs = queryTables q
+addTable name (i, q) = (AliasedColumn i, (i + 1, q { queryFrom = x:xs }))
+    where xs = queryFrom q
           x  = if null xs then From name i BaseTable
                           else From name i (InnerJoin Nothing)
 
 -- | Adds the given list of values to the given query data when called by a 
 -- | state monad.
 addValues :: [Column] -> (Int, QueryData) -> QueryResult ()
-addValues values (i, q) = ((), (i, q { queryValues = queryValues q ++ values }))
+addValues values (i, q) = ((), (i, q { querySelect = querySelect q ++ values }))
 
 -- | Replaces the given query data's orderings with the given ordering when 
 -- | called by a state monad.
 setOrder :: OrderBy -> (Int, QueryData) -> QueryResult ()
-setOrder order (i, q) = ((), (i, q { queryOrders = [order] }))
+setOrder order (i, q) = ((), (i, q { queryOrderBy = [order] }))
