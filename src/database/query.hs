@@ -5,6 +5,7 @@ module Database.Query where
 
 import Control.Applicative ( (<$>), (<*>) )
 import Control.Monad.State ( State, execState, state, get )
+import Data.Int            ( Int64 )
 
 ------------------------------------------------------------------------- Types
 
@@ -30,8 +31,8 @@ data Mapping = Mapping
 data Value where
     SQLNumber :: (Show a, Num a) => a -> Value
     SQLString :: String -> Value
-    SQLBool   :: Bool -> Value
     SQLColumn :: Column -> Value
+    SQLBool   :: Bool   -> Value
 
 instance Show Value where
     show (SQLNumber x) = "SQLNumber " ++ show x
@@ -75,12 +76,14 @@ data QueryData = QueryData
 -- | Converts a normal value to a SQL value.
 class ToValue a where toValue :: a -> Value
 
-instance ToValue Int    where toValue = SQLNumber
-instance ToValue Float  where toValue = SQLNumber
-instance ToValue Double where toValue = SQLNumber
-instance ToValue String where toValue = SQLString
-instance ToValue Column where toValue = SQLColumn
-instance ToValue Bool   where toValue = SQLBool
+instance ToValue Int     where toValue = SQLNumber
+instance ToValue Int64   where toValue = SQLNumber
+instance ToValue Integer where toValue = SQLNumber
+instance ToValue Float   where toValue = SQLNumber
+instance ToValue Double  where toValue = SQLNumber
+instance ToValue String  where toValue = SQLString
+instance ToValue Column  where toValue = SQLColumn
+instance ToValue Bool    where toValue = SQLBool
 
 --------------------------------------------------------------- Query functions
 
@@ -122,7 +125,10 @@ desc = state . addOrder . Desc
 
 -- | Orders the query randomly.
 randomOrder :: Query ()
-randomOrder = state (setOrder Random)
+randomOrder = state $ setOrder (Just Random)
+
+clearOrder :: Query ()
+clearOrder = state $ setOrder Nothing
 
 -------------------------------------------------------------- Filter Functions
 
@@ -150,10 +156,29 @@ randomOrder = state (setOrder Random)
 (*=) :: (ToValue a) => String -> a -> (Table -> Filter)
 (*=) name value = \x -> x name .= value
 
+-- | Filters out results where the value for the given column does not begin
+-- | with the given string.
+(~%) :: Column -> String -> Filter
+(~%) column value = return $ Like column (value ++ "%")
+
+-- | Filters out results where the value for the given column does not end
+-- | with the given string.
+(%~) :: Column -> String -> Filter
+(%~) column value = return $ Like column ("%" ++ value)
+
+-- | Filters out results where the value for the given column does not contain
+-- | the given string.
+(%%) :: Column -> String -> Filter
+(%%) column value = return $ Like column ("%" ++ value ++ "%")
+
 -- | Filters out results where the value for the given column does not match
 -- | the given pattern.
 like :: Column -> String -> Filter
 like column value = return $ Like column value
+
+-- | Filters out results that match the given expression.
+nay :: Filter -> Filter
+nay filter = Not <$> filter
 
 -- | Filters out results where the given query does not return any results.
 exists :: Query a -> Filter
@@ -206,5 +231,6 @@ addValues values (i, q) = ((), (i, q { querySelect = querySelect q ++ values }))
 
 -- | Replaces the given query data's orderings with the given ordering when 
 -- | called by a state monad.
-setOrder :: OrderBy -> (Int, QueryData) -> QueryResult ()
-setOrder order (i, q) = ((), (i, q { queryOrderBy = [order] }))
+setOrder :: Maybe OrderBy -> (Int, QueryData) -> QueryResult ()
+setOrder Nothing      (i, q) = ((), (i, q { queryOrderBy = [] }))
+setOrder (Just order) (i, q) = ((), (i, q { queryOrderBy = [order] }))
