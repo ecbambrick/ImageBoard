@@ -104,7 +104,7 @@ delete table filter = printf "DELETE FROM [%s] WHERE %s" table filter'
 update :: String -> (Table -> Filter) -> [Mapping] -> String
 update table filter mappings
     | null mappings = "-- no set values given"
-    | otherwise     = printf "UPDATE [%s] SET %s WHERE %s" table  filter' mappings'
+    | otherwise     = printf "UPDATE [%s] SET %s WHERE %s" table mappings' filter'
     
     where filter'   = parse $ filter (NamedColumn table)
           mappings' = intercalate ", " (map format mappings)
