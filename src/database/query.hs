@@ -9,7 +9,7 @@ import Data.Int            ( Int64 )
 
 ------------------------------------------------------------------------- Types
 
--- | The Query monad which is used to generate SQL queries.
+-- | The query monad which is used to generate a SQL query.
 type Query = State (Int, QueryData)
 
 -- | An expression by which to filter a query.
@@ -17,9 +17,6 @@ type Filter = Query Where
 
 -- | A function that maps a column name to a table column.
 type Table = String -> Column
-
--- | A result returned when modifying query data.
-type QueryResult a = (a, (Int, QueryData))
 
 -- | A mapping between a column name and a value.
 data Mapping = Mapping 
@@ -45,16 +42,16 @@ data Column = AliasedColumn Int String
             | NamedColumn String String
             deriving (Show)
 
--- | The 'from' clause of a query.
+-- | The FROM clause of a query.
 data From = From String Int Join deriving (Show)
 
 -- | The type of join for a table.
 data Join = BaseTable | InnerJoin (Maybe Where) deriving (Show)
 
--- | The 'order by' clause of a query.
+-- | The ORDER BY clause of a query.
 data OrderBy = Asc Column | Desc Column | Random deriving (Show)
 
--- | The 'where' clause of a query.
+-- | The WHERE clause of a query.
 data Where = All
            | Not Where
            | And Where Where
@@ -92,7 +89,7 @@ instance ToValue Bool    where toValue = SQLBool
 table :: String -> Query Table
 table = state . addTable
 
--- | Joins the given table based on the given filter and returns the first 
+-- | Joins the given table based on the given filter and then returns the first 
 -- | argument.
 on :: Query Table -> (Table -> Filter) -> Query Table
 on queryMapper queryFilter = do
@@ -104,8 +101,8 @@ on queryMapper queryFilter = do
             
         in (AliasedColumn (i-1), (i, q { queryFrom = x:xs }))
 
--- | Adds the given list of columns to the columns that are returned by the 
--- | query.
+-- | Adds the given list of columns to the columns that are to be returned by 
+-- | the query.
 retrieve :: [Column] -> Query ()
 retrieve = state . addValues
 
@@ -127,67 +124,72 @@ desc = state . addOrder . Desc
 randomOrder :: Query ()
 randomOrder = state $ setOrder (Just Random)
 
+-- | Removes all orderings from the query.
 clearOrder :: Query ()
 clearOrder = state $ setOrder Nothing
 
 -------------------------------------------------------------- Filter Functions
 
--- | Filters out results where the value for the given column does not equal 
--- | the given value.
+-- | Filters the query such that only results where the given value is equal
+-- | to the given column are returned.
 (.=) :: (ToValue a) => Column -> a -> Filter
 (.=) column value = return $ Equals column (toValue value)
 
--- | Filters out results where the value for the given column is less than
--- | the given value.
+-- | Filters the query such that only results where the given value is greater
+-- | than the given column are returned.
 (.>) :: (ToValue a) => Column -> a -> Filter
 (.>) column value = return $ Greater column (toValue value)
 
--- | Filters out results where the value for the given column is greater than 
--- | the given value.
+-- | Filters the query such that only results where the given value is less
+-- | than the given column are returned.
 (.<) :: (ToValue a) => Column -> a -> Filter
 (.<) column value = return $ Less column (toValue value)
 
--- | Filters out results that do not satisfy both of the given filters.
+-- | Filters the query such that only results that satisfy both of the given 
+-- | filters are returned.
 (.&) :: Filter -> Filter -> Filter; infixr 2 .&
 (.&) filter1 filter2 = And <$> filter1 <*> filter2
 
--- | Returns a function that takes a table and then filters out results where
--- | the given column for that table does not equal the given value.
+-- | Returns a function that takes a table and then filters the query such that 
+-- | only results that satisfy both of the given filters are returned. Useful
+-- | as a shorthand for when not using do notation.
 (*=) :: (ToValue a) => String -> a -> (Table -> Filter)
 (*=) name value = \x -> x name .= value
 
--- | Filters out results where the value for the given column does not begin
+-- | Filters the query such that only results where the given column begins 
 -- | with the given string.
 (~%) :: Column -> String -> Filter
 (~%) column value = return $ Like column (value ++ "%")
 
--- | Filters out results where the value for the given column does not end
+-- | Filters the query such that only results where the given column ends 
 -- | with the given string.
 (%~) :: Column -> String -> Filter
 (%~) column value = return $ Like column ("%" ++ value)
 
--- | Filters out results where the value for the given column does not contain
+-- | Filters the query such that only results where the given column contains 
 -- | the given string.
 (%%) :: Column -> String -> Filter
 (%%) column value = return $ Like column ("%" ++ value ++ "%")
 
--- | Filters out results where the value for the given column does not match
+-- | Filters the query such that only results where the given column matches 
 -- | the given pattern.
 like :: Column -> String -> Filter
-like column value = return $ Like column value
+like column pattern = return $ Like column pattern
 
--- | Filters out results that match the given expression.
+-- | Filters the query such that only results that do not satisfy the given 
+-- | filter are returned.
 nay :: Filter -> Filter
 nay filter = Not <$> filter
 
--- | Filters out results where the given query does not return any results.
+-- | Filters the query such that only results where the given sub-query returns 
+-- | anything are returned.
 exists :: Query a -> Filter
 exists q = do
     (i,_) <- get
     let (i', q') = execState q (i, emptyQuery)
     state $ \(_, q'') -> (Exists q', (i', q''))
 
--- | Does not filter an results.
+-- | Does not filter any results.
 anything :: Filter
 anything = return All
 
@@ -198,6 +200,9 @@ anything = return All
 (<<) column value = Mapping column (toValue value)
 
 ----------------------------------------------------------------------- Utility
+
+-- | A result returned when modifying query data.
+type QueryResult a = (a, (Int, QueryData))
 
 -- | An empty query.
 emptyQuery = QueryData [] [] [] []
