@@ -13,7 +13,7 @@ import Control.Monad.Trans  ( MonadIO, lift, liftIO )
 import Data.Int             ( Int64 )
 import Data.Maybe           ( listToMaybe )
 import Data.Text            ( pack )
-import Database.Query       ( Filter, Mapping, Query, Table )
+import Database.Query       ( Filter, Mapping, Query, Table, limit )
 
 ------------------------------------------------------------------------- Types
 
@@ -56,7 +56,7 @@ query f = do
 single :: (Simple.FromRow r) => Query a -> Transaction (Maybe r)
 single f = do
     conn    <- ask
-    results <- lift $ Simple.query_ conn $ toQuery (SQL.select f)
+    results <- lift $ Simple.query_ conn $ toQuery $ SQL.select (f >> limit 1)
     return (listToMaybe results)
 
 -- | Performs an INSERT query on the given table with the give values and 

@@ -67,7 +67,8 @@ data QueryData = QueryData
     { querySelect  :: [Column]
     , queryFrom    :: [From]
     , queryWhere   :: [Where]
-    , queryOrderBy :: [OrderBy] 
+    , queryOrderBy :: [OrderBy]
+    , queryLimit   :: Maybe Int
     } deriving (Show)
 
 -- | Converts a normal value to a SQL value.
@@ -109,6 +110,10 @@ retrieve = state . addValues
 -- | Adds the given filter to the query.
 wherever :: Filter -> Query ()
 wherever = (state . addFilter =<<)
+
+-- | Limits the number of results returned by query to the given amount.
+limit :: Int -> Query ()
+limit = state . setLimit
 
 -- | Adds the given ordering to the query such that the query is ordered by the 
 -- | given column in ascending order.
@@ -205,7 +210,7 @@ anything = return All
 type QueryResult a = (a, (Int, QueryData))
 
 -- | An empty query.
-emptyQuery = QueryData [] [] [] []
+emptyQuery = QueryData [] [] [] [] Nothing
 
 -- | Adds the given filter to the given query data when called by a state 
 -- | monad.
@@ -233,6 +238,11 @@ addTable name (i, q) = (AliasedColumn i, (i + 1, q { queryFrom = x:xs }))
 -- | state monad.
 addValues :: [Column] -> (Int, QueryData) -> QueryResult ()
 addValues values (i, q) = ((), (i, q { querySelect = querySelect q ++ values }))
+
+-- | Sets the given query data's limit to the given amount when called by a 
+-- | state monad.
+setLimit :: Int -> (Int, QueryData) -> QueryResult ()
+setLimit limit (i, q) = ((), (i, q { queryLimit = Just limit }))
 
 -- | Replaces the given query data's orderings with the given ordering when 
 -- | called by a state monad.

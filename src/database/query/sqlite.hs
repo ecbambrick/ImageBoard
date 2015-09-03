@@ -51,7 +51,8 @@ instance ToSQLite QueryData where
         [ selectClause queryFrom querySelect
         , fromClause   queryFrom
         , whereClause  queryWhere
-        , orderClause  queryOrderBy ]
+        , orderClause  queryOrderBy
+        , limitClause  queryLimit ]
 
 -- | Generates a select clause.
 selectClause :: [From] -> [Column] -> String
@@ -75,6 +76,11 @@ orderClause orders
 -- | Generates a from clause.
 fromClause :: [From] -> String
 fromClause tables = intercalate "\n" $ map toSQLite (reverse tables)
+
+-- | Generates a limit clause.
+limitClause :: Maybe Int -> String
+limitClause Nothing  = ""
+limitClause (Just x) = "LIMIT " ++ show x
 
 ---------------------------------------------------------------------- Builders
 
