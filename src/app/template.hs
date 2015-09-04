@@ -4,12 +4,13 @@ module App.Template where
 
 import qualified Data.Text.IO as Text
 
-import App.Common               ( ID, Entity(..), Image(..) )
+import App.Common               ( Image(..) )
 import App.Paths                ( imageURL, templatePath, thumbURL )
 import Control.Monad.Trans      ( MonadIO, liftIO )
 import Data.Data                ( Data, Typeable )
 import Data.Text                ( Text )
 import Data.Text.Lazy           ( toStrict )
+import Database.Engine          ( Entity(..), ID )
 import Text.Hastache            ( encodeStr, hastacheStr, defaultConfig )
 import Text.Hastache.Context    ( mkGenericContext )
 

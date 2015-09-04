@@ -3,17 +3,16 @@ module App.Core.Image
 
 import qualified App.Core.Tag as Tag
 
-import App.Common               ( Tag(..), Image(..), App, Entity, ID, runDB )
+import App.Common               ( Tag(..), Image(..), App, runDB )
 import App.Config               ( Config(..) )
 import App.Expression           ( Expression, Token(..) )
+import Database.Engine          ( Entity, ID )
 import App.DataSource.SQLite    ( attachTags, insertImage, selectHashExists
-                                , selectImage, selectImages
-                                , selectImagesByExpression, selectNextImage
+                                , selectImage, selectImages, selectNextImage
                                 , selectPreviousImage )
 import App.Paths                ( absoluteImagePath, absoluteThumbPath )
 import App.Validation           ( Property(..), Validation(..), isFalse
                                 , isPositive, isValidImageFileType, isValid )
-import Control.Concurrent.Async ( async, wait )
 import Control.Monad            ( when )
 import Control.Monad.Trans      ( liftIO )
 import Control.Monad.Reader     ( asks )
@@ -31,11 +30,11 @@ import Text.Printf              ( printf )
 
 -- | Returns the list of all image entities.
 getAll :: App [Entity Image]
-getAll = runDB $ selectImages
+getAll = runDB $ selectImages []
 
 -- | Returns the list of image entities that satisfy the given filter.
 getFiltered :: Expression -> App [Entity Image]
-getFiltered = runDB . selectImagesByExpression
+getFiltered = runDB . selectImages
 
 -- | Returns the image with the given ID or nothing if not found.
 getSingle :: ID -> App (Maybe (Entity Image))

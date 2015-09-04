@@ -2,8 +2,7 @@
 
 import qualified Data.Text.IO as Text
 
-import App.Common               ( Entity(..), Image(..), Tag(..), Transaction
-                                , (<$$>), fromEntity )
+import App.Common               ( Image(..), Tag(..), (<$$>) )
 import App.DataSource.SQLite
 import App.Expression           ( parse )
 import Control.Monad            ( when )
@@ -14,6 +13,7 @@ import Data.Maybe               ( isJust )
 import Data.Text                ( splitOn )
 import Data.Time.Clock          ( UTCTime(..) )
 import Data.Time.Extended       ( fromSeconds )
+import Database.Engine          ( Entity(..), Transaction, fromEntity )
 import Database.SQLite.Simple   ( Query(..), execute_, query_, withConnection )
 import Test.HUnit               ( Test(..), Assertion, (@=?), runTestTT
                                 , assertFailure )
@@ -21,6 +21,8 @@ import Test.HUnit               ( Test(..), Assertion, (@=?), runTestTT
 main = runTestTT $ TestList
     [ insertImageTest
     , selectImageTest
+    , selectNextImageTest
+    , selectPreviousImageTest
     , selectImagesTest
     , selectImagesByExpressionTest
     , deleteImageTest
@@ -29,8 +31,7 @@ main = runTestTT $ TestList
     , attachTagsTest
     , selectTagsTest
     , selectTagsByImageTest
-    , cleanTagsTest
-    , clearTagsTest ]
+    , cleanTagsTest ]
 
 ------------------------------------------------------------------- Image Tests
 
@@ -70,7 +71,7 @@ insertImageTest = testDatabase $ do
     id1 <- insertImage image1
     id2 <- insertImage image2
     
-    [entity2, entity1] <- selectImages
+    [entity2, entity1] <- selectImages []
     numResults         <- selectImageCount
     
     lift $ do
@@ -104,10 +105,54 @@ selectImageTest = testDatabase $ do
         image2    @=? image5
         image3    @=? image6
 
--- | Tests the selectImages function.
+-- | Tests the selectNextImage function.
+selectNextImageTest :: Test
+selectNextImageTest = testDatabase $ do
+    let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 []
+        image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 []
+        image3 = Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 []
+    
+    id1 <- insertImage image1
+    id2 <- insertImage image2
+    id3 <- insertImage image3
+    
+    (Just (Entity id2' image2')) <- selectNextImage id3
+    (Just (Entity id3' image3')) <- selectNextImage id1
+    noResults                    <- selectNextImage 999
+    
+    lift $ do
+        noResults @=? Nothing
+        id2'      @=? id2
+        image2'   @=? image2
+        id3'      @=? id3
+        image3'   @=? image3
+
+-- | Tests the selectPreviousImage function.
+selectPreviousImageTest :: Test
+selectPreviousImageTest = testDatabase $ do
+    let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 []
+        image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 []
+        image3 = Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 []
+    
+    id1 <- insertImage image1
+    id2 <- insertImage image2
+    id3 <- insertImage image3
+    
+    (Just (Entity id2' image2')) <- selectPreviousImage id1
+    (Just (Entity id1' image1')) <- selectPreviousImage id3
+    noResults                    <- selectPreviousImage 999
+    
+    lift $ do
+        noResults @=? Nothing
+        id1'      @=? id1
+        image1'   @=? image1
+        id2'      @=? id2
+        image2'   @=? image2
+
+-- | Tests the selectImages function with an empty expression.
 selectImagesTest :: Test
 selectImagesTest = testDatabase $ do
-    noResults <- selectImages
+    noResults <- selectImages []
 
     id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 [])
     id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 [])
@@ -116,13 +161,13 @@ selectImagesTest = testDatabase $ do
     (Just image1) <- selectImage id1
     (Just image2) <- selectImage id2
     (Just image3) <- selectImage id3
-    allImages     <- selectImages
+    allImages     <- selectImages []
     
     lift $ do
         noResults @=? []
         allImages @=? [image3, image2, image1]
 
--- | Tests the selectImagesByExpression function.
+-- | Tests the selectImages function with a non-empty expression.
 selectImagesByExpressionTest :: Test
 selectImagesByExpressionTest = testDatabase $ do
     id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 [])
@@ -147,14 +192,14 @@ selectImagesByExpressionTest = testDatabase $ do
         expr6 = parse "test, -hello"
         expr7 = parse "random"
         
-    results1 <- selectImagesByExpression expr1
-    results2 <- selectImagesByExpression expr2
-    results3 <- selectImagesByExpression expr3
-    results4 <- selectImagesByExpression expr4
-    results5 <- selectImagesByExpression expr5
-    results6 <- selectImagesByExpression expr6
-    results7 <- selectImagesByExpression expr7
-    results8 <- selectImagesByExpression []
+    results1 <- selectImages expr1
+    results2 <- selectImages expr2
+    results3 <- selectImages expr3
+    results4 <- selectImages expr4
+    results5 <- selectImages expr5
+    results6 <- selectImages expr6
+    results7 <- selectImages expr7
+    results8 <- selectImages []
     
     lift $ do
         results1 @=? [image3, image2, image1]
@@ -300,25 +345,6 @@ attachTagsTest = testDatabase $ do
         name2          @=? "test2"
         name3          @=? "test3"
         null noResults @=? True
-
--- | Tests the clearTags function.
-clearTagsTest :: Test
-clearTagsTest = testDatabase $ do
-    id1 <- insertImage $ Image "" True "" "" 1 1 (time 1) (time 1) 1 []
-    id2 <- insertImage $ Image "" True "" "" 1 1 (time 1) (time 1) 1 []
-    
-    attachTags ["test1", "test2", "test3"] id1
-    attachTags ["test1", "test2", "test3"] id2
-    
-    clearTags id2
-    clearTags 999 -- nothing should happen
-    
-    results1 <- selectTagsByImage id1
-    results2 <- selectTagsByImage id2
-    
-    lift $ do 
-        length results1 @=? 3
-        length results2 @=? 0
 
 ----------------------------------------------------------------------- Utility
 
