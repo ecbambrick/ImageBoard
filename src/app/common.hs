@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE UndecidableInstances       #-}
@@ -8,14 +6,10 @@
 module App.Common where
 
 import App.Config               ( Config(..), loadConfig )
-import App.Expression           ( Expression )
-import Control.Monad.Reader     ( MonadReader, ReaderT, ask, asks, local
-                                , runReaderT )
-import Control.Monad.Trans      ( MonadIO, lift, liftIO )
-import Data.Int                 ( Int64 )
+import Control.Monad.Reader     ( MonadReader, ReaderT, ask, asks, local, runReaderT )
+import Control.Monad.Trans      ( MonadIO, lift )
 import Data.Time                ( UTCTime )
-import Database.SQLite.Simple   ( Connection, execute_, withConnection
-                                , withTransaction )
+import Database.Engine          ( Transaction, runDatabase )
 import Web.Spock                ( SpockT, ActionT, runSpock, spockT )
 
 ----------------------------------------------------------------------- Control
@@ -28,39 +22,20 @@ instance (MonadReader r m) => MonadReader r (ActionT m) where
     ask       = lift ask
     local f m = runReaderT (lift m) . f =<< ask
 
--- | Database transaction monad which allows access to an open database 
--- | connection.
-type Transaction = ReaderT Connection IO
-
--- | Runs a transaction with the database connection string defined by the
--- | application's configuration settings.
-runDB :: (MonadIO m, MonadReader Config m) => Transaction a -> m a
-runDB f = do
-    db <- asks configDatabaseConnection
-    liftIO $ withConnection db $ \conn -> do
-        withTransaction conn $ do
-            execute_ conn "PRAGMA foreign_keys = ON;"
-            runReaderT f conn
-
 -- | Runs the application with the settings from the config file.
 runApplication :: SpockT (ReaderT Config IO) () -> IO ()
 runApplication routes = do
     config <- loadConfig
     runSpock (configPort config) $ spockT (flip runReaderT config) routes
 
+-- | Run a database transaction using the connection string in the application 
+-- | config.
+runDB :: Transaction a -> App a
+runDB command = do
+    db <- asks configDatabaseConnection
+    runDatabase db command
+
 -------------------------------------------------------------------------- Data
-
--- | The primary key of a database entity.
-type ID = Int64
-
--- | A database entity with an ID.
-data Entity a = Entity 
-    { entityID   :: ID 
-    , entityData :: a 
-    } deriving (Eq, Show)
-
-instance Functor Entity where
-    fmap f (Entity id x) = Entity id (f x)
 
 -- | A tag can be attached to an image as additional meta data. An ID of 
 -- | nothing indicates a tag that has not yet been persisted.
@@ -90,7 +65,3 @@ data Image = Image
 (<$$>) = fmap . fmap
 
 infixl 5 <$$>
-
--- | Returns the enclosed value from an entity.
-fromEntity :: Entity a -> a
-fromEntity (Entity _ x) = x

@@ -1,31 +1,32 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE LambdaCase        #-}
 
 module App.DataSource.SQLite
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
-    , selectImagesByExpression, selectNextImage, selectPreviousImage, selectTags
-    , selectTagsByImage, updateImage, attachTags, clearTags, cleanTags ) where
+    , selectNextImage, selectPreviousImage, selectTags, selectTagsByImage
+    , updateImage, attachTags, cleanTags ) where
+
+import qualified Database.Engine as SQL
                                 
-import App.Common               ( Entity(..), Image(..), Tag(..)
-                                , Transaction(..), ID, App, (<$$>), fromEntity )
-import App.Config               ( Config(..) )
-import App.Expression           ( Token(..), Expression )
-import Control.Applicative      ( (<$>), (<*>), pure )
-import Control.Monad            ( when )
-import Control.Monad.Trans      ( lift )
-import Control.Monad.Reader     ( ask, runReaderT, ReaderT )
-import Data.Int                 ( Int64 )
-import Data.List                ( intercalate )
-import Data.Maybe               ( listToMaybe )
-import Data.Text                ( pack )
-import Data.Textual             ( toLower, trim, replace )
-import Data.Time.Extended       ( fromSeconds, toSeconds )
-import Database.SQLite.Simple   ( FromRow(..), Query(..), Connection
-                                , lastInsertRowId, execute, execute_, field
-                                , query, query_, withConnection
-                                , withTransaction )
-import Foreign.Marshal.Utils    ( toBool, fromBool )
+import App.Common           ( Image(..), Tag(..), (<$$>) )
+import App.Expression       ( Token(..), Expression )
+import Control.Applicative  ( (<$>), (<*>), pure )
+import Control.Monad        ( forM_, void )
+import Data.Int             ( Int64 )
+import Data.Maybe           ( isJust )
+import Data.Textual         ( toLower, trim, replace )
+import Data.Time.Extended   ( fromSeconds, toSeconds )
+import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
+                            , fromEntity, fromRow, field )
+import Database.Query       ( OrderBy(..), Table, Query, (.=), (.&), (~%), (.>)
+                            , (.<), (*=), (<<), asc, clearOrder, desc, exists
+                            , from, nay, on, retrieve, wherever )
+
+------------------------------------------------------------------------- Types
+
+-- | The direction to use when selecting an adjacent entity in the database.
+data Direction = Next | Prev
 
 --------------------------------------------------------------------- Instances
 
@@ -40,298 +41,226 @@ instance FromRow (Entity Tag) where
         entity <- Entity <$> field
         tag    <- Tag    <$> field
 
-        return $ entity tag
+        return (entity tag)
 
 instance FromRow (Entity Image) where
     fromRow = do
         entity <- Entity <$> field
         image  <- Image  <$> field      <*> bool field <*> field
                          <*> field      <*> field      <*> field
-                         <*> time field <*> time field <*> field <*> pure []
+                         <*> time field <*> time field <*> field 
+                         <*> pure []
                          
-        return $ entity image
+        return (entity image)
         
-        where
-            intToBool :: Int -> Bool
-            intToBool = toBool
-            bool = fmap intToBool
-            time = fmap fromSeconds
+        where bool = fmap toBool
+              time = fmap fromSeconds
 
 ------------------------------------------------------------------------ Images
 
 -- | Deletes the image with the given ID.
 deleteImage :: ID -> Transaction ()
-deleteImage id = do
-    conn <- ask
-    lift $ execute conn command [id]
-    where command = "DELETE FROM post WHERE id = ?"
+deleteImage id = SQL.delete "post" ("id" *= id)
 
 -- | Inserts a new image into the database and returns its ID.
 insertImage :: Image -> Transaction ID
-insertImage image = do
-    conn <- ask
-    
-    let title       =             imageTitle        image
-        hash        =             imageHash         image
-        ext         =             imageExtension    image
-        width       =             imageWidth        image
-        height      =             imageHeight       image
-        size        =             imageFileSize     image
-        created     = toSeconds $ imageCreated      image
-        modified    = toSeconds $ imageModified     image
-        isFavourite = fromBool  $ imageIsFavourite  image :: Int
-    
-    lift $ do
-        execute conn postCommand (title, isFavourite, created, modified)
-        postID <- lastInsertRowId conn
-        execute conn imageCommand (postID, hash, width, height, size, ext)
-        return postID
+insertImage Image {..} = do
+    postID <- SQL.insert "post"
+        [ "title"        << imageTitle
+        , "created"      << toSeconds imageCreated
+        , "modified"     << toSeconds imageModified
+        , "is_favourite" << fromBool imageIsFavourite ]
         
-    where
-        postCommand  = "INSERT INTO post \
-                       \(title, is_favourite, created, modified) \
-                       \VALUES (?, ?, ?, ?);"
+    SQL.insert "image"
+        [ "post_id"      << postID
+        , "hash"         << imageHash
+        , "width"        << imageWidth
+        , "height"       << imageHeight
+        , "file_size"    << imageFileSize
+        , "extension"    << imageExtension ]
 
-        imageCommand = "INSERT INTO image \
-                       \(post_id, hash, width, height, file_size, extension) \
-                       \VALUES (?, ?, ?, ?, ?, ?);"
+    return postID
 
 -- | Returns the image from the database with the given ID. If no image exists,
 -- | nothing is returned.
 selectImage :: ID -> Transaction (Maybe (Entity Image))
 selectImage id = do
-    conn  <- ask
-    image <- lift $ listToMaybe <$> query conn command [id]
-    
-    case image of
+    results <- SQL.single (images >>= wherever . ("id" *= id))
+
+    case results of
         Nothing    -> return Nothing
         Just image -> Just <$> withTags image
-    
-    where command = "SELECT p.id, p.title, p.is_favourite, i.hash, \
-                    \i.extension, i.width, i.height, p.created, p.modified, \
-                    \i.file_size \
-                    \FROM post p \
-                    \INNER JOIN image i ON i.post_id = p.id \
-                    \WHERE i.id = ?;"
 
--- | Returns a list of all images from the database.
-selectImages :: Transaction [Entity Image]
-selectImages = do
-    conn   <- ask
-    images <- lift $ query_ conn command
-
-    sequence (withTags <$> images)
-    
-    where command = "SELECT p.id, p.title, p.is_favourite, i.hash, \
-                    \i.extension, i.width, i.height, p.created, p.modified, \
-                    \i.file_size \
-                    \FROM post p \
-                    \INNER JOIN image i ON i.post_id = p.id \
-                    \ORDER BY p.created DESC;"
-
--- | Returns a list of all images from the database with tags that satisfy the
--- | given expression.
-selectImagesByExpression :: Expression -> Transaction [Entity Image]
-selectImagesByExpression expr = do
-    conn   <- ask
-    images <- lift $ query_ conn (Query $ pack command)
-    
-    sequence (withTags <$> images)
-    
-    where command = "SELECT DISTINCT p.id, p.title, p.is_favourite, i.hash, \
-                    \i.extension, i.width, i.height, p.created, p.modified, \
-                    \i.file_size \
-                    \FROM post p \
-                    \INNER JOIN image i ON i.post_id = p.id "
-                    ++ generateWhere expr ++
-                    "ORDER BY p.created DESC;"
+-- | Gets a list of images from the database. If a non-empty expression is
+-- | passed in, only images that satisfy the expression will be returned.
+selectImages :: Expression -> Transaction [Entity Image]
+selectImages expression = do
+    results <- SQL.query (images >>= satisfying expression)
+    sequence (withTags <$> results)
 
 -- | Returns whether or not an image already exists with the given hash.
 selectHashExists :: String -> Transaction Bool
 selectHashExists hash = do
-    conn <- ask
-    [results] <- lift $ query conn command [hash] :: Transaction [Int]
-    return (results > 0)
-    where command = "SELECT COUNT(*) FROM image WHERE hash = ?"
+    results <- SQL.single $ do
+        i <- from "image"
+        wherever (i "hash" .= hash)
+        retrieve [i "id"]
+        :: Transaction (Maybe Int)
+    
+    return (isJust results)
 
+-- | Returns the image from the database ordered after the image with the 
+-- | given ID. If no image exists, nothing is returned.
 selectNextImage :: ID -> Transaction (Maybe (Entity Image))
-selectNextImage id = do
-    conn     <- ask
-    modified <- lift $ listToMaybe <$> query conn command0 [id] :: Transaction (Maybe Int)
-    
-    case modified of 
-        Nothing -> return Nothing
-        Just m  -> do
-            nextImage  <- lift $ listToMaybe <$> query  conn command1 [m]
-            firstImage <- lift $ listToMaybe <$> query_ conn command2
-            
-            case (nextImage, firstImage) of
-                (Just image, _) -> Just <$> withTags image
-                (_, Just image) -> Just <$> withTags image
-                (_, _)          -> return Nothing
-    
-    where
-    
-        command0 = "SELECT modified FROM post WHERE id = ?"
-        
-        command1 = "SELECT p.id, p.title, p.is_favourite, i.hash, \
-                   \i.extension, i.width, i.height, p.created, p.modified, \
-                   \i.file_size \
-                   \FROM post p \
-                   \INNER JOIN image i ON i.post_id = p.id \
-                   \WHERE p.modified < ? \
-                   \ORDER BY p.modified DESC \
-                   \LIMIT 1;"
-                   
-        command2 = "SELECT p.id, p.title, p.is_favourite, i.hash, \
-                   \i.extension, i.width, i.height, p.created, p.modified, \
-                   \i.file_size \
-                   \FROM post p \
-                   \INNER JOIN image i ON i.post_id = p.id \
-                   \ORDER BY p.modified DESC \
-                   \LIMIT 1;"
+selectNextImage = selectAdjacentImage Next
 
+-- | Returns the image from the database ordered before the image with the 
+-- | given ID. If no image exists, nothing is returned.
 selectPreviousImage :: ID -> Transaction (Maybe (Entity Image))
-selectPreviousImage id = do
-    conn     <- ask
-    modified <- lift $ listToMaybe <$> query conn command0 [id] :: Transaction (Maybe Int)
-    
-    case modified of 
-        Nothing -> return Nothing
-        Just m  -> do
-            nextImage  <- lift $ listToMaybe <$> query  conn command1 [m]
-            firstImage <- lift $ listToMaybe <$> query_ conn command2
-            
-            case (nextImage, firstImage) of
-                (Just image, _) -> Just <$> withTags image
-                (_, Just image) -> Just <$> withTags image
-                (_, _)          -> return Nothing
-    
-    where
-    
-        command0 = "SELECT modified FROM post WHERE id = ?"
-        
-        command1 = "SELECT p.id, p.title, p.is_favourite, i.hash, \
-                   \i.extension, i.width, i.height, p.created, p.modified, \
-                   \i.file_size \
-                   \FROM post p \
-                   \INNER JOIN image i ON i.post_id = p.id \
-                   \WHERE p.modified > ? \
-                   \ORDER BY p.modified ASC \
-                   \LIMIT 1;"
-                   
-        command2 = "SELECT p.id, p.title, p.is_favourite, i.hash, \
-                   \i.extension, i.width, i.height, p.created, p.modified, \
-                   \i.file_size \
-                   \FROM post p \
-                   \INNER JOIN image i ON i.post_id = p.id \
-                   \ORDER BY p.modified ASC \
-                   \LIMIT 1;"
+selectPreviousImage = selectAdjacentImage Prev
 
 -- | Updates the image in the database.
 updateImage :: Entity Image -> Transaction ()
-updateImage (Entity id image) = do
-    conn <- ask
-    
-    let title       =             imageTitle       image
-        size        =             imageFileSize    image
-        modified    = toSeconds $ imageModified    image
-        isFavourite = fromBool  $ imageIsFavourite image :: Int
-    
-    lift $ execute conn command (title, isFavourite, modified, id)
-    
-    where command = "UPDATE post SET \
-                    \title = ?, \
-                    \is_favourite = ?, \
-                    \modified = ? \
-                    \WHERE id = ?;"
+updateImage (Entity id (Image {..})) = SQL.update "post" ("id" *= id)
+    [ "title"        << imageTitle
+    , "is_favourite" << imageIsFavourite
+    , "modified"     << toSeconds imageModified ]
 
 -------------------------------------------------------------------------- Tags
 
 -- | Returns a list of all tags from the database.
 selectTags :: Transaction [Entity Tag]
-selectTags = do
-    conn <- ask
-    lift $ query_ conn command
-    where command = "SELECT id, name FROM tag ORDER BY name;"
+selectTags = SQL.query tags
 
--- | Returns a list of all tags associated to the image with the given ID.
+-- | Returns a list of all tags attached to the image with the given ID.
 selectTagsByImage :: ID -> Transaction [Entity Tag]
-selectTagsByImage id = do
-    conn <- ask
-    lift $ query conn command [id]
-    where command = "SELECT t.id, t.name \
-                    \FROM tag t \
-                    \INNER JOIN post_tag pt ON pt.tag_id = t.id \
-                    \WHERE pt.post_id = ? \
-                    \ORDER BY name;"
+selectTagsByImage postID = SQL.query $ do
+    t  <- tags
+    pt <- from "post_tag" `on` ("tag_id" *= t "id")
+    wherever (pt "post_id" .= postID)
 
--- | Deletes all tags from the database that are not associated to any image.
+-- | Deletes all tags from the database that are not attached to any image.
 cleanTags :: Transaction ()
 cleanTags = do
-    conn <- ask
-    lift $ do
-        orphanTags <- query_ conn (Query $ pack command1) :: IO [ID]
-        mapM_ (\x -> execute conn command2 [x]) orphanTags
-    where
-        command1 = "SELECT id FROM tag WHERE NOT EXISTS (" ++ subquery ++ ");"
-        subquery = "SELECT * FROM post_tag WHERE tag_id = tag.id"
-        command2 = "DELETE FROM tag WHERE id = ?;"
+    orphanTags <- SQL.query $ do
+        t <- from "tag"
+        retrieve [ t "id" ]
+        wherever $ nay $ exists $ do
+            pt <- from "post_tag"
+            wherever (pt "tag_id" .= t "id") 
+        :: Transaction [ID]
+    
+    forM_ orphanTags $ \id -> 
+        SQL.delete "tag" ("id" *= id)
 
 ----------------------------------------------------------------- Relationships
 
+-- | Associates the image with the given ID with the tag with the given name. 
+-- | If the tag does not eixst, it is created.
+attachTag :: ID -> String -> Transaction ()
+attachTag postID tagName = do
+    tagID <- SQL.single $ do
+        t <- from "tag"
+        wherever (t "name" .= tagName)
+        retrieve [t "id"]
+    
+    tagID' <- case tagID of
+        Nothing -> SQL.insert "tag" [ "name" << tagName ]
+        Just id -> return id
+    
+    void $ SQL.insert "post_tag"
+        [ "post_id" << postID
+        , "tag_id"  << tagID' ]
+
 -- | Associates the image with the given ID with all tags that map to the given
--- | list of names. If any tag does not eixsts, it is added to the database.
+-- | list of names. If any tag does not eixsts, it is created.
 attachTags :: [String] -> ID -> Transaction ()
-attachTags tags postID = do
-    conn <- ask
-    mapM_ (attachTag conn postID) tags
-    where 
-        attachTag conn postID name = lift $ do
-            postExists <- not . null <$> getPost conn
-            when postExists $ do
-                tagID <- getTagID conn name
-                case tagID of
-                    Nothing -> insert conn name >>= attach conn postID
-                    Just id -> attach conn postID id
-        attach c a b = execute c attachCmd (a, b)
-        getTagID c a = listToMaybe <$> query c selectCmd [a] :: IO (Maybe ID)
-        getPost c    = query c getPstCmd [postID] :: IO [ID]
-        insert c a   = execute c insertCmd [a] >> lastInsertRowId c
-        selectCmd    = "SELECT id FROM tag WHERE name = ?;"
-        insertCmd    = "INSERT INTO tag (name) VALUES (?);"
-        attachCmd    = "INSERT INTO post_tag (post_id, tag_id) VALUES (?, ?);"
-        getPstCmd    = "SELECT id FROM post WHERE id = ?;"
+attachTags tagNames postID = mapM_ (attachTag postID) tagNames
 
--- | Disassociates all tags from the image with the given ID.
-clearTags :: ID -> Transaction ()
-clearTags id = do
-    conn <- ask
-    lift $ execute conn deleteCmd [id]
-    where deleteCmd = "DELETE FROM post_tag WHERE post_id = ?;"
+------------------------------------------------------------------ Query pieces
 
------------------------------------------------------------------------ Utility
+-- | Selects images from the database.
+images :: Query Table
+images = do
+    p <- from "post"
+    i <- from "image" `on` ("post_id" *= p "id")
+    desc (p "created")
+    retrieve [ p "id", p "title", p "is_favourite", i "hash", i "extension"
+             , i "width", i "height", p "created", p "modified", i "file_size" ]
+    return p
 
--- | Converts the given expression to a SQL where clause.
-generateWhere :: Expression -> String
-generateWhere []   = ""
-generateWhere expr = "WHERE " ++ intercalate " AND " (map tagLike expr) ++ " "
-    where
-        tagLike = \case
-            Included x ->     "EXISTS (" ++ findTag (escape x) ++ ")"
-            Excluded x -> "NOT EXISTS (" ++ findTag (escape x) ++ ")"
-        escape = toLower . trim
-                         . replace "%" "\\%" 
-                         . replace "_" "\\_" 
-                         . replace "'" "''"       
-        findTag x = "SELECT 1 \
-                    \FROM post_tag pt \
-                    \INNER JOIN tag t \
-                    \ON pt.tag_id = t.id AND pt.post_id = p.id \
-                    \WHERE t.name LIKE '" ++ x ++ "%' ESCAPE '\\'"
+-- | Selects tags from the database.
+tags :: Query Table
+tags = do
+    t <- from "tag"
+    asc (t "name")
+    retrieve [t "id", t "name"]
+    return t
+
+-- | Returns a query filter that limits the results such that only results that
+-- | satisfy the given expression are returned.
+satisfying :: Expression -> Table -> Query ()
+satisfying [] _         = return ()
+satisfying expression p = forM_ expression $ \case
+    Included token -> wherever $       exists $ query (escape token)
+    Excluded token -> wherever $ nay . exists $ query (escape token)
+    
+    where escape  = toLower . trim
+          query x = do
+              pt <- from "post_tag"
+              t  <- from "tag" `on` (\t -> t "id" .= pt "tag_id" .& p "id" .= pt "post_id")
+              wherever (t "name" ~% x)
 
 -- | Adds the list of tag names to the given image entity.
 withTags :: Entity Image -> Transaction (Entity Image)
 withTags (Entity id image) = do
     tagNames <- tagName . fromEntity <$$> selectTagsByImage id
     return (Entity id image { imageTagNames = tagNames })
+
+-- | Selects the image adjacent to the image with the given ID in the given 
+-- | direction. If there is no next/previous image, then the very first or last
+-- | image is returned instead. If the image with the given ID does not exist,
+-- | nothing is returned.
+selectAdjacentImage :: Direction -> ID -> Transaction (Maybe (Entity Image))
+selectAdjacentImage dir id = do
+    let (operator, ordering) = case dir of 
+            Next -> ((.<), desc)
+            Prev -> ((.>), asc )
+                    
+    modified <- SQL.single $ do
+        p <- from "post"
+        wherever (p "id" .= id)
+        retrieve [p "modified"] 
+        :: Transaction (Maybe Int)
+        
+    nextImage <- case modified of
+        Nothing -> return Nothing
+        Just m  -> SQL.single $ do
+            p <- images
+            clearOrder
+            wherever (p "modified" `operator` m)
+            ordering (p "modified")
+        
+    firstImage <- case modified of
+        Nothing -> return Nothing
+        Just m  -> SQL.single $ do
+            p <- images 
+            clearOrder
+            ordering (p "modified")
+    
+    case (nextImage, firstImage) of
+        (Just image, _) -> Just <$> withTags image
+        (_, Just image) -> Just <$> withTags image
+        (_, _         ) -> return Nothing
+
+----------------------------------------------------------------------- Utility
+
+-- | Converts an integer to a boolean.
+toBool :: Int -> Bool
+toBool 0 = False
+toBool _ = True
+
+-- | Converts a boolean to an integer.
+fromBool :: Bool -> Int
+fromBool False = 0
+fromBool True  = 1
