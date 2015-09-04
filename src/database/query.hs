@@ -87,8 +87,8 @@ instance ToValue Bool    where toValue = SQLBool
 
 -- | Selects from the table with the given name and returns a function to map
 -- | the table to column names.
-table :: String -> Query Table
-table = state . addTable
+from :: String -> Query Table
+from = state . addTable
 
 -- | Joins the given table based on the given filter and then returns the first 
 -- | argument.
