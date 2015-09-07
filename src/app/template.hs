@@ -19,6 +19,7 @@ import Text.Hastache.Context    ( mkGenericContext )
 -- | The context data required for an image.
 data ImageContext = ImageContext
     { identifier :: ID
+    , hasTags    :: Bool
     , path       :: String
     , thumb      :: String
     , tagNames   :: [String]
@@ -30,7 +31,8 @@ toImageContext (Entity id image) = ImageContext
     { identifier = id
     , path       = imageURL image
     , thumb      = thumbURL image
-    , tagNames   = imageTagNames image }
+    , tagNames   = imageTagNames image
+    , hasTags    = not $ null $ imageTagNames image }
 
 -- | The context data required for the image page.
 data ImageSetContext = ImageSetContext
