@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <head>
-    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
     <title>Image Board</title>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
 </head>
 <body>
-    <div style="height: 24px;">
-        <div style="float: left">
-            <form name="search" action="search" method="get">
-                <input type="text" name="q" value="{{query}}" />
-                <button type="submit">Search</button>
-            </form>
+    <div class="content">
+        <div class="header">
+            <div class="left">
+                <form name="search" action="search" method="get">
+                    <input type="text" name="q" value="{{query}}" />
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+            <div class="right">
+                <form name="upload" action="upload" method="post" enctype="multipart/form-data">
+                    <input type="file" name="uploadedFile" />
+                    <input type="text" autocomplete=off name="tags" />
+                    <button type="submit">Upload</button>
+                </form>
+            </div>
         </div>
-        <div style="float: right">
-            <form name="upload" action="upload" method="post" enctype="multipart/form-data">
-                <input type="file" name="uploadedFile" />
-                <input type="text" autocomplete=off name="tags" />
-                <button type="submit">Upload</button>
-            </form>
+        <div class="gallery">
+            {{#images}}
+            <a href="/image/{{identifier}}">
+                <img src="{{thumb}}" />
+            </a>
+            {{/images}}
         </div>
     </div>
-    <hr style="clear: both"/>
-    {{#images}}
-    <a href="/image/{{identifier}}">
-        <img src="{{thumb}}" />
-    </a>
-    {{/images}}
 </body>

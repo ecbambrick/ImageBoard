@@ -33,6 +33,12 @@ main = runApplication $ do
         , isNotAbsolute 
         , hasPrefix "thumbs" <|> hasPrefix "images"
         , addBase storagePath ]
+        
+    -- Enables access to other static content such as javascript and css files.
+    middleware $ staticPolicy $ mconcat
+        [ noDots 
+        , isNotAbsolute 
+        , hasPrefix "static" ]
     
     -- Upload an image along with its tags.
     post "upload" $ do

@@ -1,0 +1,50 @@
+a {
+    text-decoration: none;
+}
+
+body {
+    background-color: #222;
+    color: #ddd;
+    font-family: "Century Gothic", Helvetica, sans-serif;
+    margin: 32px;
+}
+
+div.gallery {
+    clear: both;
+    margin-top: 24px;
+    text-align: center;
+}
+
+div.gallery img {
+    display: inline-block;
+    margin: 5px;
+}
+
+div.header {
+    height: 24px;
+}
+
+div.left {
+    float: left;
+}
+
+div.right {
+    float: right;
+}
+
+img.display {
+    visibility: hidden;
+    float: right;
+}
+
+ul.listBox {
+    background-color: rgba(0, 0, 0, 0.7);
+    float: left;
+    margin: 0px;
+    padding: 20px;
+    z-index: 100;
+}
+
+ul.listBox li {
+    list-style: none;
+}
