@@ -3,30 +3,32 @@ module App.Core.Image
 
 import qualified App.Core.Tag as Tag
 
-import App.Common               ( Tag(..), Image(..), App, runDB )
-import App.Config               ( Config(..) )
-import App.Expression           ( Expression, Token(..) )
-import Database.Engine          ( Entity, ID )
-import App.DataSource.SQLite    ( attachTags, insertImage, selectHashExists
-                                , selectImage, selectImages, selectNextImage
-                                , selectPreviousImage )
-import App.Paths                ( absoluteImagePath, absoluteThumbPath )
-import App.Validation           ( Property(..), Validation(..), isFalse
-                                , isPositive, isValidImageFileType, isValid )
-import Control.Monad            ( when )
-import Control.Monad.Trans      ( liftIO )
-import Control.Monad.Reader     ( asks )
-import Data.Functor             ( (<$>) )
-import Data.List                ( nub )
-import Data.Monoid              ( (<>), mconcat )
-import Data.Textual             ( strip, toLower )
-import Data.Time                ( getCurrentTime )
-import System.Directory         ( copyFile, createDirectoryIfMissing )
-import System.FilePath          ( takeBaseName, takeDirectory, takeExtension
-                                , replaceExtension )
-import System.IO.Metadata       ( getHash, getDimensions, getSize )
-import System.Process           ( runCommand, waitForProcess )
-import Text.Printf              ( printf )
+import App.Common           ( Tag(..), Image(..), App, runDB )
+import App.Config           ( Config(..) )
+import App.Expression       ( Expression, Token(..) )
+import App.Database         ( attachTags, insertImage, selectHashExists
+                            , selectImage, selectImages, selectNextImage
+                            , selectPreviousImage )
+import App.Paths            ( absoluteImagePath, absoluteThumbPath )
+import App.Validation       ( Property(..), Validation(..), isFalse, isPositive
+                            , isValidImageFileType, isValid )
+import Control.Monad        ( when )
+import Control.Monad.Trans  ( liftIO )
+import Control.Monad.Reader ( asks )
+import Data.Functor         ( (<$>) )
+import Data.List            ( nub )
+import Data.Monoid          ( (<>), mconcat )
+import Data.Textual         ( strip, toLower )
+import Data.Time            ( getCurrentTime )
+import Database.Engine      ( Entity, ID )
+import System.Directory     ( copyFile, createDirectoryIfMissing )
+import System.FilePath      ( takeBaseName, takeDirectory, takeExtension
+                            , replaceExtension )
+import System.IO.Metadata   ( getHash, getDimensions, getSize )
+import System.Process       ( runCommand, waitForProcess )
+import Text.Printf          ( printf )
+
+-------------------------------------------------------------------------- CRUD
 
 -- | Returns the list of all image entities.
 getAll :: App [Entity Image]

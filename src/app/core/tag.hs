@@ -1,9 +1,9 @@
 module App.Core.Tag where
 
-import App.Common            ( Tag(..), App, runDB )
-import App.Validation        ( Property(..), Validation, isValidTag )
-import App.DataSource.SQLite ( selectTags )
-import Database.Engine       ( Entity )
+import App.Common       ( Tag(..), App, runDB )
+import App.Validation   ( Property(..), Validation, isValidTag )
+import App.Database     ( selectTags )
+import Database.Engine  ( Entity )
 
 -- | Returns the list of all tag entities.
 get :: App [Entity Tag]

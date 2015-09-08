@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE LambdaCase        #-}
 
-module App.DataSource.SQLite
+module App.Database
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
     , selectNextImage, selectPreviousImage, selectTags, selectTagsByImage
     , updateImage, attachTags, cleanTags ) where
