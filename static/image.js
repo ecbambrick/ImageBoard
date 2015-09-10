@@ -13,26 +13,30 @@ Image.resize = (imageId, tagsId) => () => {
     let h         = window.innerHeight - margins.vertical;
     let w         = window.innerWidth - (margins.horizontal * x + tagsWidth);
     let ratio     = Math.min(h / image.naturalHeight, w / image.naturalWidth);
-        
+    
+    if (ratio > 1) ratio = 1;
+    
     image.style.width = image.naturalWidth * ratio + "px";
-    image.style.visibility = "visible";
+    image.style.display = "initial";
 }
 
 // Returns a function that will take a keyboard event and navigate to another 
 // page based on keyboard input.
-Image.navigate = (previousID, nextID) => e => {
+Image.navigate = (previousID, nextID, query) => e => {
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
+    let noQuery = query.length === 0;
+    let q = noQuery ? "" : "?q=" + query;
     
     // shift + space
     if (e.shiftKey && e.keyCode === 32) {
-        window.location.href = "/image/" + previousID;
+        window.location.href = "/image/" + previousID + q;
     
     // space
     } else if (!modifiers && e.keyCode === 32) {
-        window.location.href = "/image/" + nextID;
+        window.location.href = "/image/" + nextID + q;
     
     // escape
     } else if (!modifiers && e.keyCode === 27) {
-        window.location.href = "/";
+        window.location.href = noQuery ? "/" : "/search" + q;
     }
 }

@@ -8,12 +8,13 @@
     <script type="application/javascript;version=1.7">
         let prev  = {{previous.identifier}};
         let next  = {{next.identifier}};
+        let query = "{{setQuery}}";
         let image = "image";
         let tags  = "tags";
 
-        window.addEventListener("load",   Image.resize(image, tags),   false);
-        window.addEventListener("resize", Image.resize(image, tags),   false);
-        window.addEventListener("keyup",  Image.navigate(prev, next),  false);
+        window.addEventListener("load",   Image.resize(image, tags),         false);
+        window.addEventListener("resize", Image.resize(image, tags),         false);
+        window.addEventListener("keyup",  Image.navigate(prev, next, query), false);
     </script>
 </head>
 <body>

@@ -23,7 +23,7 @@
         </div>
         <div class="gallery">
             {{#images}}
-            <a href="/image/{{identifier}}">
+            <a href="/image/{{identifier}}{{#isQuery}}?q={{query}}{{/isQuery}}">
                 <img src="{{thumb}}" />
             </a>
             {{/images}}

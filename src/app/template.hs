@@ -39,26 +39,30 @@ data ImageSetContext = ImageSetContext
     { main     :: ImageContext
     , previous :: ImageContext
     , next     :: ImageContext
+    , setQuery :: String
     } deriving (Data, Typeable)
 
 -- | Returns the image set context for the given set of three images.
-toImageSetContext :: Entity Image -> Entity Image -> Entity Image -> ImageSetContext
-toImageSetContext image1 image2 image3 = ImageSetContext
+toImageSetContext :: String -> Entity Image -> Entity Image -> Entity Image -> ImageSetContext
+toImageSetContext query image1 image2 image3 = ImageSetContext
     { main     = toImageContext image1
     , previous = toImageContext image2
-    , next     = toImageContext image3 }
+    , next     = toImageContext image3
+    , setQuery = query }
     
 -- | The context data required for the index.
 data IndexContext = IndexContext
-    { query  :: String
-    , images :: [ImageContext]
+    { query   :: String
+    , isQuery :: Bool
+    , images  :: [ImageContext]
     } deriving (Data, Typeable)
 
 -- | Returns the index context data for the given query and list of images.
 toIndexContext :: String -> [Entity Image] -> IndexContext
 toIndexContext query images = IndexContext
-    { query  = query
-    , images = fmap toImageContext images }
+    { query   = query
+    , isQuery = not (null query)
+    , images  = fmap toImageContext images }
 
 --------------------------------------------------------------------- Rendering
 

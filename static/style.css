@@ -33,7 +33,7 @@ div.right {
 }
 
 img.display {
-    visibility: hidden;
+    display: none;
     float: right;
 }
 

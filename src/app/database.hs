@@ -98,6 +98,23 @@ selectImages expression = do
     results <- SQL.query (images >>= satisfying expression)
     sequence (withTags <$> results)
 
+-- | Returns the image from the database ordered after the image with the 
+-- | given ID. If no image exists, nothing is returned.
+selectNextImage :: ID -> Expression -> Transaction (Maybe (Entity Image))
+selectNextImage = selectAdjacentImage Next
+
+-- | Returns the image from the database ordered before the image with the 
+-- | given ID. If no image exists, nothing is returned.
+selectPreviousImage :: ID -> Expression -> Transaction (Maybe (Entity Image))
+selectPreviousImage = selectAdjacentImage Prev
+
+-- | Updates the image in the database.
+updateImage :: Entity Image -> Transaction ()
+updateImage (Entity id (Image {..})) = SQL.update "post" ("id" *= id)
+    [ "title"        << imageTitle
+    , "is_favourite" << imageIsFavourite
+    , "modified"     << toSeconds imageModified ]
+
 -- | Returns whether or not an image already exists with the given hash.
 selectHashExists :: String -> Transaction Bool
 selectHashExists hash = do
@@ -108,23 +125,6 @@ selectHashExists hash = do
         :: Transaction (Maybe Int)
     
     return (isJust results)
-
--- | Returns the image from the database ordered after the image with the 
--- | given ID. If no image exists, nothing is returned.
-selectNextImage :: ID -> Transaction (Maybe (Entity Image))
-selectNextImage = selectAdjacentImage Next
-
--- | Returns the image from the database ordered before the image with the 
--- | given ID. If no image exists, nothing is returned.
-selectPreviousImage :: ID -> Transaction (Maybe (Entity Image))
-selectPreviousImage = selectAdjacentImage Prev
-
--- | Updates the image in the database.
-updateImage :: Entity Image -> Transaction ()
-updateImage (Entity id (Image {..})) = SQL.update "post" ("id" *= id)
-    [ "title"        << imageTitle
-    , "is_favourite" << imageIsFavourite
-    , "modified"     << toSeconds imageModified ]
 
 -------------------------------------------------------------------------- Tags
 
@@ -221,8 +221,8 @@ withTags (Entity id image) = do
 -- | direction. If there is no next/previous image, then the very first or last
 -- | image is returned instead. If the image with the given ID does not exist,
 -- | nothing is returned.
-selectAdjacentImage :: Direction -> ID -> Transaction (Maybe (Entity Image))
-selectAdjacentImage dir id = do
+selectAdjacentImage :: Direction -> ID -> Expression -> Transaction (Maybe (Entity Image))
+selectAdjacentImage dir id expression = do
     let (operator, ordering) = case dir of 
             Next -> ((.<), desc)
             Prev -> ((.>), asc )
@@ -237,6 +237,7 @@ selectAdjacentImage dir id = do
         Nothing -> return Nothing
         Just m  -> SQL.single $ do
             p <- images
+            satisfying expression p
             clearOrder
             wherever (p "modified" `operator` m)
             ordering (p "modified")
@@ -245,6 +246,7 @@ selectAdjacentImage dir id = do
         Nothing -> return Nothing
         Just m  -> SQL.single $ do
             p <- images 
+            satisfying expression p
             clearOrder
             ordering (p "modified")
     

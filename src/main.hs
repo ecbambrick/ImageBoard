@@ -8,9 +8,10 @@ import App.Common                    ( (<$$>), runApplication )
 import App.Config                    ( Config(..) )
 import App.Expression                ( Expression(..), parse )
 import App.Validation                ( Validation(..) )
-import Control.Applicative           ( (<$>), (<*>) )
+import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad.Reader          ( asks, local )
 import Control.Monad.Trans           ( lift )
+import Data.Maybe                    ( fromMaybe )
 import Data.Monoid                   ( mconcat )
 import Data.Text                     ( pack )
 import App.Template                  ( render, toIndexContext, toImageContext
@@ -19,8 +20,8 @@ import Data.Textual                  ( splitOn )
 import Network.Wai.Middleware.Static ( (<|>), addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
 import Web.Spock                     ( (<//>), get, html, middleware, text
-                                     , post, redirect, root, var )
-import Web.Spock.Extended            ( getFile, getParam )
+                                     , post, redirect, root, var, param, param' )
+import Web.Spock.Extended            ( getFile )
 
 -- Main.
 main :: IO ()
@@ -43,7 +44,7 @@ main = runApplication $ do
     -- Upload an image along with its tags.
     post "upload" $ do
         (name, _, path) <- getFile "uploadedFile"
-        tags            <- splitOn "," <$> getParam "tags"
+        tags            <- splitOn "," <$> param' "tags"
         results         <- Image.insert path name tags
         
         case results of
@@ -59,7 +60,7 @@ main = runApplication $ do
     
     -- Renders the index page with images that match the query parameter.
     get "search" $ do
-        query   <- getParam "q"
+        query   <- param' "q"
         context <- toIndexContext query <$> Image.getFiltered (parse query)
         results <- render "index" context
         
@@ -67,11 +68,11 @@ main = runApplication $ do
     
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
-        image    <- Image.getSingle   id
-        previous <- Image.getPrevious id
-        next     <- Image.getNext     id
+        query                   <- fromMaybe "" <$> param "q"
+        (previous, image, next) <- Image.getTriple id (parse query)
         
-        let context = toImageSetContext <$> image <*> previous <*> next
+        let context = toImageSetContext <$> pure query <*> image 
+                                        <*> previous   <*> next
         
         case context of
             Nothing      -> redirect "/"

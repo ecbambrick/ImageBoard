@@ -1,5 +1,5 @@
 module App.Core.Image 
-    ( getAll, getFiltered, getSingle, getNext, getPrevious, insert ) where
+    ( getAll, getFiltered, getSingle, getTriple, insert ) where
 
 import qualified App.Core.Tag as Tag
 
@@ -42,15 +42,17 @@ getFiltered = runDB . selectImages
 getSingle :: ID -> App (Maybe (Entity Image))
 getSingle = runDB . selectImage
 
--- | Returns the image following the image with the given ID or nothing if no
--- | images exist.
-getNext :: ID -> App (Maybe (Entity Image))
-getNext = runDB . selectNextImage
+-- | Returns the image with the given ID along with the two adjacent images
+-- | based on the given filter.
+getTriple :: ID -> Expression -> App ( Maybe (Entity Image)
+                                     , Maybe (Entity Image)
+                                     , Maybe (Entity Image) )
+getTriple id expression = runDB $ do
+    main <- selectImage id
+    next <- selectNextImage id expression
+    prev <- selectPreviousImage id expression
 
--- | Returns the image preceeding the image with the given ID or nothing if no
--- | images exist.
-getPrevious :: ID -> App (Maybe (Entity Image))
-getPrevious = runDB . selectPreviousImage
+    return (prev, main, next)
 
 -- | Inserts a new image into the database/filesystem based on the the file 
 -- | with the given path and the given tags. Returns valid if the insertion was

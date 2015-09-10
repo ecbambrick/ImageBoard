@@ -4,7 +4,7 @@ import Data.Functor        ( Functor, (<$>) )
 import Data.HashMap.Strict ( (!) )
 import Data.Text           ( Text, unpack )
 import Control.Monad.Trans ( MonadIO )
-import Web.Spock           ( ActionT, UploadedFile(..), files, param' )
+import Web.Spock           ( ActionT, UploadedFile(..), files )
 
 -- | Get the uploaded file with the given input field name.
 getFile :: (Functor m, MonadIO m) => Text -> ActionT m (String, String, String)
@@ -16,8 +16,3 @@ getFile key = do
         location    = uf_tempLocation uploadedFile
     
     return (name, contentType, location)
-
--- | Read a request param. Spock looks in route captures first, then in POST 
--- | variables and at last in GET variables
-getParam :: (Functor m, MonadIO m) => Text -> ActionT m String
-getParam = fmap unpack . param'
