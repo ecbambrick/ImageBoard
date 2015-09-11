@@ -55,10 +55,10 @@ getTriple id expression = runDB $ do
     return (prev, main, next)
 
 -- | Inserts a new image into the database/filesystem based on the the file 
--- | with the given path and the given tags. Returns valid if the insertion was
--- | sucessful; otherwise invalid.
-insert :: FilePath -> String -> [String] -> App Validation
-insert fromPath fileName tagNames = case fileType of
+-- | with the given path and the given title and tags. Returns valid if the 
+-- | insertion was sucessful; otherwise invalid.
+insert :: FilePath -> String -> String -> [String] -> App Validation
+insert fromPath fileName title tagNames = case fileType of
     Valid     -> insert'
     Invalid e -> return (Invalid e)
     where
@@ -72,8 +72,7 @@ insert fromPath fileName tagNames = case fileType of
             isDuplicate <- runDB  $ selectHashExists hash
             storagePath <- asks   $ configStoragePath
 
-            let title   = takeBaseName fileName
-                tags    = cleanTags tagNames
+            let tags    = cleanTags tagNames
                 image   = Image title False hash ext w h now now size []
                 results = validate image
                           <> isFalse (Property "duplicate" isDuplicate)

@@ -19,6 +19,7 @@ import App.Template                  ( render, toIndexContext, toImageContext
 import Data.Textual                  ( splitOn )
 import Network.Wai.Middleware.Static ( (<|>), addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
+import System.FilePath               ( takeBaseName )
 import Web.Spock                     ( (<//>), get, html, middleware, text
                                      , post, redirect, root, var, param, param' )
 import Web.Spock.Extended            ( getFile )
@@ -45,7 +46,7 @@ main = runApplication $ do
     post "upload" $ do
         (name, _, path) <- getFile "uploadedFile"
         tags            <- splitOn "," <$> param' "tags"
-        results         <- Image.insert path name tags
+        results         <- Image.insert path name (takeBaseName name) tags
         
         case results of
             Valid     -> redirect "/"
