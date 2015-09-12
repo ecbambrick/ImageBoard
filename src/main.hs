@@ -11,7 +11,6 @@ import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad.Reader          ( asks, local )
 import Control.Monad.Trans           ( lift )
-import Data.Maybe                    ( fromMaybe )
 import Data.Monoid                   ( mconcat )
 import Data.Text                     ( pack )
 import App.Template                  ( render, toIndexContext, toImageContext
@@ -22,7 +21,7 @@ import Network.Wai.Middleware.Static ( (<|>), addBase, hasPrefix, isNotAbsolute
 import System.FilePath               ( takeBaseName )
 import Web.Spock                     ( (<//>), get, html, middleware, text
                                      , post, redirect, root, var, param, param' )
-import Web.Spock.Extended            ( getFile )
+import Web.Spock.Extended            ( getFile, optionalParam )
 
 -- Main.
 main :: IO ()
@@ -61,7 +60,7 @@ main = runApplication $ do
     
     -- Renders the index page with images that match the query parameter.
     get "search" $ do
-        query   <- param' "q"
+        query   <- optionalParam "q" ""
         context <- toIndexContext query <$> Image.getFiltered (parse query)
         results <- render "index" context
         
@@ -69,7 +68,7 @@ main = runApplication $ do
     
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
-        query                   <- fromMaybe "" <$> param "q"
+        query                   <- optionalParam "q" ""
         (previous, image, next) <- Image.getTriple id (parse query)
         
         let context = toImageSetContext <$> pure query <*> image 
