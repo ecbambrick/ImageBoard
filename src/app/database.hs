@@ -19,9 +19,9 @@ import Data.Textual         ( toLower, trim, replace )
 import Data.Time.Extended   ( fromSeconds, toSeconds )
 import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
                             , fromEntity, fromRow, field )
-import Database.Query       ( OrderBy(..), Table, Query, (.=), (.&), (~%), (.>)
-                            , (.<), (*=), (<<), asc, clearOrder, desc, exists
-                            , from, nay, on, retrieve, wherever )
+import Database.Query       ( OrderBy(..), Table, Query, (.=), (.&), (~%), (%%)
+                            , (.>), (.<), (*=), (<<), asc, clearOrder, desc
+                            , exists, from, nay, on, retrieve, wherever )
 
 ------------------------------------------------------------------------- Types
 
@@ -184,7 +184,7 @@ images :: Query Table
 images = do
     p <- from "post"
     i <- from "image" `on` ("post_id" *= p "id")
-    desc (p "created")
+    desc (p "id")
     retrieve [ p "id", p "title", p "is_favourite", i "hash", i "extension"
              , i "width", i "height", p "created", p "modified", i "file_size" ]
     return p
@@ -209,7 +209,7 @@ satisfying expression p = forM_ expression $ \case
           query x = do
               pt <- from "post_tag"
               t  <- from "tag" `on` (\t -> t "id" .= pt "tag_id" .& p "id" .= pt "post_id")
-              wherever (t "name" ~% x)
+              wherever (t "name" %% x)
 
 -- | Adds the list of tag names to the given image entity.
 withTags :: Entity Image -> Transaction (Entity Image)
@@ -230,7 +230,7 @@ selectAdjacentImage dir id expression = do
     modified <- SQL.single $ do
         p <- from "post"
         wherever (p "id" .= id)
-        retrieve [p "modified"] 
+        retrieve [p "id"] 
         :: Transaction (Maybe Int)
         
     nextImage <- case modified of
@@ -239,8 +239,8 @@ selectAdjacentImage dir id expression = do
             p <- images
             satisfying expression p
             clearOrder
-            wherever (p "modified" `operator` m)
-            ordering (p "modified")
+            wherever (p "id" `operator` m)
+            ordering (p "id")
         
     firstImage <- case modified of
         Nothing -> return Nothing
@@ -248,7 +248,7 @@ selectAdjacentImage dir id expression = do
             p <- images 
             satisfying expression p
             clearOrder
-            ordering (p "modified")
+            ordering (p "id")
     
     case (nextImage, firstImage) of
         (Just image, _) -> Just <$> withTags image
