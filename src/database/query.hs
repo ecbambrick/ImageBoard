@@ -68,6 +68,7 @@ data QueryData = QueryData
     , queryFrom    :: [From]
     , queryWhere   :: [Where]
     , queryOrderBy :: [OrderBy]
+    , queryOffset  :: Maybe Int
     , queryLimit   :: Maybe Int
     } deriving (Show)
 
@@ -114,6 +115,10 @@ wherever = (state . addFilter =<<)
 -- | Limits the number of results returned by query to the given amount.
 limit :: Int -> Query ()
 limit = state . setLimit
+
+-- | Offsets the results returned by the query by the given amount.
+offset :: Int -> Query ()
+offset = state . setOffset
 
 -- | Adds the given ordering to the query such that the query is ordered by the 
 -- | given column in ascending order.
@@ -210,7 +215,7 @@ anything = return All
 type QueryResult a = (a, (Int, QueryData))
 
 -- | An empty query.
-emptyQuery = QueryData [] [] [] [] Nothing
+emptyQuery = QueryData [] [] [] [] Nothing Nothing
 
 -- | Adds the given filter to the given query data when called by a state 
 -- | monad.
@@ -243,6 +248,11 @@ addValues values (i, q) = ((), (i, q { querySelect = querySelect q ++ values }))
 -- | state monad.
 setLimit :: Int -> (Int, QueryData) -> QueryResult ()
 setLimit limit (i, q) = ((), (i, q { queryLimit = Just limit }))
+
+-- | Sets the given query data's offset to the given amount when called by a
+-- | state monad.
+setOffset :: Int -> (Int, QueryData) -> QueryResult ()
+setOffset offset (i, q) = ((), (i, q { queryOffset = Just offset }))
 
 -- | Replaces the given query data's orderings with the given ordering when 
 -- | called by a state monad.
