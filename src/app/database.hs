@@ -21,7 +21,8 @@ import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
                             , fromEntity, fromRow, field )
 import Database.Query       ( OrderBy(..), Table, Query, (.=), (.&), (~%), (%%)
                             , (.>), (.<), (*=), (<<), asc, clearOrder, desc
-                            , exists, from, nay, on, retrieve, wherever )
+                            , exists, limit, from, nay, offset, on, retrieve
+                            , wherever )
 
 ------------------------------------------------------------------------- Types
 
@@ -93,9 +94,14 @@ selectImage id = do
 
 -- | Gets a list of images from the database. If a non-empty expression is
 -- | passed in, only images that satisfy the expression will be returned.
-selectImages :: Expression -> Transaction [Entity Image]
-selectImages expression = do
-    results <- SQL.query (images >>= satisfying expression)
+selectImages :: Expression -> Int -> Int -> Transaction [Entity Image]
+selectImages expression from count = do
+    results <- SQL.query $ do
+        i <- images
+        satisfying expression i
+        offset from
+        limit count
+    
     sequence (withTags <$> results)
 
 -- | Returns the image from the database ordered after the image with the 

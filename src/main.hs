@@ -53,15 +53,17 @@ main = runApplication $ do
     
     -- Renders the index page with all images.
     get root $ do
-        context <- toIndexContext "" <$> Image.getAll
+        page    <- optionalParam "page" 0
+        context <- toIndexContext "" <$> Image.query [] page
         results <- render "index" context
         
         html results
     
     -- Renders the index page with images that match the query parameter.
     get "search" $ do
+        page    <- optionalParam "page" 0
         query   <- optionalParam "q" ""
-        context <- toIndexContext query <$> Image.getFiltered (parse query)
+        context <- toIndexContext query <$> Image.query (parse query) page
         results <- render "index" context
         
         html results
@@ -69,7 +71,7 @@ main = runApplication $ do
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
         query                   <- optionalParam "q" ""
-        (previous, image, next) <- Image.getTriple id (parse query)
+        (previous, image, next) <- Image.queryTriple (parse query) id
         
         let context = toImageSetContext <$> pure query <*> image 
                                         <*> previous   <*> next

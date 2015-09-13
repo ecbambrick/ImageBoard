@@ -19,6 +19,6 @@ getFile key = do
     
     return (name, contentType, location)
 
--- | Read a request param; returns a default value if one it could not be found.
+-- | Returns a request param or a default value if one it could not be found.
 optionalParam :: (PathPiece p, Functor m, MonadIO m) => Text -> p -> ActionT m p
 optionalParam name defaultValue = fromMaybe defaultValue <$> param name

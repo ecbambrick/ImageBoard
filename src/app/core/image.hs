@@ -1,5 +1,4 @@
-module App.Core.Image 
-    ( getAll, getFiltered, getSingle, getTriple, insert ) where
+module App.Core.Image ( query, queryTriple, insert ) where
 
 import qualified App.Core.Tag as Tag
 
@@ -28,26 +27,21 @@ import System.IO.Metadata   ( getHash, getDimensions, getSize )
 import System.Process       ( runCommand, waitForProcess )
 import Text.Printf          ( printf )
 
+------------------------------------------------------------------------- Types
+
+-- | A tuple of three values of the same type.
+type Triple a = (a, a, a)
+
 -------------------------------------------------------------------------- CRUD
 
 -- | Returns the list of all image entities.
-getAll :: App [Entity Image]
-getAll = runDB $ selectImages []
-
--- | Returns the list of image entities that satisfy the given filter.
-getFiltered :: Expression -> App [Entity Image]
-getFiltered = runDB . selectImages
-
--- | Returns the image with the given ID or nothing if not found.
-getSingle :: ID -> App (Maybe (Entity Image))
-getSingle = runDB . selectImage
+query :: Expression -> Int -> App [Entity Image]
+query expression page = runDB $ selectImages expression ((page - 1) * 50) 50
 
 -- | Returns the image with the given ID along with the two adjacent images
 -- | based on the given filter.
-getTriple :: ID -> Expression -> App ( Maybe (Entity Image)
-                                     , Maybe (Entity Image)
-                                     , Maybe (Entity Image) )
-getTriple id expression = runDB $ do
+queryTriple :: Expression -> ID -> App (Triple (Maybe (Entity Image)))
+queryTriple expression id = runDB $ do
     main <- selectImage id
     next <- selectNextImage id expression
     prev <- selectPreviousImage id expression
