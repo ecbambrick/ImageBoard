@@ -36,7 +36,9 @@ type Triple a = (a, a, a)
 
 -- | Returns the list of all image entities.
 query :: Expression -> Int -> App [Entity Image]
-query expression page = runDB $ selectImages expression ((page - 1) * 50) 50
+query expression page = do
+    size <- asks configPageSize
+    runDB $ selectImages expression ((page - 1) * size) size
 
 -- | Returns the image with the given ID along with the two adjacent images
 -- | based on the given filter.

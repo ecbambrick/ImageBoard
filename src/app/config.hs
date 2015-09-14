@@ -8,7 +8,8 @@ import Data.Configurator ( Worth(..), load, lookupDefault, require )
 data Config = Config 
     { configPort                :: Int
     , configDatabaseConnection  :: String
-    , configStoragePath         :: FilePath }
+    , configStoragePath         :: FilePath
+    , configPageSize            :: Int }
 
 -- | Returns the application's settings loaded from the config file.
 loadConfig :: IO Config
@@ -17,3 +18,4 @@ loadConfig = do
     Config <$> lookupDefault 8000     config (pack "port")
            <*> require                config (pack "database")
            <*> require                config (pack "storage_path")
+           <*> require                config (pack "page_size")
