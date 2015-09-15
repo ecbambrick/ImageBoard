@@ -39,6 +39,7 @@ instance ToSQLite Where where
     toSQLite (Less column value)    = toSQLite column <<> toSQLite value
     toSQLite (Like column value)    = toSQLite column <~> liken value
     toSQLite (And x y)              = toSQLite x      <&> toSQLite y
+    toSQLite (Or x y)               = toSQLite x      <|> toSQLite y
 
 instance ToSQLite From where
     toSQLite (From name i join) = case join of
@@ -159,6 +160,10 @@ update table filter mappings
 -- | Joins the two given strings with " AND ".
 (<&>) :: String -> String -> String
 (<&>) x y = x ++ " AND " ++ y
+
+-- | Joins the two given strings with " OR ".
+(<|>) :: String -> String -> String
+(<|>) x y = x ++ " OR " ++ y
 
 -- | Converts the given number to a table alias.
 alias :: Int -> String

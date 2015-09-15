@@ -55,6 +55,7 @@ data OrderBy = Asc Column | Desc Column | Random deriving (Show)
 data Where = All
            | Not Where
            | And Where Where
+           | Or Where Where
            | Exists QueryData
            | Equals Column Value
            | Greater Column Value
@@ -159,6 +160,11 @@ clearOrder = state $ setOrder Nothing
 -- | filters are returned.
 (.&) :: Filter -> Filter -> Filter; infixr 2 .&
 (.&) filter1 filter2 = And <$> filter1 <*> filter2
+
+-- | Filters the query such that only results that satisfy either of the given 
+-- | filters are returned.
+(.|) :: Filter -> Filter -> Filter; infixr 3 .|
+(.|) filter1 filter2 = Or <$> filter1 <*> filter2
 
 -- | Returns a function that takes a table and then filters the query such that 
 -- | only results that satisfy both of the given filters are returned. Useful
