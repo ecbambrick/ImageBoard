@@ -22,6 +22,12 @@
             </div>
         </div>
         <div class="gallery">
+            <a href="/?page={{previousPage}}{{#isQuery}}&q={{query}}{{/isQuery}}">
+                <div class="thumb">previous</div>
+            </a>
+            <a href="/?page={{nextPage}}{{#isQuery}}&q={{query}}{{/isQuery}}">
+                <div class="thumb">next</div>
+            </a>
             {{#images}}
             <a href="/image/{{identifier}}{{#isQuery}}?q={{query}}{{/isQuery}}">
                 <img src="{{thumb}}" />

@@ -4,23 +4,22 @@ module Main where
 
 import qualified App.Core.Image as Image
 
-import App.Common                    ( (<$$>), runApplication )
+import App.Common                    ( runApplication )
 import App.Config                    ( Config(..) )
-import App.Expression                ( Expression(..), parse )
+import App.Expression                ( parse )
 import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
-import Control.Monad.Reader          ( asks, local )
+import Control.Monad.Reader          ( asks )
 import Control.Monad.Trans           ( lift )
 import Data.Monoid                   ( mconcat )
 import Data.Text                     ( pack )
-import App.Template                  ( render, toIndexContext, toImageContext
-                                     , toImageSetContext )
+import App.Template                  ( render, toIndexContext, toImageSetContext )
 import Data.Textual                  ( splitOn )
 import Network.Wai.Middleware.Static ( (<|>), addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
 import System.FilePath               ( takeBaseName )
 import Web.Spock                     ( (<//>), get, html, middleware, text
-                                     , post, redirect, root, var, param, param' )
+                                     , post, redirect, root, var )
 import Web.Spock.Extended            ( getFile, optionalParam )
 
 -- Main.
@@ -44,8 +43,9 @@ main = runApplication $ do
     -- Upload an image along with its tags.
     post "upload" $ do
         (name, _, path) <- getFile "uploadedFile"
-        tags            <- splitOn "," <$> param' "tags"
-        results         <- Image.insert path name (takeBaseName name) tags
+        title           <- optionalParam "title" ""
+        tags            <- splitOn "," <$> optionalParam "tags" ""
+        results         <- Image.insert path name title tags
         
         case results of
             Valid     -> redirect "/"
@@ -54,7 +54,7 @@ main = runApplication $ do
     -- Renders the index page with all images.
     get root $ do
         page    <- optionalParam "page" 0
-        context <- toIndexContext "" <$> Image.query [] page
+        context <- toIndexContext "" page <$> Image.query [] page
         results <- render "index" context
         
         html results
@@ -63,7 +63,7 @@ main = runApplication $ do
     get "search" $ do
         page    <- optionalParam "page" 0
         query   <- optionalParam "q" ""
-        context <- toIndexContext query <$> Image.query (parse query) page
+        context <- toIndexContext query page <$> Image.query (parse query) page
         results <- render "index" context
         
         html results

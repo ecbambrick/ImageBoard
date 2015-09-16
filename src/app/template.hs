@@ -52,17 +52,23 @@ toImageSetContext query image1 image2 image3 = ImageSetContext
     
 -- | The context data required for the index.
 data IndexContext = IndexContext
-    { query   :: String
-    , isQuery :: Bool
-    , images  :: [ImageContext]
+    { query        :: String
+    , isQuery      :: Bool
+    , page         :: Int
+    , previousPage :: Int
+    , nextPage     :: Int
+    , images       :: [ImageContext]
     } deriving (Data, Typeable)
 
 -- | Returns the index context data for the given query and list of images.
-toIndexContext :: String -> [Entity Image] -> IndexContext
-toIndexContext query images = IndexContext
-    { query   = query
-    , isQuery = not (null query)
-    , images  = fmap toImageContext images }
+toIndexContext :: String -> Int -> [Entity Image] -> IndexContext
+toIndexContext query page images = IndexContext
+    { query        = query
+    , isQuery      = not (null query)
+    , page         = page
+    , previousPage = max (page - 1) 1
+    , nextPage     = page + 1
+    , images       = fmap toImageContext images }
 
 --------------------------------------------------------------------- Rendering
 

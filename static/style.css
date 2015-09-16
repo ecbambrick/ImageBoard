@@ -15,9 +15,22 @@ div.gallery {
     text-align: center;
 }
 
-div.gallery img {
+div.gallery a {
+    color: #ddd;
     display: inline-block;
-    margin: 5px;
+}
+
+div.gallery img {
+    height: 128px;
+    width: 128px;
+}
+
+div.gallery div {
+    background-color: #444;
+    display: table;
+    height: 128px;
+    width: 128px;
+    line-height: 128px;
 }
 
 div.header {
