@@ -10,7 +10,6 @@ import App.Expression                ( parse )
 import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad.Reader          ( asks )
-import Control.Monad.Trans           ( lift )
 import Data.Monoid                   ( mconcat )
 import Data.Text                     ( pack )
 import App.Template                  ( render, toIndexContext, toImageSetContext )
@@ -25,7 +24,7 @@ import Web.Spock.Extended            ( getFile, optionalParam )
 -- Main.
 main :: IO ()
 main = runApplication $ do
-    storagePath <- lift (asks configStoragePath)
+    storagePath <- asks configStoragePath
     
     -- Enables access to thumbnails and images in the storage path.
     middleware $ staticPolicy $ mconcat

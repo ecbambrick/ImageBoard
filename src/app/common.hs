@@ -22,6 +22,10 @@ instance (MonadReader r m) => MonadReader r (ActionT m) where
     ask       = lift ask
     local f m = runReaderT (lift m) . f =<< ask
 
+instance (MonadReader r m) => MonadReader r (SpockT m) where
+    ask       = lift ask
+    local f m = runReaderT (lift m) . f =<< ask
+
 -- | Runs the application with the settings from the config file.
 runApplication :: SpockT (ReaderT Config IO) () -> IO ()
 runApplication routes = do
