@@ -8,7 +8,7 @@ import App.Expression       ( Expression, Token(..) )
 import App.Database         ( attachTags, insertImage, selectHashExists
                             , selectImage, selectImages, selectNextImage
                             , selectPreviousImage )
-import App.Paths            ( absoluteImagePath, absoluteThumbPath )
+import App.Paths            ( imagePath, thumbnailPath )
 import App.Validation       ( Property(..), Validation(..), isFalse, isPositive
                             , isValidImageFileType, isValid )
 import Control.Monad        ( when )
@@ -73,8 +73,8 @@ insert fromPath fileName title tagNames = case fileType of
                           <> mconcat (Tag.validate . Tag <$> tags)
                          
             when (isValid results) $ do
-                toPath    <- absoluteImagePath image
-                thumbPath <- absoluteThumbPath image
+                toPath    <- imagePath image
+                thumbPath <- thumbnailPath image
                 runDB  $ insertImage image >>= attachTags tags
                 liftIO $ createDirectoryIfMissing True $ takeDirectory toPath
                 liftIO $ copyFile fromPath toPath

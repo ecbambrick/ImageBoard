@@ -7,6 +7,7 @@ import qualified App.Core.Image as Image
 import App.Common                    ( runApplication )
 import App.Config                    ( Config(..) )
 import App.Expression                ( parse )
+import App.Paths                     ( dataPath )
 import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad.Reader          ( asks )
@@ -14,7 +15,7 @@ import Data.Monoid                   ( mconcat )
 import Data.Text                     ( pack )
 import App.Template                  ( render, toIndexContext, toImageSetContext )
 import Data.Textual                  ( splitOn )
-import Network.Wai.Middleware.Static ( (<|>), addBase, hasPrefix, isNotAbsolute
+import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
 import System.FilePath               ( takeBaseName )
 import Web.Spock                     ( (<//>), get, html, middleware, text
@@ -30,7 +31,7 @@ main = runApplication $ do
     middleware $ staticPolicy $ mconcat
         [ noDots 
         , isNotAbsolute 
-        , hasPrefix "thumbs" <|> hasPrefix "images"
+        , hasPrefix dataPath
         , addBase storagePath ]
         
     -- Enables access to other static content such as javascript and css files.

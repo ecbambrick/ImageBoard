@@ -5,7 +5,7 @@ module App.Template where
 import qualified Data.Text.IO as Text
 
 import App.Common               ( Image(..) )
-import App.Paths                ( imageURL, templatePath, thumbURL )
+import App.Paths                ( imageURL, templatePath, thumbnailURL )
 import Control.Monad.Trans      ( MonadIO, liftIO )
 import Data.Data                ( Data, Typeable )
 import Data.Text                ( Text )
@@ -30,7 +30,7 @@ toImageContext :: Entity Image -> ImageContext
 toImageContext (Entity id image) = ImageContext
     { identifier = id
     , path       = imageURL image
-    , thumb      = thumbURL image
+    , thumb      = thumbnailURL image
     , tagNames   = imageTagNames image
     , hasTags    = not $ null $ imageTagNames image }
 
