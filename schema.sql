@@ -22,15 +22,7 @@ CREATE TABLE image (
         ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS gallery;
-CREATE TABLE gallery (
-    id      INTEGER     PRIMARY KEY AUTOINCREMENT,
-    post_id INTEGER     NOT NULL,
-    
-    FOREIGN KEY (post_id) REFERENCES post (id)
-        ON UPDATE CASCADE 
-        ON DELETE CASCADE
-);
+CREATE INDEX width_height_index ON image(width, height);
 
 DROP TABLE IF EXISTS category;
 CREATE TABLE category (
@@ -42,24 +34,6 @@ DROP TABLE IF EXISTS tag;
 CREATE TABLE tag (
     id      INTEGER     PRIMARY KEY AUTOINCREMENT,
     name    TEXT        UNIQUE NOT NULL
-);
-
-DROP TABLE IF EXISTS gallery_image;
-CREATE TABLE gallery_image (
-    gallery_id  INTEGER     NOT NULL,
-    image_id    INTEGER     NOT NULL,
-    page_number INTEGER     NOT NULL,
-    page_title  TEXT        NOT NULL,
-    
-    PRIMARY KEY (gallery_id, image_id),
-    
-    FOREIGN KEY (gallery_id) REFERENCES gallery(id) 
-        ON UPDATE CASCADE 
-        ON DELETE CASCADE,
-        
-    FOREIGN KEY (image_id) REFERENCES image(id) 
-        ON UPDATE CASCADE 
-        ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS post_tag;
@@ -93,5 +67,3 @@ CREATE TABLE tag_category (
         ON UPDATE CASCADE
         ON DELETE CASCADE
 );
-
-CREATE INDEX width_height_index ON image(width, height);
