@@ -24,6 +24,32 @@ CREATE TABLE image (
 
 CREATE INDEX width_height_index ON image(width, height);
 
+DROP TABLE IF EXISTS album;
+CREATE TABLE album (
+    id          INTEGER     PRIMARY KEY AUTOINCREMENT,
+    post_id     INTEGER     NOT NULL,
+    file_size   INTEGER     NOT NULL,
+    
+    FOREIGN KEY (post_id) REFERENCES post (id)
+        ON UPDATE CASCADE 
+        ON DELETE CASCADE
+);
+
+DROP TABLE IF EXISTS page;
+CREATE TABLE page (
+    id          INTEGER     PRIMARY KEY AUTOINCREMENT,
+    album_id    INTEGER     NOT NULL,
+    title       TEXT        NOT NULL,
+    number      INTEGER     NOT NULL,
+    extension   TEXT        NOT NULL,
+    
+    FOREIGN KEY (album_id) REFERENCES album (id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX page_position_index ON page (album_id, number);
+
 DROP TABLE IF EXISTS category;
 CREATE TABLE category (
     id          INTEGER     PRIMARY KEY AUTOINCREMENT,
