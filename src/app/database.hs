@@ -4,12 +4,12 @@
 
 module App.Database
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
-    , selectNextImage, selectPreviousImage, selectTags, selectTagsByImage
-    , updateImage, attachTags, cleanTags ) where
+    , selectNextImage, selectPreviousImage, updateImage, insertAlbum
+    , selectTags, selectTagsByImage, attachTags, cleanTags ) where
 
 import qualified Database.Engine as SQL
                                 
-import App.Common           ( Image(..), Tag(..), (<$$>) )
+import App.Common           ( Album(..), Image(..), Page(..), Tag(..), (<$$>) )
 import App.Expression       ( Token(..), Expression )
 import Control.Applicative  ( (<$>), (<*>), pure )
 import Control.Monad        ( forM_, void )
@@ -158,6 +158,29 @@ cleanTags = do
     
     forM_ orphanTags $ \id -> 
         SQL.delete "tag" ("id" *= id)
+
+------------------------------------------------------------------------ Albums
+
+-- | Inserts a new album into the database and returns its ID.
+insertAlbum :: Album -> Transaction ID
+insertAlbum Album {..} = do
+    postID <- SQL.insert "post"
+        [ "title"        << albumTitle
+        , "created"      << toSeconds albumCreated
+        , "modified"     << toSeconds albumModified
+        , "is_favourite" << fromBool albumIsFavourite ]
+        
+    albumID <- SQL.insert "album"
+        [ "post_id"      << postID
+        , "file_size"    << albumFileSize ]
+    
+    forM_ albumPages $ \Page {..} -> SQL.insert "page"
+        [ "album_id"     << albumID
+        , "title"        << pageTitle
+        , "number"       << pageNumber
+        , "extension"    << pageExtension ]
+
+    return postID
 
 ----------------------------------------------------------------- Relationships
 
