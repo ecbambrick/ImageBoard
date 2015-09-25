@@ -41,26 +41,42 @@ runDB command = do
 
 -------------------------------------------------------------------------- Data
 
--- | A tag can be attached to an image as additional meta data. An ID of 
--- | nothing indicates a tag that has not yet been persisted.
+-- | A tag can be attached to an image as additional meta data.
 data Tag = Tag 
     { tagName :: String
     } deriving (Eq, Show)
 
 -- | An Image contains the meta data of an image file that has been uploaded. 
--- | An ID of nothing indicates an image that has not yet been persisted.
 data Image = Image
-    { imageTitle        :: String
-    , imageIsFavourite  :: Bool
-    , imageHash         :: String
-    , imageExtension    :: String
-    , imageWidth        :: Int
-    , imageHeight       :: Int
-    , imageCreated      :: UTCTime
-    , imageModified     :: UTCTime
-    , imageFileSize     :: Int
-    , imageTagNames     :: [String]
+    { imageTitle       :: String
+    , imageIsFavourite :: Bool
+    , imageHash        :: String
+    , imageExtension   :: String
+    , imageWidth       :: Int
+    , imageHeight      :: Int
+    , imageCreated     :: UTCTime
+    , imageModified    :: UTCTime
+    , imageFileSize    :: Int
+    , imageTagNames    :: [String]
     } deriving (Eq, Show)
+
+-- | An album contains the meta data of a collection of image files that are
+-- | considered an isolated group.
+data Album = Album
+    { albumTitle       :: String
+    , albumIsFavourite :: Bool
+    , albumCreated     :: UTCTime
+    , albumModified    :: UTCTime
+    , albumFileSize    :: Int
+    , albumPages       :: [Page]
+    } deriving (Show)
+
+-- | A page contains the meta data of a single image file within an album.
+data Page = Page
+    { pageTitle     :: String
+    , pageNumber    :: Int
+    , pageExtension :: String
+    } deriving (Show)
 
 ----------------------------------------------------------------------- Utility
 
