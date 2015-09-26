@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards  #-}
 
 module App.Paths where
 
@@ -28,9 +27,24 @@ imagePath image = do
     storagePath <- asks configStoragePath
     return (storagePath </> relativeImagePath image)
 
+-- | Returns the absolute file path of the thumbnail for the given image.
+imageThumbnailPath :: (MonadReader Config m) => Image -> m FilePath
+imageThumbnailPath image = do
+    storagePath <- asks configStoragePath
+    return (storagePath </> relativeThumbnailPath image)
+
 -- | Returns the relative URL of the given image
 imageURL :: Image -> FilePath
-imageURL image = replace "\\" "/" ("/" ++ relativeImagePath image)
+imageURL image = toURL (relativeImagePath image)
+
+-- | Returns the relative URL of the thumbnail for the given image.
+imageThumbnailURL :: Image -> FilePath
+imageThumbnailURL image = toURL (relativeThumbnailPath image)
+
+-- | Returns the relative file path of the thumbnail for the given image.
+relativeThumbnailPath :: Image -> FilePath
+relativeThumbnailPath image = "data/thumb" </> take 2 hash </> hash <.> "jpg"
+    where hash = imageHash image
 
 -- | Returns the relative file path of the given image.
 relativeImagePath :: Image -> FilePath
@@ -38,19 +52,8 @@ relativeImagePath image = "data/image" </> take 2 hash </> hash <.> ext
     where hash = imageHash image
           ext  = imageExtension image
 
--------------------------------------------------------------------- Thumbnails
+----------------------------------------------------------------------- Utility
 
--- | Returns the absolute file path of the thumbnail for the given image.
-thumbnailPath :: (MonadReader Config m) => Image -> m FilePath
-thumbnailPath image = do
-    storagePath <- asks configStoragePath
-    return (storagePath </> relativeThumbnailPath image)
-
--- | Returns the relative URL of the thumbnail for the given image.
-thumbnailURL :: Image -> FilePath
-thumbnailURL image = replace "\\" "/" ("/" ++ relativeThumbnailPath image)
-
--- | Returns the relative file path of the thumbnail for the given image.
-relativeThumbnailPath :: Image -> FilePath
-relativeThumbnailPath image = "data/thumb" </> take 2 hash </> hash <.> "jpg"
-    where hash = imageHash image
+-- | Converts the given file path to a URL.
+toURL :: FilePath -> FilePath
+toURL path = replace "\\" "/" ("/" ++ path)

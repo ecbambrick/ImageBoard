@@ -5,7 +5,7 @@ module App.Template where
 import qualified Data.Text.IO as Text
 
 import App.Common               ( Image(..) )
-import App.Paths                ( imageURL, templatePath, thumbnailURL )
+import App.Paths                ( imageURL, templatePath, imageThumbnailURL )
 import Control.Monad.Trans      ( MonadIO, liftIO )
 import Data.Data                ( Data, Typeable )
 import Data.Text                ( Text )
@@ -30,7 +30,7 @@ toImageContext :: Entity Image -> ImageContext
 toImageContext (Entity id image) = ImageContext
     { identifier = id
     , path       = imageURL image
-    , thumb      = thumbnailURL image
+    , thumb      = imageThumbnailURL image
     , tagNames   = imageTagNames image
     , hasTags    = not $ null $ imageTagNames image }
 
@@ -61,8 +61,8 @@ data IndexContext = IndexContext
     } deriving (Data, Typeable)
 
 -- | Returns the index context data for the given query and list of images.
-toIndexContext :: String -> Int -> [Entity Image] -> IndexContext
-toIndexContext query page images = IndexContext
+toImagesContext :: String -> Int -> [Entity Image] -> IndexContext
+toImagesContext query page images = IndexContext
     { query        = query
     , isQuery      = not (null query)
     , page         = page

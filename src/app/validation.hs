@@ -1,8 +1,8 @@
 module App.Validation where
 
-import Text.Printf  (printf)
-import Data.Char    (isAlphaNum, isSpace)
-import Data.Monoid  (Monoid, (<>), mempty, mappend)
+import Text.Printf  ( printf )
+import Data.Char    ( isAlphaNum, isSpace )
+import Data.Monoid  ( Monoid, (<>), mempty, mappend )
 
 ------------------------------------------------------------------------- Types
 
@@ -38,15 +38,6 @@ isPositive :: (Show a, Num a, Ord a) => Property a -> Validation
 isPositive (Property name x)
     | x <= 0    = Invalid [Error name (show x) "non-positive number"]
     | otherwise = Valid
-
--- | Returns valid if the given property is a valid image file type; otherwise,
--- | invalid.
-isValidImageFileType :: Property String -> Validation
-isValidImageFileType (Property name x)
-    | isInvalidType x     = Invalid [Error name x "invalid file type"]
-    | otherwise           = Valid
-    where isInvalidType x = notElem x ["jpg", "jpeg", "png", "gif"]
-    
 
 -- | Returns valid if the given property is a valid tag name; otherwise, 
 -- | invalid.

@@ -7,23 +7,21 @@ import qualified App.Core.Image as Image
 import App.Common                    ( runApplication )
 import App.Config                    ( Config(..) )
 import App.Expression                ( parse )
+import App.FileType                  ( FileType(..), getFileType )
 import App.Paths                     ( dataPath )
 import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad.Reader          ( asks )
 import Data.Monoid                   ( mconcat )
 import Data.Text                     ( pack )
-import App.Template                  ( render, toIndexContext, toImageSetContext )
+import App.Template                  ( render, toImagesContext, toImageSetContext )
 import Data.Textual                  ( splitOn )
 import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
-import System.FilePath               ( takeBaseName )
 import Web.Spock                     ( (<//>), get, html, middleware, text
                                      , post, redirect, root, var )
 import Web.Spock.Extended            ( getFile, optionalParam )
 
--- Main.
-main :: IO ()
 main = runApplication $ do
     storagePath <- asks configStoragePath
     
@@ -40,31 +38,31 @@ main = runApplication $ do
         , isNotAbsolute 
         , hasPrefix "static" ]
     
-    -- Upload an image along with its tags.
+    -- Upload an image.
     post "upload" $ do
         (name, _, path) <- getFile "uploadedFile"
         title           <- optionalParam "title" ""
         tags            <- splitOn "," <$> optionalParam "tags" ""
-        results         <- Image.insert path name title tags
         
+        results <- case (getFileType path name) of
+            ImageType   file -> Image.insert file title tags
+            InvalidType ""   -> text $ pack ("invalid file type")
+            InvalidType ext  -> text $ pack ("invalid file type: " ++ ext)
+            
         case results of
             Valid     -> redirect "/"
             Invalid e -> text $ pack (show e)
     
-    -- Renders the index page with all images.
+    -- Redirects to the images page.
     get root $ do
-        page    <- optionalParam "page" 0
-        context <- toIndexContext "" page <$> Image.query [] page
-        results <- render "index" context
-        
-        html results
+        redirect "images"
     
-    -- Renders the index page with images that match the query parameter.
-    get "search" $ do
+    -- Renders the images page with images that match the query parameter.
+    get "images" $ do
         page    <- optionalParam "page" 0
         query   <- optionalParam "q" ""
-        context <- toIndexContext query page <$> Image.query (parse query) page
-        results <- render "index" context
+        context <- toImagesContext query page <$> Image.query (parse query) page
+        results <- render "images" context
         
         html results
     

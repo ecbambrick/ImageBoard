@@ -8,9 +8,9 @@ import App.Expression       ( Expression, Token(..) )
 import App.Database         ( attachTags, insertImage, selectHashExists
                             , selectImage, selectImages, selectNextImage
                             , selectPreviousImage )
-import App.Paths            ( imagePath, thumbnailPath )
-import App.Validation       ( Property(..), Validation(..), isFalse, isPositive
-                            , isValidImageFileType, isValid )
+import App.FileType         ( ImageFile, File(..) )
+import App.Paths            ( imagePath, imageThumbnailPath )
+import App.Validation       ( Property(..), Validation, isFalse, isPositive, isValid )
 import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
@@ -22,7 +22,7 @@ import Data.Time            ( getCurrentTime )
 import Database.Engine      ( Entity, ID )
 import Graphics.Thumbnail   ( createThumbnail )
 import System.Directory     ( copyFile, createDirectoryIfMissing )
-import System.FilePath      ( takeDirectory, takeExtension )
+import System.FilePath      ( takeDirectory )
 import System.IO.Metadata   ( getHash, getDimensions, getSize )
 
 ------------------------------------------------------------------------- Types
@@ -51,48 +51,41 @@ queryTriple expression id = runDB $ do
 -- | Inserts a new image into the database/filesystem based on the the file 
 -- | with the given path and the given title and tags. Returns valid if the 
 -- | insertion was sucessful; otherwise invalid.
-insert :: FilePath -> String -> String -> [String] -> App Validation
-insert fromPath fileName title tagNames = case fileType of
-    Valid     -> insert'
-    Invalid e -> return (Invalid e)
-    where
-        fileType = isValidImageFileType (Property "extension" ext)
-        ext      = getExtension fileName
-        insert'  = do
-            hash        <- liftIO $ getHash fromPath
-            now         <- liftIO $ getCurrentTime
-            size        <- liftIO $ fromIntegral <$> getSize fromPath
-            (w, h)      <- liftIO $ getDimensions fromPath
-            isDuplicate <- runDB  $ selectHashExists hash
-            thumbSize   <- asks   $ configThumbnailSize
+insert :: ImageFile -> String -> [String] -> App Validation
+insert file title tagNames = do
+    let fromPath = getPath file
+        ext      = getExtension file
 
-            let tags    = cleanTags tagNames
-                image   = Image title False hash ext w h now now size []
-                results = validate image
-                          <> isFalse (Property "duplicate" isDuplicate)
-                          <> mconcat (Tag.validate . Tag <$> tags)
-                         
-            when (isValid results) $ do
-                toPath    <- imagePath image
-                thumbPath <- thumbnailPath image
-                runDB  $ insertImage image >>= attachTags tags
-                liftIO $ createDirectoryIfMissing True $ takeDirectory toPath
-                liftIO $ copyFile fromPath toPath
-                liftIO $ createThumbnail thumbSize toPath thumbPath
-            
-            return results
+    hash        <- liftIO $ getHash fromPath
+    now         <- liftIO $ getCurrentTime
+    size        <- liftIO $ fromIntegral <$> getSize fromPath
+    (w, h)      <- liftIO $ getDimensions fromPath
+    isDuplicate <- runDB  $ selectHashExists hash
+    thumbSize   <- asks   $ configThumbnailSize
+
+    let tags    = cleanTags tagNames
+        image   = Image title False hash ext w h now now size []
+        results = validate image
+                  <> isFalse (Property "duplicate" isDuplicate)
+                  <> mconcat (Tag.validate . Tag <$> tags)
+                 
+    when (isValid results) $ do
+        toPath    <- imagePath image
+        thumbPath <- imageThumbnailPath image
+        
+        runDB  $ insertImage image >>= attachTags tags
+        liftIO $ createDirectoryIfMissing True $ takeDirectory toPath
+        liftIO $ copyFile fromPath toPath
+        liftIO $ createThumbnail thumbSize toPath thumbPath
+    
+    return results
+
+----------------------------------------------------------------------- Utility
 
 -- | Returns valid if all fields of the given image are valid; otherwise 
 -- | invalid. Any validation that requires access to the database is ignored.
 validate :: Image -> Validation
 validate Image { imageFileSize = size } = isPositive (Property "size" size)
-
------------------------------------------------------------------------ Utility
-
--- | Returns the file extension of the given path, excluding the period.
-getExtension :: FilePath -> String
-getExtension path = if null extension then "" else toLower (tail extension)
-    where extension = takeExtension path
 
 -- | Sanitizes the given list of tag names.
 cleanTags :: [String] -> [String]
