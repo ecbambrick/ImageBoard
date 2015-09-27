@@ -33,6 +33,7 @@ executable imageboard
         App.Paths,
         App.Template,
         App.Validation,
+        Data.Ord.Extended,
         Data.Time.Extended,
         Data.Textual,
         Database.Engine,
