@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards  #-}
 
 module App.Paths where
 
-import App.Common           ( Image(..) )
+import App.Common           ( Image(..), Page(..) )
 import App.Config           ( Config(..) )
 import Control.Monad.Reader ( MonadReader, asks )
 import Data.Textual         ( replace )
@@ -11,13 +12,13 @@ import System.FilePath      ( (</>), (<.>) )
 
 ------------------------------------------------------------------- Application
 
--- | Returns the path of the template with the given name.
-templatePath :: String -> FilePath
-templatePath name = "templates" </> name <.> "html"
-
 -- | Returns the base path of static data.
 dataPath :: String
 dataPath = "data"
+
+-- | Returns the path of the template with the given name.
+templatePath :: String -> FilePath
+templatePath name = "templates" </> name <.> "html"
 
 ------------------------------------------------------------------------ Images
 
@@ -31,7 +32,7 @@ imagePath image = do
 imageThumbnailPath :: (MonadReader Config m) => Image -> m FilePath
 imageThumbnailPath image = do
     storagePath <- asks configStoragePath
-    return (storagePath </> relativeThumbnailPath image)
+    return (storagePath </> relativeImageThumbnailPath image)
 
 -- | Returns the relative URL of the given image
 imageURL :: Image -> FilePath
@@ -39,11 +40,11 @@ imageURL image = toURL (relativeImagePath image)
 
 -- | Returns the relative URL of the thumbnail for the given image.
 imageThumbnailURL :: Image -> FilePath
-imageThumbnailURL image = toURL (relativeThumbnailPath image)
+imageThumbnailURL image = toURL (relativeImageThumbnailPath image)
 
 -- | Returns the relative file path of the thumbnail for the given image.
-relativeThumbnailPath :: Image -> FilePath
-relativeThumbnailPath image = "data/thumb" </> take 2 hash </> hash <.> "jpg"
+relativeImageThumbnailPath :: Image -> FilePath
+relativeImageThumbnailPath image = "data/thumb" </> take 2 hash </> hash <.> "jpg"
     where hash = imageHash image
 
 -- | Returns the relative file path of the given image.
@@ -51,6 +52,42 @@ relativeImagePath :: Image -> FilePath
 relativeImagePath image = "data/image" </> take 2 hash </> hash <.> ext
     where hash = imageHash image
           ext  = imageExtension image
+
+------------------------------------------------------------------------ Albums
+
+-- | Returns the absolute directory path of the given album.
+albumPath :: (MonadReader Config m) => ID -> m FilePath
+albumPath id = do
+    storagePath <- asks configStoragePath
+    return (storagePath </> relativeAlbumPath id)
+
+-- | Returns the absolute file path of the thumbnail for the given album.
+albumThumbnailPath :: (MonadReader Config m) => ID -> m FilePath
+albumThumbnailPath id = do
+    storagePath <- asks configStoragePath
+    return (storagePath </> relativeAlbumPath id </> "thumbnail.jpg")
+
+-- | Returns the relative file path of the given album.
+relativeAlbumPath :: ID -> FilePath
+relativeAlbumPath id = "data/album" </> show (id `mod` 100) </> show id
+
+------------------------------------------------------------------------- Pages
+
+-- | Returns the absolute directory path of the given page for the album with
+-- | the given ID.
+pagePath :: (MonadReader Config m) => ID -> Page -> m FilePath
+pagePath id Page {..} = do
+    storagePath <- asks configStoragePath
+    basePath    <- albumPath id
+    return (basePath </> show pageNumber <.> pageExtension)
+
+-- | Returns the absolute directory path of the thumbnail for the given page 
+-- | for the album with the given ID.
+pageThumbnailPath :: (MonadReader Config m) => ID -> Page -> m FilePath
+pageThumbnailPath id Page {..} = do
+    storagePath <- asks configStoragePath
+    basePath    <- albumPath id
+    return (basePath </> "t" ++ show pageNumber <.> "jpg")
 
 ----------------------------------------------------------------------- Utility
 

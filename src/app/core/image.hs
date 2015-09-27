@@ -4,7 +4,7 @@ import qualified App.Core.Tag as Tag
 
 import App.Common           ( Tag(..), Image(..), App, runDB )
 import App.Config           ( Config(..) )
-import App.Expression       ( Expression, Token(..) )
+import App.Expression       ( Expression )
 import App.Database         ( attachTags, insertImage, selectHashExists
                             , selectImage, selectImages, selectNextImage
                             , selectPreviousImage )
@@ -32,7 +32,7 @@ type Triple a = (a, a, a)
 
 -------------------------------------------------------------------------- CRUD
 
--- | Returns the list of all image entities.
+-- | Returns a page of image based on the given page number and filter.
 query :: Expression -> Int -> App [Entity Image]
 query expression page = do
     size <- asks configPageSize
@@ -48,14 +48,13 @@ queryTriple expression id = runDB $ do
 
     return (prev, main, next)
 
--- | Inserts a new image into the database/filesystem based on the the file 
--- | with the given path and the given title and tags. Returns valid if the 
--- | insertion was sucessful; otherwise invalid.
+-- | Inserts a new image into the database/filesystem based on the given file,
+-- | title and tags. Returns valid if the insertion was sucessful; otherwise 
+-- | invalid.
 insert :: ImageFile -> String -> [String] -> App Validation
 insert file title tagNames = do
     let fromPath = getPath file
-        ext      = getExtension file
-
+    
     hash        <- liftIO $ getHash fromPath
     now         <- liftIO $ getCurrentTime
     size        <- liftIO $ fromIntegral <$> getSize fromPath
@@ -63,7 +62,8 @@ insert file title tagNames = do
     isDuplicate <- runDB  $ selectHashExists hash
     thumbSize   <- asks   $ configThumbnailSize
 
-    let tags    = cleanTags tagNames
+    let ext     = getExtension file
+        tags    = cleanTags tagNames
         image   = Image title False hash ext w h now now size []
         results = validate image
                   <> isFalse (Property "duplicate" isDuplicate)
