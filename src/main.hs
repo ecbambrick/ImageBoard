@@ -3,6 +3,7 @@
 module Main where
 
 import qualified App.Core.Image as Image
+import qualified App.Core.Album as Album
 
 import App.Common                    ( runApplication )
 import App.Config                    ( Config(..) )
@@ -38,13 +39,14 @@ main = runApplication $ do
         , isNotAbsolute 
         , hasPrefix "static" ]
     
-    -- Upload an image.
+    -- Upload an image or album.
     post "upload" $ do
         (name, _, path) <- getFile "uploadedFile"
         title           <- optionalParam "title" ""
         tags            <- splitOn "," <$> optionalParam "tags" ""
         
         results <- case (getFileType path name) of
+            ArchiveType file -> Album.insert file title tags
             ImageType   file -> Image.insert file title tags
             InvalidType ""   -> text $ pack ("invalid file type")
             InvalidType ext  -> text $ pack ("invalid file type: " ++ ext)
