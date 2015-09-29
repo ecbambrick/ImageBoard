@@ -1,4 +1,4 @@
-module Data.Time.Extended where
+module Data.Time.Extended ( UTCTime, fromSeconds, toSeconds ) where
 
 import Data.Time             ( UTCTime )
 import Data.Time.Clock.POSIX ( posixSecondsToUTCTime, utcTimeToPOSIXSeconds )

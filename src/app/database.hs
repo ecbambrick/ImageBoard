@@ -5,7 +5,8 @@
 module App.Database
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
     , selectNextImage, selectPreviousImage, updateImage, insertAlbum
-    , selectTags, selectTagsByImage, attachTags, cleanTags ) where
+    , selectAlbum, selectAlbums, selectTags, selectTagsByImage, attachTags
+    , cleanTags ) where
 
 import qualified Database.Engine as SQL
                                 
@@ -16,7 +17,7 @@ import Control.Monad        ( forM_, void )
 import Data.Int             ( Int64 )
 import Data.Maybe           ( isJust )
 import Data.Textual         ( toLower, trim, replace )
-import Data.Time.Extended   ( fromSeconds, toSeconds )
+import Data.Time.Extended   ( UTCTime, fromSeconds, toSeconds )
 import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
                             , fromEntity, fromRow, field )
 import Database.Query       ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
@@ -29,20 +30,19 @@ import Database.Query       ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
 -- | The direction to use when selecting an adjacent entity in the database.
 data Direction = Next | Prev
 
---------------------------------------------------------------------- Instances
-
 instance FromRow Int64 where
     fromRow = field
 
 instance FromRow Int where
     fromRow = field
-    
-instance FromRow (Entity Tag) where
+
+instance FromRow (Entity Album) where
     fromRow = do
         entity <- Entity <$> field
-        tag    <- Tag    <$> field
-
-        return (entity tag)
+        album  <- Album  <$> field      <*> bool field <*> time field
+                         <*> time field <*> field      <*> pure []
+                         
+        return (entity album)
 
 instance FromRow (Entity Image) where
     fromRow = do
@@ -53,9 +53,20 @@ instance FromRow (Entity Image) where
                          <*> pure []
                          
         return (entity image)
-        
-        where bool = fmap toBool
-              time = fmap fromSeconds
+
+instance FromRow (Entity Page) where
+    fromRow = do
+        entity <- Entity <$> field
+        page   <- Page   <$> field <*> field <*> field
+                         
+        return (entity page)
+    
+instance FromRow (Entity Tag) where
+    fromRow = do
+        entity <- Entity <$> field
+        tag    <- Tag    <$> field
+
+        return (entity tag)
 
 ------------------------------------------------------------------------ Images
 
@@ -182,6 +193,39 @@ insertAlbum Album {..} = do
 
     return postID
 
+-- | Returns the album from the database with the given ID. If no album exists,
+-- | nothing is returned.
+selectAlbum :: ID -> Transaction (Maybe (Entity Album))
+selectAlbum id = do
+    results <- SQL.single (albums >>= wherever . ("id" *= id))
+    
+    case results of
+        Nothing    -> return Nothing
+        Just album -> Just <$> withPages album
+
+-- | Gets a list of albums from the database. If a non-empty expression is
+-- | passed in, only albums that satisfy the expression will be returned.
+selectAlbums :: Expression -> Int -> Int -> Transaction [Entity Album]
+selectAlbums expression from count = do
+    results <- SQL.query $ do
+        a <- albums
+        satisfying expression a
+        offset from
+        limit count
+    
+    sequence (withPages <$> results)
+
+------------------------------------------------------------------------- Pages
+
+-- | Returns the list of all pages owned by the album with the given ID.
+selectPagesByAlbum :: ID -> Transaction [Entity Page]
+selectPagesByAlbum postID = SQL.query $ do
+    a <- from "album"
+    p <- from "page" `on` ("album_id" *= a "id")
+    wherever (a "post_id" .= postID)
+    retrieve [ p "id", p "title", p "number", p "extension" ]
+    asc (p "number")
+
 ----------------------------------------------------------------- Relationships
 
 -- | Associates the image with the given ID with the tag with the given name. 
@@ -207,6 +251,17 @@ attachTags :: [String] -> ID -> Transaction ()
 attachTags tagNames postID = mapM_ (attachTag postID) tagNames
 
 ------------------------------------------------------------------ Query pieces
+
+-- | Selects albums from the database.
+albums :: Query Table
+albums = do
+    p  <- from "post"
+    a  <- from "album" `on` ("post_id" *= p "id")
+    desc (p "modified")
+    desc (p "id")
+    retrieve [ p "id", p "title", p "is_favourite", p "created", p "modified"
+             , a "file_size" ]
+    return p
 
 -- | Selects images from the database.
 images :: Query Table
@@ -241,6 +296,12 @@ satisfying expression p = forM_ expression $ \case
               t  <- from "tag" `on` \t -> t "id" .= pt "tag_id" 
                                        .& p "id" .= pt "post_id"
               wherever (t "name" ~% x .| t "name" %% (' ':x))
+
+-- | Adds the list of pages to the given album entity.
+withPages :: Entity Album -> Transaction (Entity Album)
+withPages (Entity id album) = do
+    pages <- fromEntity <$$> selectPagesByAlbum id
+    return (Entity id album { albumPages = pages })
 
 -- | Adds the list of tag names to the given image entity.
 withTags :: Entity Image -> Transaction (Entity Image)
@@ -290,10 +351,13 @@ selectAdjacentImage dir id expression = do
 
 ----------------------------------------------------------------------- Utility
 
--- | Converts an integer to a boolean.
-toBool :: Int -> Bool
-toBool 0 = False
-toBool _ = True
+-- | Maps the given integer to a boolean.
+bool :: (Functor f) => f Int -> f Bool
+bool = fmap (\x -> if x == 0 then False else True)
+
+-- | Maps the given integer to a UTC time.
+time :: (Functor f) => f Integer -> f UTCTime
+time = fmap fromSeconds
 
 -- | Converts a boolean to an integer.
 fromBool :: Bool -> Int
