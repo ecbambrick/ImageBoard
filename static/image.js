@@ -37,6 +37,6 @@ Image.navigate = (previousID, nextID, query) => e => {
     
     // escape
     } else if (!modifiers && e.keyCode === 27) {
-        window.location.href = noQuery ? "/" : "/search" + q;
+        window.location.href = noQuery ? "/" : "/images" + q;
     }
 }

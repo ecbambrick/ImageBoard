@@ -1,76 +1,14 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-
 module App.Template where
 
 import qualified Data.Text.IO as Text
 
-import App.Common               ( Image(..) )
-import App.Paths                ( imageURL, templatePath, imageThumbnailURL )
+import App.Paths                ( templatePath )
 import Control.Monad.Trans      ( MonadIO, liftIO )
-import Data.Data                ( Data, Typeable )
+import Data.Data                ( Data )
 import Data.Text                ( Text )
 import Data.Text.Lazy           ( toStrict )
-import Database.Engine          ( Entity(..), ID )
-import Text.Hastache            ( encodeStr, hastacheStr, defaultConfig )
+import Text.Hastache            ( hastacheStr, defaultConfig )
 import Text.Hastache.Context    ( mkGenericContext )
-
----------------------------------------------------------------------- Contexts
-
--- | The context data required for an image.
-data ImageContext = ImageContext
-    { identifier :: ID
-    , hasTags    :: Bool
-    , path       :: String
-    , thumb      :: String
-    , tagNames   :: [String]
-    } deriving (Data, Typeable)
-
--- | Returns the image context data for the given image.
-toImageContext :: Entity Image -> ImageContext
-toImageContext (Entity id image) = ImageContext
-    { identifier = id
-    , path       = imageURL image
-    , thumb      = imageThumbnailURL image
-    , tagNames   = imageTagNames image
-    , hasTags    = not $ null $ imageTagNames image }
-
--- | The context data required for the image page.
-data ImageSetContext = ImageSetContext
-    { main     :: ImageContext
-    , previous :: ImageContext
-    , next     :: ImageContext
-    , setQuery :: String
-    } deriving (Data, Typeable)
-
--- | Returns the image set context for the given set of three images.
-toImageSetContext :: String -> Entity Image -> Entity Image -> Entity Image -> ImageSetContext
-toImageSetContext query image1 image2 image3 = ImageSetContext
-    { main     = toImageContext image1
-    , previous = toImageContext image2
-    , next     = toImageContext image3
-    , setQuery = query }
-    
--- | The context data required for the index.
-data IndexContext = IndexContext
-    { query        :: String
-    , isQuery      :: Bool
-    , page         :: Int
-    , previousPage :: Int
-    , nextPage     :: Int
-    , images       :: [ImageContext]
-    } deriving (Data, Typeable)
-
--- | Returns the index context data for the given query and list of images.
-toImagesContext :: String -> Int -> [Entity Image] -> IndexContext
-toImagesContext query page images = IndexContext
-    { query        = query
-    , isQuery      = not (null query)
-    , page         = page
-    , previousPage = max (page - 1) 1
-    , nextPage     = page + 1
-    , images       = fmap toImageContext images }
-
---------------------------------------------------------------------- Rendering
 
 -- | Renders the mustahce template with the given name with the given data.
 render :: (MonadIO m, Data a) => FilePath -> a -> m Text

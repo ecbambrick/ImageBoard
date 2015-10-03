@@ -8,7 +8,7 @@
     <div class="content">
         <div class="header">
             <div class="left">
-                <form name="search" action="search" method="get">
+                <form name="search" action="images" method="get">
                     <input type="text" name="q" value="{{query}}" />
                     <button type="submit">Search</button>
                 </form>
@@ -22,10 +22,10 @@
             </div>
         </div>
         <div class="gallery">
-            <a href="/?page={{previousPage}}{{#isQuery}}&q={{query}}{{/isQuery}}">
+            <a href="/images?page={{previousPage}}{{#isQuery}}&q={{query}}{{/isQuery}}">
                 <div class="thumb">previous</div>
             </a>
-            <a href="/?page={{nextPage}}{{#isQuery}}&q={{query}}{{/isQuery}}">
+            <a href="/images?page={{nextPage}}{{#isQuery}}&q={{query}}{{/isQuery}}">
                 <div class="thumb">next</div>
             </a>
             {{#images}}
