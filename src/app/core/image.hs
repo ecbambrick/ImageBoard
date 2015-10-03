@@ -32,7 +32,7 @@ type Triple a = (a, a, a)
 
 -------------------------------------------------------------------------- CRUD
 
--- | Returns a page of image based on the given page number and filter.
+-- | Returns a page of images based on the given page number and filter.
 query :: Expression -> Int -> App [Entity Image]
 query expression page = do
     size <- asks configPageSize

@@ -44,9 +44,9 @@ querySingle = runDB . selectAlbum
 -- | invalid.
 insert :: ArchiveFile -> String -> [String] -> App Validation
 insert file title tagNames = do
-    handle    <- liftIO $ openFile (getPath file) ReadMode
-    archive   <- liftIO $ toArchive <$> hGetContents handle
-    now       <- liftIO $ getCurrentTime
+    handle  <- liftIO $ openFile (getPath file) ReadMode
+    archive <- liftIO $ toArchive <$> hGetContents handle
+    now     <- liftIO $ getCurrentTime
      
     let entries    = sortBy (comparingAlphaNum eRelativePath) (zEntries archive)
         anyEntries = not (null entries)
