@@ -1,9 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards  #-}
 
-module App.Paths where
+module App.Paths 
+    ( dataPath, templatePath, imagePath, imageThumbnailPath, imageURL
+    , imageThumbnailURL, albumPath, albumThumbnailPath, albumURL
+    , albumThumbnailURL, pagePath, pageThumbnailPath, pageURL
+    , pageThumbnailURL ) where
 
-import App.Common           ( Image(..), Page(..) )
+import App.Common           ( Album(..), Image(..), Page(..) )
 import App.Config           ( Config(..) )
 import Control.Monad.Reader ( MonadReader, asks )
 import Data.Textual         ( replace )
@@ -67,6 +71,14 @@ albumThumbnailPath id = do
     storagePath <- asks configStoragePath
     return (storagePath </> relativeAlbumPath id </> "thumbnail.jpg")
 
+-- | Returns the relative URL of the given album.
+albumURL :: Entity Album -> FilePath
+albumURL (Entity id _) = toURL (relativeAlbumPath id)
+
+-- | Returns the relative URL of the thumbnail of the given album.
+albumThumbnailURL :: Entity Album -> FilePath
+albumThumbnailURL (Entity id _) = toURL (relativeAlbumPath id </> "thumbnail.jpg")
+
 -- | Returns the relative file path of the given album.
 relativeAlbumPath :: ID -> FilePath
 relativeAlbumPath id = "data/album" </> show (id `mod` 100) </> show id
@@ -88,6 +100,16 @@ pageThumbnailPath id Page {..} = do
     storagePath <- asks configStoragePath
     basePath    <- albumPath id
     return (basePath </> "t" ++ show pageNumber <.> "jpg")
+
+-- | Returns the relative URL of the given page.
+pageURL :: ID -> Page -> FilePath
+pageURL id Page {..} = toURL path
+    where path = relativeAlbumPath id </> show pageNumber <.> pageExtension
+
+-- | Returns the relative URL of the thumbnail of the given page.
+pageThumbnailURL :: ID -> Page -> FilePath
+pageThumbnailURL id Page {..} = toURL path
+    where path = relativeAlbumPath id </> "t" ++ show pageNumber <.> "jpg"
 
 ----------------------------------------------------------------------- Utility
 

@@ -12,10 +12,14 @@ import App.FileType                  ( FileType(..), getFileType )
 import App.Paths                     ( dataPath )
 import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
+import Control.Monad                 ( join )
 import Control.Monad.Reader          ( asks )
 import Data.Monoid                   ( mconcat )
 import Data.Text                     ( pack )
-import App.Template                  ( render, toImagesContext, toImageSetContext )
+import App.Template                  ( render )
+import App.Template.Image            ( toImagesContext, toImageSetContext )
+import App.Template.Album            ( toAlbumsContext, toAlbumContext
+                                     , toPageContext )
 import Data.Textual                  ( splitOn )
 import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
@@ -59,6 +63,36 @@ main = runApplication $ do
     get root $ do
         redirect "images"
     
+    -- Renders the albums page with albums that match the query parameter.
+    get "albums" $ do
+        page    <- optionalParam "page" 0
+        query   <- optionalParam "q" ""
+        context <- toAlbumsContext query page <$> Album.query (parse query) page
+        results <- render "albums" context
+        
+        html results
+    
+    -- Renders the album details page for the album with the given ID.
+    get ("album" <//> var) $ \id -> do
+        album   <- Album.querySingle id
+        
+        let context = toAlbumContext <$> album
+        
+        case context of
+            Nothing      -> redirect "/"
+            Just context -> html =<< render "album" context
+    
+    -- Renders the details page for the page and album with the given IDs.
+    get ("album" <//> var <//> var) $ \id number -> do
+        album <- Album.querySingle id
+        
+        let page    = join $ Album.getPage <$> album <*> pure number
+            context =        toPageContext <$> album <*> page
+        
+        case context of
+            Nothing      -> redirect "/"
+            Just context -> html =<< render "page" context
+    
     -- Renders the images page with images that match the query parameter.
     get "images" $ do
         page    <- optionalParam "page" 0
@@ -70,11 +104,10 @@ main = runApplication $ do
     
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
-        query                   <- optionalParam "q" ""
-        (previous, image, next) <- Image.queryTriple (parse query) id
+        query               <- optionalParam "q" ""
+        (prev, image, next) <- Image.queryTriple (parse query) id
         
-        let context = toImageSetContext <$> pure query <*> image 
-                                        <*> previous   <*> next
+        let context = toImageSetContext <$> pure query <*> image <*> prev <*> next
         
         case context of
             Nothing      -> redirect "/"
