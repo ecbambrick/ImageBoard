@@ -15,9 +15,7 @@ import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
 import Data.Functor         ( (<$>) )
-import Data.List            ( nub )
 import Data.Monoid          ( (<>), mconcat )
-import Data.Textual         ( strip, toLower )
 import Data.Time            ( getCurrentTime )
 import Database.Engine      ( Entity, ID )
 import Graphics.Thumbnail   ( createThumbnail )
@@ -63,7 +61,7 @@ insert file title tagNames = do
     thumbSize   <- asks   $ configThumbnailSize
 
     let ext     = getExtension file
-        tags    = cleanTags tagNames
+        tags    = Tag.cleanTags tagNames
         image   = Image title False hash ext w h now now size []
         results = validate image
                   <> isFalse (Property "duplicate" isDuplicate)
@@ -86,7 +84,3 @@ insert file title tagNames = do
 -- | invalid. Any validation that requires access to the database is ignored.
 validate :: Image -> Validation
 validate Image { imageFileSize = size } = isPositive (Property "size" size)
-
--- | Sanitizes the given list of tag names.
-cleanTags :: [String] -> [String]
-cleanTags = filter (not . null) . nub . map (toLower . strip)
