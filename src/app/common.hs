@@ -41,7 +41,7 @@ runDB command = do
 
 -------------------------------------------------------------------------- Data
 
--- | A tag can be attached to an image as additional meta data.
+-- | A tag can be attached to an image or album as additional meta data.
 data Tag = Tag 
     { tagName :: String
     } deriving (Eq, Show)
@@ -69,6 +69,7 @@ data Album = Album
     , albumModified    :: UTCTime
     , albumFileSize    :: Int
     , albumPages       :: [Page]
+    , albumTagNames    :: [String]
     } deriving (Show)
 
 -- | A page contains the meta data of a single image file within an album.

@@ -5,10 +5,10 @@
 module App.Database
     ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
     , selectNextImage, selectPreviousImage, updateImage, insertAlbum
-    , selectAlbum, selectAlbums, selectTags, selectTagsByImage, attachTags
-    , cleanTags ) where
+    , selectAlbum, selectAlbums, selectTags, attachTags, cleanTags ) where
 
 import qualified Database.Engine as SQL
+import qualified Data.Traversable as Traversable
                                 
 import App.Common           ( Album(..), Image(..), Page(..), Tag(..), (<$$>) )
 import App.Expression       ( Token(..), Expression )
@@ -41,6 +41,7 @@ instance FromRow (Entity Album) where
         entity <- Entity <$> field
         album  <- Album  <$> field      <*> bool field <*> time field
                          <*> time field <*> field      <*> pure []
+                         <*> pure []
                          
         return (entity album)
 
@@ -98,22 +99,16 @@ insertImage Image {..} = do
 selectImage :: ID -> Transaction (Maybe (Entity Image))
 selectImage id = do
     results <- SQL.single (images >>= wherever . ("id" *= id))
-
-    case results of
-        Nothing    -> return Nothing
-        Just image -> Just <$> withTags image
+    
+    Traversable.sequence (withImageTags <$> results)
 
 -- | Gets a list of images from the database. If a non-empty expression is
 -- | passed in, only images that satisfy the expression will be returned.
 selectImages :: Expression -> Int -> Int -> Transaction [Entity Image]
 selectImages expression from count = do
-    results <- SQL.query $ do
-        i <- images
-        satisfying expression i
-        offset from
-        limit count
+    results <- SQL.query (images >>= paginated expression from count)
     
-    sequence (withTags <$> results)
+    Traversable.sequence (withImageTags <$> results)
 
 -- | Returns the image from the database ordered after the image with the 
 -- | given ID. If no image exists, nothing is returned.
@@ -150,8 +145,8 @@ selectTags :: Transaction [Entity Tag]
 selectTags = SQL.query tags
 
 -- | Returns a list of all tags attached to the image with the given ID.
-selectTagsByImage :: ID -> Transaction [Entity Tag]
-selectTagsByImage postID = SQL.query $ do
+selectTagsByPost :: ID -> Transaction [Entity Tag]
+selectTagsByPost postID = SQL.query $ do
     t  <- tags
     pt <- from "post_tag" `on` ("tag_id" *= t "id")
     wherever (pt "post_id" .= postID)
@@ -169,6 +164,28 @@ cleanTags = do
     
     forM_ orphanTags $ \id -> 
         SQL.delete "tag" ("id" *= id)
+
+-- | Associates the image with the given ID with the tag with the given name. 
+-- | If the tag does not eixst, it is created.
+attachTag :: ID -> String -> Transaction ()
+attachTag postID tagName = do
+    tagID <- SQL.single $ do
+        t <- from "tag"
+        wherever (t "name" .= tagName)
+        retrieve [t "id"]
+    
+    tagID' <- case tagID of
+        Nothing -> SQL.insert "tag" [ "name" << tagName ]
+        Just id -> return id
+    
+    void $ SQL.insert "post_tag"
+        [ "post_id" << postID
+        , "tag_id"  << tagID' ]
+
+-- | Associates the image with the given ID with all tags that map to the given
+-- | list of names. If any tag does not eixsts, it is created.
+attachTags :: [String] -> ID -> Transaction ()
+attachTags tagNames postID = mapM_ (attachTag postID) tagNames
 
 ------------------------------------------------------------------------ Albums
 
@@ -197,24 +214,22 @@ insertAlbum Album {..} = do
 -- | nothing is returned.
 selectAlbum :: ID -> Transaction (Maybe (Entity Album))
 selectAlbum id = do
-    results <- SQL.single (albums >>= wherever . ("id" *= id))
+    results          <- SQL.single (albums >>= wherever . ("id" *= id))
+    withPages        <- Traversable.sequence (withPages     <$> results)
+    withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
     
-    case results of
-        Nothing    -> return Nothing
-        Just album -> Just <$> withPages album
+    return withPagesAndTags
 
 -- | Gets a list of albums from the database. If a non-empty expression is
 -- | passed in, only albums that satisfy the expression will be returned.
 selectAlbums :: Expression -> Int -> Int -> Transaction [Entity Album]
 selectAlbums expression from count = do
-    results <- SQL.query $ do
-        a <- albums
-        satisfying expression a
-        offset from
-        limit count
+    results          <- SQL.query (albums >>= paginated expression from count)
+    withPages        <- Traversable.sequence (withPages <$> results)
+    withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
     
-    sequence (withPages <$> results)
-
+    return withPagesAndTags
+    
 ------------------------------------------------------------------------- Pages
 
 -- | Returns the list of all pages owned by the album with the given ID.
@@ -226,31 +241,7 @@ selectPagesByAlbum postID = SQL.query $ do
     retrieve [ p "id", p "title", p "number", p "extension" ]
     asc (p "number")
 
------------------------------------------------------------------ Relationships
-
--- | Associates the image with the given ID with the tag with the given name. 
--- | If the tag does not eixst, it is created.
-attachTag :: ID -> String -> Transaction ()
-attachTag postID tagName = do
-    tagID <- SQL.single $ do
-        t <- from "tag"
-        wherever (t "name" .= tagName)
-        retrieve [t "id"]
-    
-    tagID' <- case tagID of
-        Nothing -> SQL.insert "tag" [ "name" << tagName ]
-        Just id -> return id
-    
-    void $ SQL.insert "post_tag"
-        [ "post_id" << postID
-        , "tag_id"  << tagID' ]
-
--- | Associates the image with the given ID with all tags that map to the given
--- | list of names. If any tag does not eixsts, it is created.
-attachTags :: [String] -> ID -> Transaction ()
-attachTags tagNames postID = mapM_ (attachTag postID) tagNames
-
------------------------------------------------------------------- Query pieces
+---------------------------------------------------------------- Query segments
 
 -- | Selects albums from the database.
 albums :: Query Table
@@ -297,6 +288,16 @@ satisfying expression p = forM_ expression $ \case
                                        .& p "id" .= pt "post_id"
               wherever (t "name" ~% x .| t "name" %% (' ':x))
 
+-- | Returns a paginated query for the given table using the given expression,
+-- | offset, and limit.
+paginated :: Expression -> Int -> Int -> Table -> Query ()
+paginated expression from count table = do 
+    satisfying expression table
+    offset from
+    limit count
+
+--------------------------------------------------------------------- Modifiers
+
 -- | Adds the list of pages to the given album entity.
 withPages :: Entity Album -> Transaction (Entity Album)
 withPages (Entity id album) = do
@@ -304,10 +305,18 @@ withPages (Entity id album) = do
     return (Entity id album { albumPages = pages })
 
 -- | Adds the list of tag names to the given image entity.
-withTags :: Entity Image -> Transaction (Entity Image)
-withTags (Entity id image) = do
-    tagNames <- tagName . fromEntity <$$> selectTagsByImage id
+withImageTags :: Entity Image -> Transaction (Entity Image)
+withImageTags (Entity id image) = do
+    tagNames <- tagName . fromEntity <$$> selectTagsByPost id
     return (Entity id image { imageTagNames = tagNames })
+
+-- | Adds the list of tag names to the given image entity.
+withAlbumTags :: Entity Album -> Transaction (Entity Album)
+withAlbumTags (Entity id album) = do
+    tagNames <- tagName . fromEntity <$$> selectTagsByPost id
+    return (Entity id album { albumTagNames = tagNames })
+
+----------------------------------------------------------------------- Utility
 
 -- | Selects the image adjacent to the image with the given ID in the given 
 -- | direction. If there is no next/previous image, then the very first or last
@@ -345,11 +354,9 @@ selectAdjacentImage dir id expression = do
             ordering (p "id")
     
     case (nextImage, firstImage) of
-        (Just image, _) -> Just <$> withTags image
-        (_, Just image) -> Just <$> withTags image
+        (Just image, _) -> Just <$> withImageTags image
+        (_, Just image) -> Just <$> withImageTags image
         (_, _         ) -> return Nothing
-
------------------------------------------------------------------------ Utility
 
 -- | Maps the given integer to a boolean.
 bool :: (Functor f) => f Int -> f Bool

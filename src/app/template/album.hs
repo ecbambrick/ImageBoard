@@ -13,6 +13,8 @@ data AlbumContext = AlbumContext
     { identifier :: ID
     , thumb      :: String
     , pages      :: [PageContext]
+    , hasTags    :: Bool
+    , tagNames   :: [String]
     } deriving (Data, Typeable)
 
 -- | Returns the album context data for the given album.
@@ -20,7 +22,9 @@ toAlbumContext :: Entity Album -> AlbumContext
 toAlbumContext album @ (Entity id Album {..}) = AlbumContext
     { identifier = id
     , thumb      = albumThumbnailURL album
-    , pages      = map (toPageContext album) albumPages }
+    , pages      = map (toPageContext album) albumPages
+    , hasTags    = not $ null albumTagNames
+    , tagNames   = albumTagNames }
 
 -- | The context data required for a page.
 data PageContext = PageContext

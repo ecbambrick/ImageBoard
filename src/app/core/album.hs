@@ -2,16 +2,17 @@
 
 module App.Core.Album ( insert, query, querySingle, getPage ) where
 
+import qualified App.Core.Tag as Tag
 import qualified Data.ByteString as ByteString
 
-import App.Common           ( Album(..), Page(..), App, runDB )
+import App.Common           ( Album(..), Page(..), Tag(..), App, runDB )
 import App.Config           ( Config(..) )
-import App.Database         ( insertAlbum, selectAlbum, selectAlbums )
+import App.Database         ( insertAlbum, selectAlbum, selectAlbums, attachTags )
 import App.Expression       ( Expression )
 import App.FileType         ( ArchiveFile, File(..) )
 import App.Paths            ( albumPath, albumThumbnailPath, pagePath
                             , pageThumbnailPath )
-import App.Validation       ( Validation(..) )
+import App.Validation       ( Validation(..), isValid )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
 import Control.Applicative  ( (<$>) )
 import Control.Monad        ( when )
@@ -19,6 +20,7 @@ import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
 import Data.ByteString.Lazy ( hGetContents, hPut )
 import Data.List            ( sortBy, find )
+import Data.Monoid          ( mconcat )
 import Data.Ord.Extended    ( comparingAlphaNum )
 import Data.Time            ( getCurrentTime )
 import Database.Engine      ( Entity(..), ID )
@@ -53,23 +55,29 @@ insert file title tagNames = do
         entryPairs = zip entries [1..length entries]
         pages      = map (uncurry toPage) entryPairs
         fileSize   = sum $ map (fromIntegral . eUncompressedSize) entries
-        album      = Album title False now now fileSize pages
+        tags       = Tag.cleanTags tagNames
+        album      = Album title False now now fileSize pages tags
+        results    = validate album
     
-    id <- runDB (insertAlbum album)
-    
-    when anyEntries $ do
-        basePath  <- albumPath id
-        firstPath <- pagePath id (toPage (head entries) 1)
-        thumbPath <- albumThumbnailPath id
-        thumbSize <- asks configThumbnailSize
+    when (isValid results) $ do
+        id <- runDB $ do
+            id <- insertAlbum album
+            attachTags tags id
+            return id
         
-        liftIO $ createDirectoryIfMissing True basePath
-        mapM_ (extractFile id) entryPairs
-        liftIO $ createThumbnail thumbSize firstPath thumbPath
-    
+        when anyEntries $ do
+            basePath  <- albumPath id
+            firstPath <- pagePath id (toPage (head entries) 1)
+            thumbPath <- albumThumbnailPath id
+            thumbSize <- asks configThumbnailSize
+            
+            liftIO $ createDirectoryIfMissing True basePath
+            mapM_ (extractFile id) entryPairs
+            liftIO $ createThumbnail thumbSize firstPath thumbPath
+        
     liftIO (hClose handle)
     
-    return Valid
+    return results
 
 -- | Returns the page with the given number from the given album.
 getPage :: Entity Album -> Int -> Maybe Page
@@ -77,6 +85,11 @@ getPage (Entity _ Album {..}) number =
     find (\x -> pageNumber x == number) albumPages
 
 ----------------------------------------------------------------------- Utility
+
+-- | Returns valid if all fields of the given album are valid; otherwise 
+-- | invalid. Any validation that requires access to the database is ignored.
+validate :: Album -> Validation
+validate Album {..} = mconcat (Tag.validate . Tag <$> albumTagNames)
 
 -- | Extracts the given zip file entry.
 extractFile :: ID -> (Entry, Int) -> App ()
