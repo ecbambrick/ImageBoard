@@ -189,6 +189,7 @@ replace from to (x:xs)
     | x == from = to  ++ replace from to xs
     | otherwise = [x] ++ replace from to xs
 
+-- | Maps the given fucntion to the reverse of the given list.
 reverseMap :: (a -> b) -> [a] -> [b]
 reverseMap f xs = map f (reverse xs)
 
