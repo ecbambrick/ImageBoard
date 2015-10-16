@@ -40,6 +40,7 @@ instance Show Value where
 -- | A SQL table column.
 data Column = AliasedColumn Int String
             | NamedColumn String String
+            | Count
             deriving (Show)
 
 -- | The FROM clause of a query.
@@ -74,7 +75,8 @@ data QueryData = QueryData
     } deriving (Show)
 
 -- | Converts a normal value to a SQL value.
-class ToValue a where toValue :: a -> Value
+class ToValue a where 
+    toValue :: a -> Value
 
 instance ToValue Int     where toValue = SQLNumber
 instance ToValue Int64   where toValue = SQLNumber
@@ -98,6 +100,7 @@ on :: Query Table -> (Table -> Filter) -> Query Table
 on queryMapper queryFilter = do
     mapper <- queryMapper
     filter <- Just <$> queryFilter mapper
+    
     state $ \(i,q) ->
         let ([(From name _ _)], xs) = splitAt 1 (queryFrom q)
             x                       = From name (i - 1) (InnerJoin filter)
@@ -214,6 +217,10 @@ anything = return All
 -- | Maps a table column with the given name to the given value.
 (<<) :: (ToValue a) => String -> a -> Mapping
 (<<) column value = Mapping column (toValue value)
+
+-- | Returns a column representing the total number of results.
+count :: Column
+count = Count
 
 ----------------------------------------------------------------------- Utility
 
