@@ -67,8 +67,9 @@ main = runApplication $ do
     get "albums" $ do
         page    <- optionalParam "page" 0
         query   <- optionalParam "q" ""
-        context <- toAlbumsContext query page <$> Album.query (parse query) page
-        results <- render "albums" context
+        count   <- Album.count (parse query)
+        albums  <- Album.query (parse query) page
+        results <- render "albums" (toAlbumsContext query page count albums)
         
         html results
     
@@ -97,8 +98,9 @@ main = runApplication $ do
     get "images" $ do
         page    <- optionalParam "page" 0
         query   <- optionalParam "q" ""
-        context <- toImagesContext query page <$> Image.query (parse query) page
-        results <- render "images" context
+        count   <- Image.count (parse query)
+        images  <- Image.query (parse query) page
+        results <- render "images" (toImagesContext query page count images)
         
         html results
     

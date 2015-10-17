@@ -50,14 +50,17 @@ data ImagesContext = ImagesContext
     , previousPage :: Int
     , nextPage     :: Int
     , images       :: [ImageContext]
+    , total        :: Int
     } deriving (Data, Typeable)
 
 -- | Returns the index context data for the given query and list of images.
-toImagesContext :: String -> Int -> [Entity Image] -> ImagesContext
-toImagesContext query page images = ImagesContext
+toImagesContext :: String -> Int -> Int -> [Entity Image] -> ImagesContext
+toImagesContext query page total images = ImagesContext
     { query        = query
     , isQuery      = not (null query)
     , page         = page
     , previousPage = max (page - 1) 1
     , nextPage     = page + 1
-    , images       = map toImageContext images }
+    , images       = map toImageContext images
+    , total        = total }
+

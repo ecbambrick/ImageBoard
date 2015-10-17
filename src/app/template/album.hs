@@ -26,6 +26,28 @@ toAlbumContext album @ (Entity id Album {..}) = AlbumContext
     , hasTags    = not $ null albumTagNames
     , tagNames   = albumTagNames }
 
+-- | The context data required for a list of albums.
+data AlbumsContext = AlbumsContext
+    { query        :: String
+    , isQuery      :: Bool
+    , page         :: Int
+    , previousPage :: Int
+    , nextPage     :: Int
+    , albums       :: [AlbumContext]
+    , total        :: Int
+    } deriving (Data, Typeable)
+
+-- | Returns the album context for the given query, page, and list of albums.
+toAlbumsContext :: String -> Int -> Int -> [Entity Album] -> AlbumsContext
+toAlbumsContext query page total albums = AlbumsContext
+    { query        = query
+    , isQuery      = not (null query)
+    , page         = page
+    , previousPage = max (page - 1) 1
+    , nextPage     = page + 1
+    , albums       = map toAlbumContext albums
+    , total        = total }
+
 -- | The context data required for a page.
 data PageContext = PageContext
     { path      :: String
@@ -43,23 +65,3 @@ toPageContext (Entity id Album {..}) page @ Page {..} = PageContext
     , number    = pageNumber
     , previous  = pageNumber - 1 `mod` length albumPages
     , next      = pageNumber + 1 `mod` length albumPages }
-
--- | The context data required for a list of albums.
-data AlbumsContext = AlbumsContext
-    { query        :: String
-    , isQuery      :: Bool
-    , page         :: Int
-    , previousPage :: Int
-    , nextPage     :: Int
-    , albums       :: [AlbumContext]
-    } deriving (Data, Typeable)
-
--- | Returns the album context for the given query, page, and list of albums.
-toAlbumsContext :: String -> Int -> [Entity Album] -> AlbumsContext
-toAlbumsContext query page albums = AlbumsContext
-    { query        = query
-    , isQuery      = not (null query)
-    , page         = page
-    , previousPage = max (page - 1) 1
-    , nextPage     = page + 1
-    , albums       = map toAlbumContext albums }
