@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module App.Core.Image ( query, queryTriple, insert ) where
+module App.Core.Image ( count, query, queryTriple, insert ) where
 
 import qualified App.Core.Tag as Tag
 
@@ -8,8 +8,8 @@ import App.Common           ( Tag(..), Image(..), App, runDB )
 import App.Config           ( Config(..) )
 import App.Expression       ( Expression )
 import App.Database         ( attachTags, insertImage, selectHashExists
-                            , selectImage, selectImages, selectNextImage
-                            , selectPreviousImage )
+                            , selectImagesCount, selectImage, selectImages
+                            , selectNextImage, selectPreviousImage )
 import App.FileType         ( ImageFile, File(..) )
 import App.Paths            ( imagePath, imageThumbnailPath )
 import App.Validation       ( Property(..), Validation, isFalse, isPositive, isValid )
@@ -31,6 +31,10 @@ import System.IO.Metadata   ( getHash, getDimensions, getSize )
 type Triple a = (a, a, a)
 
 -------------------------------------------------------------------------- CRUD
+
+-- | Returns the total number of images satisfying the given expression.
+count :: Expression -> App Int
+count expression = runDB (selectImagesCount expression)
 
 -- | Returns a page of images based on the given page number and filter.
 query :: Expression -> Int -> App [Entity Image]

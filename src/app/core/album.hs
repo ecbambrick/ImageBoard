@@ -1,13 +1,14 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module App.Core.Album ( insert, query, querySingle, getPage ) where
+module App.Core.Album ( count, query, querySingle, insert, getPage ) where
 
 import qualified App.Core.Tag as Tag
 import qualified Data.ByteString as ByteString
 
 import App.Common           ( Album(..), Page(..), Tag(..), App, runDB )
 import App.Config           ( Config(..) )
-import App.Database         ( insertAlbum, selectAlbum, selectAlbums, attachTags )
+import App.Database         ( insertAlbum, selectAlbum, selectAlbums
+                            , selectAlbumsCount, attachTags )
 import App.Expression       ( Expression )
 import App.FileType         ( ArchiveFile, File(..) )
 import App.Paths            ( albumPath, albumThumbnailPath, pagePath
@@ -30,6 +31,10 @@ import System.Directory     ( createDirectoryIfMissing )
 import System.IO            ( IOMode(..), hClose, openFile, withFile )
 
 -------------------------------------------------------------------------- CRUD
+
+-- | Returns the total number of albums satisfying the given expression.
+count :: Expression -> App Int
+count expression = runDB (selectAlbumsCount expression)
 
 -- | Returns a page of albums based on the given page number and filter.
 query :: Expression -> Int -> App [Entity Album]
