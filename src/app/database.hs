@@ -3,9 +3,10 @@
 {-# LANGUAGE LambdaCase        #-}
 
 module App.Database
-    ( deleteImage, insertImage, selectHashExists, selectImage, selectImages
-    , selectNextImage, selectPreviousImage, updateImage, insertAlbum
-    , selectAlbum, selectAlbums, selectTags, attachTags, cleanTags ) where
+    ( deleteImage, insertImage, selectHashExists, selectImagesCount
+    , selectImage, selectImages, selectNextImage, selectPreviousImage
+    , updateImage, insertAlbum, selectAlbum, selectAlbums, selectAlbumsCount
+    , selectTags, attachTags, cleanTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
@@ -22,7 +23,7 @@ import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
                             , fromEntity, fromRow, field )
 import Database.Query       ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
                             , (.=), (.>), (.<), (*=), (<<), asc, clearOrder
-                            , desc, exists, limit, from, nay, offset, on
+                            , count, desc, exists, limit, from, nay, offset, on
                             , retrieve, wherever )
 
 ------------------------------------------------------------------------- Types
@@ -138,6 +139,10 @@ selectHashExists hash = do
     
     return (isJust results)
 
+-- | Returns the total number of images that satisfy the given expression.
+selectImagesCount :: Expression -> Transaction Int
+selectImagesCount = selectCount "image"
+
 -------------------------------------------------------------------------- Tags
 
 -- | Returns a list of all tags from the database.
@@ -229,6 +234,10 @@ selectAlbums expression from count = do
     withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
     
     return withPagesAndTags
+
+-- | Returns the total number of albums that satisfy the given expression.
+selectAlbumsCount :: Expression -> Transaction Int
+selectAlbumsCount = selectCount "album"
     
 ------------------------------------------------------------------------- Pages
 
@@ -357,6 +366,17 @@ selectAdjacentImage dir id expression = do
         (Just image, _) -> Just <$> withImageTags image
         (_, Just image) -> Just <$> withImageTags image
         (_, _         ) -> return Nothing
+
+-- | Returns the total number of rows from the table with the given name that
+-- | satisfy the given expression.
+selectCount :: String -> Expression -> Transaction Int
+selectCount table expression = do
+    results <- SQL.query $ do
+        t <- from table 
+        satisfying expression t
+        retrieve [count]
+        
+    return (head results)
 
 -- | Maps the given integer to a boolean.
 bool :: (Functor f) => f Int -> f Bool
