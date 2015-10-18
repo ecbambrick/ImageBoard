@@ -2,14 +2,15 @@
 
 import qualified Data.Text.IO as Text
 
-import App.Common               ( Image(..), Tag(..), (<$$>) )
-import App.DataSource.SQLite
+import App.Common               ( Album(..), Image(..), Page(..), Tag(..)
+                                , (<$$>) )
+import App.Database
 import App.Expression           ( parse )
 import Control.Monad            ( when )
 import Control.Monad.Reader     ( runReaderT, ask )
 import Control.Monad.Trans      ( lift )
 import Data.Functor             ( (<$>) )
-import Data.Maybe               ( isJust )
+import Data.Maybe               ( fromJust, isJust )
 import Data.Text                ( splitOn )
 import Data.Time.Clock          ( UTCTime(..) )
 import Data.Time.Extended       ( fromSeconds )
@@ -24,15 +25,16 @@ main = runTestTT $ TestList
     , selectNextImageTest
     , selectPreviousImageTest
     , selectImagesTest
-    , selectImagesByExpressionTest
+    , selectImagesCountTest
     , deleteImageTest
     , updateImageTest
     , selectHashExistsTest
+    , insertAlbumTest
+    , selectAlbumsTest
+    , selectAlbumsCountTest
     , attachTagsTest
     , selectTagsTest
-    , selectTagsByImageTest
     , cleanTagsTest ]
-
 ------------------------------------------------------------------- Image Tests
 
 -- | Tests the deleteImage function.
@@ -42,13 +44,13 @@ deleteImageTest = testDatabase $ do
     id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 2) (time 5) 5 [])
     id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 3) (time 6) 6 [])
     
-    numResults1 <- selectImageCount
+    numResults1 <- selectImagesCount []
     
     deleteImage id2
-    numResults2 <- selectImageCount
+    numResults2 <- selectImagesCount []
     
     deleteImage 999
-    numResults3 <- selectImageCount
+    numResults3 <- selectImagesCount []
     
     image1 <- selectImage id1
     image2 <- selectImage id2
@@ -66,13 +68,13 @@ deleteImageTest = testDatabase $ do
 insertImageTest :: Test
 insertImageTest = testDatabase $ do
     let image1 = Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 []
-    let image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 []
+        image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 []
     
     id1 <- insertImage image1
     id2 <- insertImage image2
     
-    [entity2, entity1] <- selectImages []
-    numResults         <- selectImageCount
+    [entity2, entity1] <- selectImages [] 0 50
+    numResults         <- selectImagesCount []
     
     lift $ do
         id1               @/? id2
@@ -116,9 +118,9 @@ selectNextImageTest = testDatabase $ do
     id2 <- insertImage image2
     id3 <- insertImage image3
     
-    (Just (Entity id2' image2')) <- selectNextImage id3
-    (Just (Entity id3' image3')) <- selectNextImage id1
-    noResults                    <- selectNextImage 999
+    (Just (Entity id2' image2')) <- selectNextImage id3 []
+    (Just (Entity id3' image3')) <- selectNextImage id1 []
+    noResults                    <- selectNextImage 999 []
     
     lift $ do
         noResults @=? Nothing
@@ -138,9 +140,9 @@ selectPreviousImageTest = testDatabase $ do
     id2 <- insertImage image2
     id3 <- insertImage image3
     
-    (Just (Entity id2' image2')) <- selectPreviousImage id1
-    (Just (Entity id1' image1')) <- selectPreviousImage id3
-    noResults                    <- selectPreviousImage 999
+    (Just (Entity id2' image2')) <- selectPreviousImage id1 []
+    (Just (Entity id1' image1')) <- selectPreviousImage id3 []
+    noResults                    <- selectPreviousImage 999 []
     
     lift $ do
         noResults @=? Nothing
@@ -149,27 +151,11 @@ selectPreviousImageTest = testDatabase $ do
         id2'      @=? id2
         image2'   @=? image2
 
--- | Tests the selectImages function with an empty expression.
+-- | Tests the selectImages function.
 selectImagesTest :: Test
 selectImagesTest = testDatabase $ do
-    noResults <- selectImages []
+    noResults <- selectImages [] 0 50
 
-    id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 [])
-    id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 [])
-    
-    (Just image1) <- selectImage id1
-    (Just image2) <- selectImage id2
-    (Just image3) <- selectImage id3
-    allImages     <- selectImages []
-    
-    lift $ do
-        noResults @=? []
-        allImages @=? [image3, image2, image1]
-
--- | Tests the selectImages function with a non-empty expression.
-selectImagesByExpressionTest :: Test
-selectImagesByExpressionTest = testDatabase $ do
     id1 <- insertImage (Image "t1" False "h1" "e1" 2 4 (time 1) (time 2) 8 [])
     id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 [])
     id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 [])
@@ -184,32 +170,60 @@ selectImagesByExpressionTest = testDatabase $ do
     (Just image3) <- selectImage id3
     (Just image4) <- selectImage id4
     
-    let expr1 = parse "test"
-        expr2 = parse "hello"
-        expr3 = parse "goodbye"
-        expr4 = parse "test, hello"
-        expr5 = parse "-test"
-        expr6 = parse "test, -hello"
-        expr7 = parse "random"
-        
-    results1 <- selectImages expr1
-    results2 <- selectImages expr2
-    results3 <- selectImages expr3
-    results4 <- selectImages expr4
-    results5 <- selectImages expr5
-    results6 <- selectImages expr6
-    results7 <- selectImages expr7
-    results8 <- selectImages []
+    allImages   <- selectImages [] 0 50
+    firstImage  <- selectImages [] 0 1
+    secondImage <- selectImages [] 1 1
+    thirdImage  <- selectImages [] 2 1
+    twoImages   <- selectImages [] 2 2
     
     lift $ do
-        results1 @=? [image3, image2, image1]
-        results2 @=? [image3, image1]
-        results3 @=? [image1]
-        results4 @=? [image3, image1]
-        results5 @=? [image4]
-        results6 @=? [image2]
-        results7 @=? []
-        results8 @=? [image4, image3, image2, image1]
+        noResults   @=? []
+        allImages   @=? [image4, image3, image2, image1]
+        firstImage  @=? [image4]
+        secondImage @=? [image3]
+        thirdImage  @=? [image2]
+        twoImages   @=? [image2, image1]
+        
+    results1 <- selectImages (parse "test")         0 50
+    results2 <- selectImages (parse "hello")        0 50
+    results3 <- selectImages (parse "goodbye")      0 50
+    results4 <- selectImages (parse "test, hello")  0 50
+    results5 <- selectImages (parse "-test")        0 50
+    results6 <- selectImages (parse "test, -hello") 0 50
+    results7 <- selectImages (parse "random")       0 50
+    results8 <- selectImages []                     0 50
+    
+    lift $ do
+        results1    @=? [image3, image2, image1]
+        results2    @=? [image3, image1]
+        results3    @=? [image1]
+        results4    @=? [image3, image1]
+        results5    @=? [image4]
+        results6    @=? [image2]
+        results7    @=? []
+        results8    @=? [image4, image3, image2, image1]
+
+-- | Tests the selectImagesCount function.
+selectImagesCountTest :: Test
+selectImagesCountTest = testDatabase $ do
+    zero <- selectImagesCount []
+    
+    id1 <- insertImage (Image "t1" True  "h1" "e1" 1 2 (time 1) (time 2) 3 [])
+    id2 <- insertImage (Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 [])
+    id3 <- insertImage (Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 [])
+    id4 <- insertImage (Image "t4" False "h4" "e4" 4 2 (time 7) (time 8) 9 [])
+    
+    attachTags ["test", "hello", "goodbye"]  id1
+    attachTags ["another", "couple", "test"] id2
+    attachTags ["hello", "blahblah", "test"] id3
+    
+    two  <- selectImagesCount (parse "test, -blahblah")
+    four <- selectImagesCount []
+    
+    lift $ do
+        zero @=? 0
+        two  @=? 2
+        four @=? 4
 
 -- | Tests the selectHashExists function.
 selectHashExistsTest :: Test 
@@ -228,7 +242,7 @@ selectHashExistsTest = testDatabase $ do
         result2 @=? False
         result3 @=? True
         result4 @=? True
-    
+
 -- | Tests the updateImage function.
 updateImageTest :: Test
 updateImageTest = testDatabase $ do
@@ -255,6 +269,135 @@ updateImageTest = testDatabase $ do
         imageFileSize    image2 @/? imageFileSize    image4
         image2                  @/? image3
 
+------------------------------------------------------------------- Album Tests
+
+-- | Tests the insertAlbum function.
+insertAlbumTest :: Test
+insertAlbumTest = testDatabase $ do
+    let pages1 = [Page "p1" 1 "e1"]
+        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+        album1 = Album "t1" False (time 1) (time 2) 8 pages1 []
+        album2 = Album "t2" True  (time 3) (time 4) 5 pages2 []
+        
+    id1 <- insertAlbum album1
+    id2 <- insertAlbum album2
+    
+    [entity2, entity1] <- selectAlbums [] 0 50
+    numResults         <- selectAlbumsCount []
+    
+    lift $ do
+        id1               @/? id2
+        numResults        @=? 2
+        Entity id1 album1 @=? entity1
+        Entity id2 album2 @=? entity2
+
+-- | Tests the selectAlbum function.
+selectAlbumTest :: Test
+selectAlbumTest = testDatabase $ do
+    let pages1 = [Page "p1" 1 "e1"]
+        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+        album1 = Album "t1" False (time 1) (time 2) 8 pages1 []
+        album2 = Album "t2" True  (time 3) (time 4) 5 pages2 []
+        album3 = Album "t3" True  (time 6) (time 7) 9 []     []
+
+    id1 <- insertAlbum album1
+    id2 <- insertAlbum album2
+    id3 <- insertAlbum album3
+    
+    (Just (Entity id4 album4)) <- selectAlbum id1
+    (Just (Entity id5 album5)) <- selectAlbum id2
+    (Just (Entity id6 album6)) <- selectAlbum id3
+    noResults                  <- selectAlbum 999
+    
+    lift $ do
+        noResults @=? Nothing
+        id1       @=? id4
+        id2       @=? id5
+        id3       @=? id6
+        album1    @=? album4
+        album2    @=? album5
+        album3    @=? album6
+
+-- | Tests the selectAlbums function.
+selectAlbumsTest :: Test
+selectAlbumsTest = testDatabase $ do
+    noResults <- selectImages [] 0 50
+    
+    let pages1 = [Page "p1" 1 "e1"]
+        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+        
+    id1 <- insertAlbum (Album "t1" False (time 10) (time 20) 30 pages1 [])
+    id2 <- insertAlbum (Album "t2" True  (time 11) (time 21) 31 pages2 [])
+    id3 <- insertAlbum (Album "t3" False (time 12) (time 22) 32 []     [])
+    id4 <- insertAlbum (Album "t4" True  (time 13) (time 23) 33 []     [])
+    
+    attachTags ["test", "hello", "goodbye"]  id1
+    attachTags ["another", "couple", "test"] id2
+    attachTags ["hello", "blahblah", "test"] id3
+    
+    (Just album1) <- selectAlbum id1
+    (Just album2) <- selectAlbum id2
+    (Just album3) <- selectAlbum id3
+    (Just album4) <- selectAlbum id4
+    
+    allAlbums   <- selectAlbums [] 0 50
+    firstAlbum  <- selectAlbums [] 0 1
+    secondAlbum <- selectAlbums [] 1 1
+    thirdAlbum  <- selectAlbums [] 2 1
+    twoAlbums   <- selectAlbums [] 2 2
+    
+    lift $ do
+        noResults   @=? []
+        allAlbums   @=? [album4, album3, album2, album1]
+        firstAlbum  @=? [album4]
+        secondAlbum @=? [album3]
+        thirdAlbum  @=? [album2]
+        twoAlbums   @=? [album2, album1]
+        
+    results1 <- selectAlbums (parse "test")         0 50
+    results2 <- selectAlbums (parse "hello")        0 50
+    results3 <- selectAlbums (parse "goodbye")      0 50
+    results4 <- selectAlbums (parse "test, hello")  0 50
+    results5 <- selectAlbums (parse "-test")        0 50
+    results6 <- selectAlbums (parse "test, -hello") 0 50
+    results7 <- selectAlbums (parse "random")       0 50
+    results8 <- selectAlbums []                     0 50
+    
+    lift $ do
+        results1    @=? [album3, album2, album1]
+        results2    @=? [album3, album1]
+        results3    @=? [album1]
+        results4    @=? [album3, album1]
+        results5    @=? [album4]
+        results6    @=? [album2]
+        results7    @=? []
+        results8    @=? [album4, album3, album2, album1]
+
+-- | Tests the selectAlbumsCount function.
+selectAlbumsCountTest :: Test
+selectAlbumsCountTest = testDatabase $ do
+    zero <- selectAlbumsCount []
+    
+    let pages1 = [Page "p1" 1 "e1"]
+        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+        
+    id1 <- insertAlbum (Album "t1" False (time 10) (time 20) 30 pages1 [])
+    id2 <- insertAlbum (Album "t2" True  (time 11) (time 21) 31 pages2 [])
+    id3 <- insertAlbum (Album "t3" False (time 12) (time 22) 32 []     [])
+    id4 <- insertAlbum (Album "t4" True  (time 13) (time 23) 33 []     [])
+    
+    attachTags ["test", "hello", "goodbye"]  id1
+    attachTags ["another", "couple", "test"] id2
+    attachTags ["hello", "blahblah", "test"] id3
+    
+    two  <- selectAlbumsCount (parse "test, -blahblah")
+    four <- selectAlbumsCount []
+    
+    lift $ do
+        zero @=? 0
+        two  @=? 2
+        four @=? 4
+
 --------------------------------------------------------------------- Tag Tests
 
 -- Tests the selectTags function.
@@ -280,25 +423,6 @@ selectTagsTest = testDatabase $ do
         name4          @=? "hello"
         name5          @=? "test"
     
--- Tests the selectTagsByImage function.
-selectTagsByImageTest :: Test
-selectTagsByImageTest = testDatabase $ do
-    id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5 [])
-    id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6 [])
-    
-    attachTags ["test", "hello", "goodbye"]  id1
-    attachTags ["another", "couple", "test"] id2
-    
-    results @ [(Entity _ (Tag name1)),
-               (Entity _ (Tag name2)),
-               (Entity _ (Tag name3))] <- selectTagsByImage id1
-    
-    lift $ do
-        length results @=? 3
-        name1          @=? "goodbye"
-        name2          @=? "hello"
-        name3          @=? "test"
-
 -- Tests the cleanTags function.
 cleanTagsTest :: Test
 cleanTagsTest = testDatabase $ do
@@ -335,15 +459,16 @@ attachTagsTest = testDatabase $ do
     
     attachTags ["test1", "test2", "test3"] id1
     
-    [(Entity _ (Tag name1)),
-     (Entity _ (Tag name2)),
-     (Entity _ (Tag name3))] <- selectTagsByImage id1
-    noResults                <- selectTagsByImage id2
+    results1 <- selectImage id1
+    results2 <- selectImage id2
+    
+    let tags      = imageTagNames $ fromEntity $ fromJust $ results1
+        noResults = imageTagNames $ fromEntity $ fromJust $ results2
     
     lift $ do
-        name1          @=? "test1"
-        name2          @=? "test2"
-        name3          @=? "test3"
+        tags !! 0      @=? "test1"
+        tags !! 1      @=? "test2"
+        tags !! 2      @=? "test3"
         null noResults @=? True
 
 ----------------------------------------------------------------------- Utility
@@ -353,12 +478,6 @@ attachTagsTest = testDatabase $ do
 (@/?) :: (Show a, Eq a) => a -> a -> Assertion
 (@/?) a b = when (a == b) (assertFailure (message ++ show a))
     where message = "Expected two different values but got: "
-
--- | Selects the number of rows in the image table.
-selectImageCount :: Transaction Int
-selectImageCount = do
-    conn <- ask
-    lift $ head <$> query_ conn "SELECT COUNT(*) FROM image"
 
 -- | Runs a test with an empty database.
 testDatabase :: Transaction () -> Test
