@@ -11,7 +11,7 @@ import App.Database         ( attachTags, insertImage, selectHashExists
                             , selectImagesCount, selectImage, selectImages
                             , selectNextImage, selectPreviousImage )
 import App.FileType         ( ImageFile, File(..) )
-import App.Paths            ( imagePath, imageThumbnailPath )
+import App.Paths            ( getImagePath, getImageThumbnailPath )
 import App.Validation       ( Property(..), Validation, isFalse, isPositive, isValid )
 import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
@@ -72,8 +72,8 @@ insert file title tagNames = do
         results = validate image <> isFalse (Property "duplicate" isDuplicate)
                  
     when (isValid results) $ do
-        toPath    <- imagePath image
-        thumbPath <- imageThumbnailPath image
+        toPath    <- getImagePath image
+        thumbPath <- getImageThumbnailPath image
         
         runDB  $ insertImage image >>= attachTags tags
         liftIO $ createDirectoryIfMissing True $ takeDirectory toPath

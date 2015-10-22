@@ -11,8 +11,8 @@ import App.Database         ( insertAlbum, selectAlbum, selectAlbums
                             , selectAlbumsCount, attachTags )
 import App.Expression       ( Expression )
 import App.FileType         ( ArchiveFile, File(..) )
-import App.Paths            ( albumPath, albumThumbnailPath, pagePath
-                            , pageThumbnailPath )
+import App.Paths            ( getAlbumPath, getAlbumThumbnailPath, getPagePath
+                            , getPageThumbnailPath )
 import App.Validation       ( Validation(..), isValid )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
 import Control.Applicative  ( (<$>) )
@@ -71,9 +71,9 @@ insert file title tagNames = do
             return id
         
         when anyEntries $ do
-            basePath  <- albumPath id
-            firstPath <- pagePath id (toPage (head entries) 1)
-            thumbPath <- albumThumbnailPath id
+            basePath  <- getAlbumPath id
+            firstPath <- getPagePath id (toPage (head entries) 1)
+            thumbPath <- getAlbumThumbnailPath id
             thumbSize <- asks configThumbnailSize
             
             liftIO $ createDirectoryIfMissing True basePath
@@ -102,8 +102,8 @@ extractFile id (entry, index) = do
     let contents = fromEntry entry
         page     = toPage entry index
         
-    extractPath   <- pagePath id page
-    thumbnailPath <- pageThumbnailPath id page
+    extractPath   <- getPagePath id page
+    thumbnailPath <- getPageThumbnailPath id page
     thumbSize     <- asks configThumbnailSize
         
     liftIO $ do

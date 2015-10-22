@@ -9,7 +9,7 @@ import App.Common                    ( runApplication )
 import App.Config                    ( Config(..) )
 import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
-import App.Paths                     ( dataPath )
+import App.Paths                     ( getDataPath )
 import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad                 ( join )
@@ -34,7 +34,7 @@ main = runApplication $ do
     middleware $ staticPolicy $ mconcat
         [ noDots 
         , isNotAbsolute 
-        , hasPrefix dataPath
+        , hasPrefix getDataPath
         , addBase storagePath ]
         
     -- Enables access to other static content such as javascript and css files.

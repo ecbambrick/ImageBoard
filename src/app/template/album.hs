@@ -4,7 +4,7 @@
 module App.Template.Album where
 
 import App.Common       ( Album(..), Page(..) )
-import App.Paths        ( albumThumbnailURL, pageURL, pageThumbnailURL )
+import App.Paths        ( getAlbumThumbnailURL, getPageURL, getPageThumbnailURL )
 import Data.Data        ( Data, Typeable )
 import Database.Engine  ( Entity(..), ID )
 
@@ -21,9 +21,9 @@ data AlbumContext = AlbumContext
 toAlbumContext :: Entity Album -> AlbumContext
 toAlbumContext album @ (Entity id Album {..}) = AlbumContext
     { identifier = id
-    , thumb      = albumThumbnailURL album
+    , thumb      = getAlbumThumbnailURL album
     , pages      = map (toPageContext album) albumPages
-    , hasTags    = not $ null albumTagNames
+    , hasTags    = not (null albumTagNames)
     , tagNames   = albumTagNames }
 
 -- | The context data required for a list of albums.
@@ -60,8 +60,8 @@ data PageContext = PageContext
 -- | Returns the page context for the given page.
 toPageContext :: Entity Album -> Page -> PageContext
 toPageContext (Entity id Album {..}) page @ Page {..} = PageContext
-    { path      = pageURL id page
-    , thumbnail = pageThumbnailURL id page
+    { path      = getPageURL id page
+    , thumbnail = getPageThumbnailURL id page
     , number    = pageNumber
     , previous  = pageNumber - 1 `mod` length albumPages
     , next      = pageNumber + 1 `mod` length albumPages }

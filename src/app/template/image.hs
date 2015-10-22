@@ -4,7 +4,7 @@
 module App.Template.Image where
 
 import App.Common       ( Image(..) )
-import App.Paths        ( imageURL, imageThumbnailURL )
+import App.Paths        ( getImageURL, getImageThumbnailURL )
 import Data.Data        ( Data, Typeable )
 import Database.Engine  ( Entity(..), ID )
 
@@ -21,8 +21,8 @@ data ImageContext = ImageContext
 toImageContext :: Entity Image -> ImageContext
 toImageContext (Entity id image) = ImageContext
     { identifier = id
-    , path       = imageURL image
-    , thumb      = imageThumbnailURL image
+    , path       = getImageURL image
+    , thumb      = getImageThumbnailURL image
     , tagNames   = imageTagNames image
     , hasTags    = not $ null $ imageTagNames image }
 
