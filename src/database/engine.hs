@@ -40,8 +40,8 @@ fromEntity (Entity _ x) = x
 -- | Runs a transaction with the given database connection string.
 runDatabase :: (MonadIO m) => String -> Transaction a -> m a
 runDatabase db f = liftIO $ Simple.withConnection db $ \conn -> do
+    Simple.execute_ conn "PRAGMA foreign_keys = ON;"
     Simple.withTransaction conn $ do
-        Simple.execute_ conn "PRAGMA foreign_keys = ON;"
         runReaderT f conn
 
 ----------------------------------------------------------------------- Queries
