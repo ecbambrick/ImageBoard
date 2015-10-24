@@ -1,14 +1,15 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module App.Core.Album ( count, query, querySingle, insert, getPage ) where
+module App.Core.Album 
+    ( count, delete, query, querySingle, insert, getPage ) where
 
 import qualified App.Core.Tag as Tag
 import qualified Data.ByteString as ByteString
 
 import App.Common           ( Album(..), Page(..), Tag(..), App, runDB )
 import App.Config           ( Config(..) )
-import App.Database         ( insertAlbum, selectAlbum, selectAlbums
-                            , selectAlbumsCount, attachTags )
+import App.Database         ( deleteAlbum, insertAlbum, selectAlbum, selectAlbums
+                            , selectAlbumsCount, attachTags, cleanTags )
 import App.Expression       ( Expression )
 import App.FileType         ( ArchiveFile, File(..) )
 import App.Paths            ( getAlbumPath, getAlbumThumbnailPath, getPagePath
@@ -27,7 +28,8 @@ import Data.Time            ( getCurrentTime )
 import Database.Engine      ( Entity(..), ID )
 import Graphics.Thumbnail   ( createThumbnail )
 import System.FilePath      ( takeBaseName, takeExtension )
-import System.Directory     ( createDirectoryIfMissing )
+import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist
+                            , removeDirectoryRecursive )
 import System.IO            ( IOMode(..), hClose, openFile, withFile )
 
 -------------------------------------------------------------------------- CRUD
@@ -35,6 +37,19 @@ import System.IO            ( IOMode(..), hClose, openFile, withFile )
 -- | Returns the total number of albums satisfying the given expression.
 count :: Expression -> App Int
 count expression = runDB (selectAlbumsCount expression)
+
+-- | Deletes the album with the given ID from the database/filesystem.
+delete :: ID -> App ()
+delete id = do
+    path       <- getAlbumPath id
+    pathExists <- liftIO $ doesDirectoryExist path
+
+    runDB $ do
+        deleteAlbum id
+        cleanTags
+    
+    liftIO $ do
+        when pathExists (removeDirectoryRecursive path)
 
 -- | Returns a page of albums based on the given page number and filter.
 query :: Expression -> Int -> App [Entity Album]
@@ -80,7 +95,7 @@ insert file title tagNames = do
             mapM_ (extractFile id) entryPairs
             liftIO $ createThumbnail thumbSize firstPath thumbPath
         
-    liftIO (hClose handle)
+    liftIO $ hClose handle
     
     return results
 

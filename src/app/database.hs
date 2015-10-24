@@ -5,8 +5,8 @@
 module App.Database
     ( deleteImage, insertImage, selectHashExists, selectImagesCount
     , selectImage, selectImages, selectNextImage, selectPreviousImage
-    , updateImage, insertAlbum, selectAlbum, selectAlbums, selectAlbumsCount
-    , selectTags, attachTags, cleanTags ) where
+    , updateImage, deleteAlbum, insertAlbum, selectAlbum, selectAlbums
+    , selectAlbumsCount, selectTags, attachTags, cleanTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
@@ -193,6 +193,10 @@ attachTags :: [String] -> ID -> Transaction ()
 attachTags tagNames postID = mapM_ (attachTag postID) tagNames
 
 ------------------------------------------------------------------------ Albums
+
+-- | Deletes the album with the given ID.
+deleteAlbum :: ID -> Transaction ()
+deleteAlbum id = SQL.delete "post" ("id" *= id)
 
 -- | Inserts a new album into the database and returns its ID.
 insertAlbum :: Album -> Transaction ID

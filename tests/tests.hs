@@ -29,12 +29,14 @@ main = runTestTT $ TestList
     , deleteImageTest
     , updateImageTest
     , selectHashExistsTest
+    , deleteAlbumTest
     , insertAlbumTest
     , selectAlbumsTest
     , selectAlbumsCountTest
     , attachTagsTest
     , selectTagsTest
     , cleanTagsTest ]
+
 ------------------------------------------------------------------- Image Tests
 
 -- | Tests the deleteImage function.
@@ -271,6 +273,38 @@ updateImageTest = testDatabase $ do
 
 ------------------------------------------------------------------- Album Tests
 
+-- | Tests the deleteAlbum function.
+deleteAlbumTest :: Test
+deleteAlbumTest = testDatabase $ do
+    let pages1 = [Page "p1" 1 "e1"]
+        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+        
+    id1 <- insertAlbum (Album "t1" False (time 1) (time 2) 8 pages1 [])
+    id2 <- insertAlbum (Album "t2" True  (time 3) (time 4) 5 pages2 [])
+    id3 <- insertAlbum (Album "t3" True  (time 6) (time 7) 9 []     [])
+    
+    numResults1 <- selectAlbumsCount []
+    
+    deleteAlbum id2
+    numResults2 <- selectAlbumsCount []
+    
+    deleteAlbum 999
+    numResults3 <- selectAlbumsCount []
+    
+    album1 <- selectAlbum id1
+    album2 <- selectAlbum id2
+    album3 <- selectAlbum id3
+    [page] <- selectPages
+    
+    lift $ do
+        numResults1   @=? 3
+        numResults2   @=? 2
+        numResults3   @=? 2
+        isJust album1 @=? True
+        isJust album2 @=? False
+        isJust album3 @=? True
+        page          @=? Entity 1 (Page "p1" 1 "e1")
+
 -- | Tests the insertAlbum function.
 insertAlbumTest :: Test
 insertAlbumTest = testDatabase $ do
@@ -428,26 +462,29 @@ cleanTagsTest :: Test
 cleanTagsTest = testDatabase $ do
     id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5 [])
     id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6 [])
+    id3 <- insertImage (Image "t3" False "h3" "e3" 7 8 (time 9) (time 0) 2 [])
     
     attachTags ["test", "hello", "goodbye"]  id1
     attachTags ["another", "couple", "test"] id2
+    attachTags ["another", "hello", "test"]  id3
     
-    deleteImage id1
-
     results1 <- selectTags
     
+    deleteImage id1
     cleanTags
     
     results2 @ [(Entity _ (Tag name1)),
                 (Entity _ (Tag name2)),
-                (Entity _ (Tag name3))] <- selectTags
+                (Entity _ (Tag name3)),
+                (Entity _ (Tag name4))] <- selectTags
     
     lift $ do
         length results1 @=? 5
-        length results2 @=? 3
+        length results2 @=? 4
         name1           @=? "another"
         name2           @=? "couple"
-        name3           @=? "test"
+        name3           @=? "hello"
+        name4           @=? "test"
 
 ------------------------------------------------------------ Relationship Tests
 
@@ -493,3 +530,9 @@ testDatabase f = TestCase $ withConnection ":memory:" $ \conn -> do
 -- | Returns the UTC time that is the given number of seconds after the epoch.
 time :: Integer -> UTCTime
 time = fromSeconds
+
+-- | Returns all the pages from the database.
+selectPages :: Transaction [Entity Page]
+selectPages = do
+    conn <- ask
+    lift $ query_ conn "SELECT id, title, number, extension FROM page"

@@ -1,27 +1,29 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module App.Core.Image ( count, query, queryTriple, insert ) where
+module App.Core.Image 
+    ( count, delete, query, querySingle, queryTriple, insert ) where
 
 import qualified App.Core.Tag as Tag
 
 import App.Common           ( Tag(..), Image(..), App, runDB )
 import App.Config           ( Config(..) )
 import App.Expression       ( Expression )
-import App.Database         ( attachTags, insertImage, selectHashExists
-                            , selectImagesCount, selectImage, selectImages
-                            , selectNextImage, selectPreviousImage )
+import App.Database         ( attachTags, cleanTags, deleteImage, insertImage
+                            , selectHashExists, selectImagesCount, selectImage
+                            , selectImages, selectNextImage, selectPreviousImage )
 import App.FileType         ( ImageFile, File(..) )
 import App.Paths            ( getImagePath, getImageThumbnailPath )
 import App.Validation       ( Property(..), Validation, isFalse, isPositive, isValid )
+import Control.Applicative  ( (<$>), (<*>) )
 import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
-import Data.Functor         ( (<$>) )
 import Data.Monoid          ( (<>), mconcat )
 import Data.Time            ( getCurrentTime )
-import Database.Engine      ( Entity, ID )
+import Database.Engine      ( Entity(..), ID )
 import Graphics.Thumbnail   ( createThumbnail )
-import System.Directory     ( copyFile, createDirectoryIfMissing )
+import System.Directory     ( copyFile, createDirectoryIfMissing, doesFileExist
+                            , removeFile )
 import System.FilePath      ( takeDirectory )
 import System.IO.Metadata   ( getHash, getDimensions, getSize )
 
@@ -36,11 +38,36 @@ type Triple a = (a, a, a)
 count :: Expression -> App Int
 count expression = runDB (selectImagesCount expression)
 
+-- | Deletes the image with the given ID from the database/filesystem.
+delete :: ID -> App ()
+delete id = do
+    image <- querySingle id
+
+    case image of 
+        Nothing               -> return ()
+        Just (Entity _ image) -> do
+            imagePath   <- getImagePath image
+            thumbPath   <- getImageThumbnailPath image
+            imageExists <- liftIO $ doesFileExist imagePath
+            thumbExists <- liftIO $ doesFileExist thumbPath
+
+            runDB $ do
+                deleteImage id
+                cleanTags
+            
+            liftIO $ do
+                when imageExists (removeFile imagePath)
+                when thumbExists (removeFile thumbPath)
+
 -- | Returns a page of images based on the given page number and filter.
 query :: Expression -> Int -> App [Entity Image]
 query expression page = do
     size <- asks configPageSize
     runDB $ selectImages expression ((page - 1) * size) size
+
+-- | Returns the image with the given ID.
+querySingle :: ID -> App (Maybe (Entity Image))
+querySingle = runDB . selectImage
 
 -- | Returns the image with the given ID along with the two adjacent images
 -- | based on the given filter.
@@ -58,6 +85,7 @@ queryTriple expression id = runDB $ do
 insert :: ImageFile -> String -> [String] -> App Validation
 insert file title tagNames = do
     let fromPath = getPath file
+        ext      = getExtension file
     
     hash        <- liftIO $ getHash fromPath
     now         <- liftIO $ getCurrentTime
@@ -66,8 +94,7 @@ insert file title tagNames = do
     isDuplicate <- runDB  $ selectHashExists hash
     thumbSize   <- asks   $ configThumbnailSize
 
-    let ext     = getExtension file
-        tags    = Tag.cleanTags tagNames
+    let tags    = Tag.cleanTags tagNames
         image   = Image title False hash ext w h now now size tags
         results = validate image <> isFalse (Property "duplicate" isDuplicate)
                  
@@ -75,10 +102,13 @@ insert file title tagNames = do
         toPath    <- getImagePath image
         thumbPath <- getImageThumbnailPath image
         
-        runDB  $ insertImage image >>= attachTags tags
-        liftIO $ createDirectoryIfMissing True $ takeDirectory toPath
-        liftIO $ copyFile fromPath toPath
-        liftIO $ createThumbnail thumbSize toPath thumbPath
+        runDB $ do
+            insertImage image >>= attachTags tags
+        
+        liftIO $ do
+            createDirectoryIfMissing True $ takeDirectory toPath
+            copyFile fromPath toPath
+            createThumbnail thumbSize toPath thumbPath
     
     return results
 
