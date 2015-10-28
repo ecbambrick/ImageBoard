@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes       #-}
+
 module App.Core.Tag where
 
 import App.Common       ( Tag(..), App, runDB )

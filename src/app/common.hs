@@ -1,7 +1,9 @@
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes                 #-}
 
 module App.Common where
 
@@ -16,7 +18,7 @@ import Web.Spock            ( SpockT, ActionT, runSpock, spockT )
 
 -- | Main application monad which allows read-only access to configuration 
 -- | settings.
-type App = ActionT (ReaderT Config IO)
+type App a = forall m . (MonadIO m, MonadReader Config m) => m a
 
 instance (MonadReader r m) => MonadReader r (ActionT m) where
     ask       = lift ask
