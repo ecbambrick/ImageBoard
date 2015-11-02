@@ -6,7 +6,7 @@ module App.Database
     ( deleteImage, insertImage, selectHashExists, selectImagesCount
     , selectImage, selectImages, selectNextImage, selectPreviousImage
     , updateImage, deleteAlbum, insertAlbum, selectAlbum, selectAlbums
-    , selectAlbumsCount, selectTags, attachTags, cleanTags ) where
+    , selectAlbumsCount, selectTags, attachTags, cleanTags, detachTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
@@ -149,14 +149,14 @@ selectImagesCount = selectCount "image"
 selectTags :: Transaction [Entity Tag]
 selectTags = SQL.query tags
 
--- | Returns a list of all tags attached to the image with the given ID.
+-- | Returns a list of all tags attached to the post with the given ID.
 selectTagsByPost :: ID -> Transaction [Entity Tag]
 selectTagsByPost postID = SQL.query $ do
     t  <- tags
     pt <- from "post_tag" `on` ("tag_id" *= t "id")
     wherever (pt "post_id" .= postID)
 
--- | Deletes all tags from the database that are not attached to any image.
+-- | Deletes all tags from the database that are not attached to any post.
 cleanTags :: Transaction ()
 cleanTags = do
     orphanTags <- SQL.query $ do
@@ -170,8 +170,8 @@ cleanTags = do
     forM_ orphanTags $ \id -> 
         SQL.delete "tag" ("id" *= id)
 
--- | Associates the image with the given ID with the tag with the given name. 
--- | If the tag does not eixst, it is created.
+-- | Associates the post with the given ID with the tag with the given name. 
+-- | If the tag does not exist, it is created.
 attachTag :: ID -> String -> Transaction ()
 attachTag postID tagName = do
     tagID <- SQL.single $ do
@@ -187,10 +187,21 @@ attachTag postID tagName = do
         [ "post_id" << postID
         , "tag_id"  << tagID' ]
 
--- | Associates the image with the given ID with all tags that map to the given
--- | list of names. If any tag does not eixsts, it is created.
+-- | Associates the post with the given ID with all tags that map to the given
+-- | list of names. If any tag does not exists, it is created.
 attachTags :: [String] -> ID -> Transaction ()
 attachTags tagNames postID = mapM_ (attachTag postID) tagNames
+
+-- | Disassociates the post with the given ID with the tag with the given name. 
+-- | If the tag is not already attached, it is ignored.
+detachTag :: ID -> String -> Transaction ()
+detachTag postID tagName = SQL.delete "post_tag" $ \pt -> pt "tag_id"  .= tagName
+                                                       .& pt "post_id" .= postID
+
+-- | Disassociates the post with the given ID with all tags that map to the 
+-- | given list of names. If any tag is not already attached, it is ignored.
+detachTags :: [String] -> ID -> Transaction ()
+detachTags tagNames postID = mapM_ (detachTag postID) tagNames
 
 ------------------------------------------------------------------------ Albums
 
