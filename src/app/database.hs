@@ -174,11 +174,7 @@ cleanTags = do
 -- | If the tag does not exist, it is created.
 attachTag :: ID -> String -> Transaction ()
 attachTag postID tagName = do
-    tagID <- SQL.single $ do
-        t <- from "tag"
-        wherever (t "name" .= tagName)
-        retrieve [t "id"]
-    
+    tagID  <- selectTagIDByName tagName
     tagID' <- case tagID of
         Nothing -> SQL.insert "tag" [ "name" << tagName ]
         Just id -> return id
@@ -195,8 +191,13 @@ attachTags tagNames postID = mapM_ (attachTag postID) tagNames
 -- | Disassociates the post with the given ID with the tag with the given name. 
 -- | If the tag is not already attached, it is ignored.
 detachTag :: ID -> String -> Transaction ()
-detachTag postID tagName = SQL.delete "post_tag" $ \pt -> pt "tag_id"  .= tagName
-                                                       .& pt "post_id" .= postID
+detachTag postID tagName = do
+    tagID <- selectTagIDByName tagName
+    
+    case tagID of
+        Nothing -> return ()
+        Just id -> SQL.delete "post_tag" $ \pt -> pt "tag_id"  .= id
+                                               .& pt "post_id" .= postID
 
 -- | Disassociates the post with the given ID with all tags that map to the 
 -- | given list of names. If any tag is not already attached, it is ignored.
@@ -392,6 +393,14 @@ selectCount table expression = do
         retrieve [count]
         
     return (head results)
+
+-- | Returns the ID of the tag with the given name or nothing if the tag name
+-- | does not exist.
+selectTagIDByName :: String -> Transaction (Maybe ID)
+selectTagIDByName tagName = SQL.single $ do
+    t <- from "tag"
+    wherever (t "name" .= tagName)
+    retrieve [t "id"]
 
 -- | Maps the given integer to a boolean.
 bool :: (Functor f) => f Int -> f Bool

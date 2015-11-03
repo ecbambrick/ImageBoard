@@ -515,16 +515,16 @@ detachTagsTest = testDatabase $ do
     id1 <- insertImage (Image "t1" False "h1" "e1" 1 2 (time 1) (time 2) 5 [])
     id2 <- insertImage (Image "t2" True  "h2" "e2" 3 4 (time 3) (time 4) 6 [])
     
-    attachTags ["1", "2", "3"] id1
-    attachTags ["3", "4", "5"] id2
-    detachTags ["2", "3"]      id1
+    attachTags ["t1", "t2", "t3"] id1
+    attachTags ["t3", "t4", "t5"] id2
+    detachTags ["t2", "t3"]      id1
     
     tags1 <- imageTagNames . fromEntity . fromJust <$> selectImage id1
     tags2 <- imageTagNames . fromEntity . fromJust <$> selectImage id2
 
     lift $ do
-        ["1"]           @=? tags1
-        ["3", "4", "5"] @=? tags2
+        ["t1"]             @=? tags1
+        ["t3", "t4", "t5"] @=? tags2
     
 ----------------------------------------------------------------------- Utility
 
