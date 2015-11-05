@@ -31,6 +31,7 @@ main = runTestTT $ TestList
     , selectHashExistsTest
     , deleteAlbumTest
     , insertAlbumTest
+    , updateAlbumTest
     , selectAlbumsTest
     , selectAlbumsCountTest
     , attachTagsTest
@@ -352,6 +353,30 @@ selectAlbumTest = testDatabase $ do
         album1    @=? album4
         album2    @=? album5
         album3    @=? album6
+
+-- | Tests the updateAlbum function
+updateAlbumTest :: Test
+updateAlbumTest = testDatabase $ do
+    let pages1 = [Page "p1" 1 "e1"]
+        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+        album1 = Album "t1" False (time 1) (time 2) 8 pages1 []
+        album2 = Album "t2" True  (time 3) (time 4) 5 pages2 []
+        album3 = album1 
+            { albumTitle = "t3"
+            , albumIsFavourite = True
+            , albumModified = time 10 }
+        
+    id1 <- insertAlbum album1
+    id2 <- insertAlbum album2
+    
+    updateAlbum (Entity id1 album3)
+    
+    (Just (Entity _ album4)) <- selectAlbum id1
+    (Just (Entity _ album5)) <- selectAlbum id2
+    
+    lift $ do
+        album3 @=? album4
+        album5 @=? album2
 
 -- | Tests the selectAlbums function.
 selectAlbumsTest :: Test

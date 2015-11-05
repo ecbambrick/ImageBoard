@@ -6,7 +6,8 @@ module App.Database
     ( deleteImage, insertImage, selectHashExists, selectImagesCount
     , selectImage, selectImages, selectNextImage, selectPreviousImage
     , updateImage, deleteAlbum, insertAlbum, selectAlbum, selectAlbums
-    , selectAlbumsCount, selectTags, attachTags, cleanTags, detachTags ) where
+    , selectAlbumsCount, updateAlbum, selectTags, attachTags, cleanTags
+    , detachTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
@@ -254,6 +255,13 @@ selectAlbums expression from count = do
 -- | Returns the total number of albums that satisfy the given expression.
 selectAlbumsCount :: Expression -> Transaction Int
 selectAlbumsCount = selectCount "album"
+
+-- | Updates the album in the database.
+updateAlbum :: Entity Album -> Transaction ()
+updateAlbum (Entity id (Album {..})) = SQL.update "post" ("id" *= id)
+    [ "title"        << albumTitle
+    , "is_favourite" << albumIsFavourite
+    , "modified"     << toSeconds albumModified ]
     
 ------------------------------------------------------------------------- Pages
 
