@@ -1,6 +1,5 @@
 module App.Validation where
 
-import Text.Printf  ( printf )
 import Data.Char    ( isAlphaNum, isSpace )
 import Data.Monoid  ( Monoid, (<>), mempty, mappend )
 
@@ -56,3 +55,8 @@ isValidTag (Property name x)
 isValid :: Validation -> Bool
 isValid (Invalid _) = False
 isValid Valid       = True
+
+-- | Returns valid if the given value is true; otherwise, returns invalid with 
+-- | the given error.
+verify :: Bool -> Error -> Validation
+verify x error = if x then Valid else Invalid [error]
