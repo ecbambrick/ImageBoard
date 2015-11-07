@@ -3,26 +3,30 @@
 {-# LANGUAGE RankNTypes       #-}
 
 module App.Core.Image 
-    ( count, delete, query, querySingle, queryTriple, insert ) where
+    ( count, delete, query, querySingle, queryTriple, insert, update ) where
 
 import qualified App.Core.Tag as Tag
 
 import App.Common           ( Tag(..), Image(..), App, runDB )
 import App.Config           ( Config(..) )
 import App.Expression       ( Expression )
-import App.Database         ( attachTags, cleanTags, deleteImage, insertImage
-                            , selectHashExists, selectImagesCount, selectImage
-                            , selectImages, selectNextImage, selectPreviousImage )
+import App.Database         ( attachTags, detachTags, cleanTags, deleteImage
+                            , insertImage, selectHashExists, selectImagesCount
+                            , selectImage, selectImages, selectNextImage
+                            , selectPreviousImage, updateImage )
 import App.FileType         ( ImageFile, File(..) )
 import App.Paths            ( getImagePath, getImageThumbnailPath )
-import App.Validation       ( Property(..), Validation, isFalse, isPositive, isValid )
+import App.Validation       ( Error(..), Property(..), Validation, isFalse
+                            , isPositive, isValid, verify )
 import Control.Applicative  ( (<$>), (<*>) )
 import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
+import Data.List            ( (\\) )
+import Data.Maybe           ( isJust, fromJust )
 import Data.Monoid          ( (<>), mconcat )
 import Data.Time            ( getCurrentTime )
-import Database.Engine      ( Entity(..), ID )
+import Database.Engine      ( Entity(..), ID, fromEntity )
 import Graphics.Thumbnail   ( createThumbnail )
 import System.Directory     ( copyFile, createDirectoryIfMissing, doesFileExist
                             , removeFile )
@@ -111,6 +115,27 @@ insert file title tagNames = do
             createDirectoryIfMissing True $ takeDirectory toPath
             copyFile fromPath toPath
             createThumbnail thumbSize toPath thumbPath
+    
+    return results
+
+-- | Updates the given image in the database. Returns valid if the update was
+-- | successful; otherwise, invalid.
+update :: Entity Image -> App Validation
+update (Entity id image) = do
+    now      <- liftIO $ getCurrentTime
+    previous <- runDB  $ selectImage id
+    
+    let isFound = verify (isJust previous) (Error "id" (show id) "ID not found") 
+        results = validate image <> isFound
+    
+    when (isValid results) $ runDB $ do
+        let newTags = imageTagNames image
+            oldTags = imageTagNames . fromEntity . fromJust $ previous
+    
+        updateImage (Entity id image { imageModified = now })
+        detachTags (oldTags \\ newTags) id
+        attachTags (newTags \\ oldTags) id
+        cleanTags
     
     return results
 

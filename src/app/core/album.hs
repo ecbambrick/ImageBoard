@@ -3,31 +3,33 @@
 {-# LANGUAGE RankNTypes       #-}
 
 module App.Core.Album 
-    ( count, delete, query, querySingle, insert, getPage ) where
+    ( count, delete, query, querySingle, insert, update, getPage ) where
 
 import qualified App.Core.Tag as Tag
 import qualified Data.ByteString as ByteString
 
 import App.Common           ( Album(..), Page(..), Tag(..), App, runDB )
 import App.Config           ( Config(..) )
-import App.Database         ( deleteAlbum, insertAlbum, selectAlbum, selectAlbums
-                            , selectAlbumsCount, attachTags, cleanTags )
+import App.Database         ( deleteAlbum, insertAlbum, selectAlbum
+                            , selectAlbums, updateAlbum, selectAlbumsCount
+                            , attachTags, detachTags, cleanTags )
 import App.Expression       ( Expression )
 import App.FileType         ( ArchiveFile, File(..) )
 import App.Paths            ( getAlbumPath, getAlbumThumbnailPath, getPagePath
                             , getPageThumbnailPath )
-import App.Validation       ( Validation(..), isValid )
+import App.Validation       ( Error(..), Validation(..), isValid, verify )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
 import Control.Applicative  ( (<$>) )
 import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
 import Data.ByteString.Lazy ( hGetContents, hPut )
-import Data.List            ( sortBy, find )
-import Data.Monoid          ( mconcat )
+import Data.List            ( (\\), sortBy, find )
+import Data.Maybe           ( isJust, fromJust )
+import Data.Monoid          ( (<>), mconcat )
 import Data.Ord.Extended    ( comparingAlphaNum )
 import Data.Time            ( getCurrentTime )
-import Database.Engine      ( Entity(..), ID )
+import Database.Engine      ( Entity(..), ID, fromEntity )
 import Graphics.Thumbnail   ( createThumbnail )
 import System.FilePath      ( takeBaseName, takeExtension )
 import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist
@@ -98,6 +100,27 @@ insert file title tagNames = do
             liftIO $ createThumbnail thumbSize firstPath thumbPath
         
     liftIO $ hClose handle
+    
+    return results
+
+-- | Updates the given album in the database. Returns valid if the update was
+-- | successful; otherwise, invalid.
+update :: Entity Album -> App Validation
+update (Entity id album) = do
+    now      <- liftIO $ getCurrentTime
+    previous <- runDB  $ selectAlbum id
+    
+    let isFound = verify (isJust previous) (Error "id" (show id) "ID not found") 
+        results = validate album <> isFound
+    
+    when (isValid results) $ runDB $ do
+        let newTags = albumTagNames album
+            oldTags = albumTagNames . fromEntity . fromJust $ previous
+    
+        updateAlbum (Entity id album { albumModified = now })
+        detachTags (oldTags \\ newTags) id
+        attachTags (newTags \\ oldTags) id
+        cleanTags
     
     return results
 
