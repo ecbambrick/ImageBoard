@@ -16,8 +16,8 @@ import App.Database         ( attachTags, detachTags, cleanTags, deleteImage
                             , selectPreviousImage, updateImage )
 import App.FileType         ( ImageFile, File(..) )
 import App.Paths            ( getImagePath, getImageThumbnailPath )
-import App.Validation       ( Error(..), Property(..), Validation, isFalse
-                            , isPositive, isValid, verify )
+import App.Validation       ( Error(..), Property(..), Validation, isPositive
+                            , isValid, verify )
 import Control.Applicative  ( (<$>), (<*>) )
 import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
@@ -97,12 +97,13 @@ insert file title tagNames = do
     now         <- liftIO $ getCurrentTime
     size        <- liftIO $ fromIntegral <$> getSize fromPath
     (w, h)      <- liftIO $ getDimensions fromPath
-    isDuplicate <- runDB  $ selectHashExists hash
+    hashExists  <- runDB  $ selectHashExists hash
     thumbSize   <- asks   $ configThumbnailSize
-
-    let tags    = Tag.cleanTags tagNames
-        image   = Image title False hash ext w h now now size tags
-        results = validate image <> isFalse (Property "duplicate" isDuplicate)
+    
+    let isDuplicate = verify (not hashExists) (Error "hash" hash "duplicate hash") 
+        tags        = Tag.cleanTags tagNames
+        image       = Image title False hash ext w h now now size tags
+        results     = validate image <> isDuplicate
                  
     when (isValid results) $ do
         toPath    <- getImagePath image

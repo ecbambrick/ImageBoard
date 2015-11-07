@@ -27,11 +27,6 @@ instance Monoid Validation where
 
 -------------------------------------------------------------------- Validation
 
--- | Returns valid if the given property is false; otherwise, invalid.
-isFalse :: Property Bool -> Validation
-isFalse (Property  _  False) = Valid
-isFalse (Property name True) = Invalid [Error name "True" "expected false"]
-
 -- | Returns valid if the given property is positive; otherwise, invalid.
 isPositive :: (Show a, Num a, Ord a) => Property a -> Validation
 isPositive (Property name x)
