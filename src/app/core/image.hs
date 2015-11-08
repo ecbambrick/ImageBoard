@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes       #-}
 
 module App.Core.Image 
-    ( count, delete, query, querySingle, queryTriple, insert, update ) where
+    ( count, delete, insert, query, querySingle, queryTriple, update ) where
 
 import qualified App.Core.Tag as Tag
 
@@ -42,7 +42,7 @@ type Triple a = (a, a, a)
 
 -- | Returns the total number of images satisfying the given expression.
 count :: Expression -> App Int
-count expression = runDB (selectImagesCount expression)
+count = runDB . selectImagesCount
 
 -- | Deletes the image with the given ID from the database/filesystem.
 delete :: ID -> App ()
@@ -50,40 +50,23 @@ delete id = do
     image <- querySingle id
 
     case image of 
+        Just (Entity _ image) -> delete' image
         Nothing               -> return ()
-        Just (Entity _ image) -> do
-            imagePath   <- getImagePath image
-            thumbPath   <- getImageThumbnailPath image
-            imageExists <- liftIO $ doesFileExist imagePath
-            thumbExists <- liftIO $ doesFileExist thumbPath
+    
+    where 
+    delete' image = do
+        imagePath   <- getImagePath image
+        thumbPath   <- getImageThumbnailPath image
+        imageExists <- liftIO $ doesFileExist imagePath
+        thumbExists <- liftIO $ doesFileExist thumbPath
 
-            runDB $ do
-                deleteImage id
-                cleanTags
-            
-            liftIO $ do
-                when imageExists (removeFile imagePath)
-                when thumbExists (removeFile thumbPath)
-
--- | Returns a page of images based on the given page number and filter.
-query :: Expression -> Int -> App [Entity Image]
-query expression page = do
-    size <- asks configPageSize
-    runDB $ selectImages expression ((page - 1) * size) size
-
--- | Returns the image with the given ID.
-querySingle :: ID -> App (Maybe (Entity Image))
-querySingle = runDB . selectImage
-
--- | Returns the image with the given ID along with the two adjacent images
--- | based on the given filter.
-queryTriple :: Expression -> ID -> App (Triple (Maybe (Entity Image)))
-queryTriple expression id = runDB $ do
-    main <- selectImage id
-    next <- selectNextImage id expression
-    prev <- selectPreviousImage id expression
-
-    return (prev, main, next)
+        runDB $ do
+            deleteImage id
+            cleanTags
+        
+        liftIO $ do
+            when imageExists (removeFile imagePath)
+            when thumbExists (removeFile thumbPath)
 
 -- | Inserts a new image into the database/filesystem based on the given file,
 -- | title and tags. Returns valid if the insertion was sucessful; otherwise 
@@ -118,6 +101,26 @@ insert file title tagNames = do
             createThumbnail thumbSize toPath thumbPath
     
     return results
+
+-- | Returns a page of images based on the given page number and filter.
+query :: Expression -> Int -> App [Entity Image]
+query expression page = do
+    size <- asks configPageSize
+    runDB $ selectImages expression ((page - 1) * size) size
+
+-- | Returns the image with the given ID.
+querySingle :: ID -> App (Maybe (Entity Image))
+querySingle = runDB . selectImage
+
+-- | Returns the image with the given ID along with the two adjacent images
+-- | based on the given filter.
+queryTriple :: Expression -> ID -> App (Triple (Maybe (Entity Image)))
+queryTriple expression id = runDB $ do
+    main <- selectImage id
+    next <- selectNextImage id expression
+    prev <- selectPreviousImage id expression
+
+    return (prev, main, next)
 
 -- | Updates the given image in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.

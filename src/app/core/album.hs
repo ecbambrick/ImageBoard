@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes       #-}
 
 module App.Core.Album 
-    ( count, delete, query, querySingle, insert, update, getPage ) where
+    ( count, delete, getPage, insert, query, querySingle, update ) where
 
 import qualified App.Core.Tag as Tag
 import qualified Data.ByteString as ByteString
@@ -55,15 +55,9 @@ delete id = do
     liftIO $ do
         when pathExists (removeDirectoryRecursive path)
 
--- | Returns a page of albums based on the given page number and filter.
-query :: Expression -> Int -> App [Entity Album]
-query expression page = do
-    size <- asks configPageSize
-    runDB $ selectAlbums expression ((page - 1) * size) size
-
--- | Returns the album with the given ID.
-querySingle :: ID -> App (Maybe (Entity Album))
-querySingle = runDB . selectAlbum
+-- | Returns the page with the given number from the given album.
+getPage :: Album -> Int -> Maybe Page
+getPage Album {..} number = find (\x -> number == pageNumber x) albumPages
     
 -- | Inserts a new album into the database/filesystem based on the given file,
 -- | title and tags. Returns valid if the insertion was sucessful; otherwise 
@@ -103,6 +97,16 @@ insert file title tagNames = do
     
     return results
 
+-- | Returns a page of albums based on the given page number and filter.
+query :: Expression -> Int -> App [Entity Album]
+query expression page = do
+    size <- asks configPageSize
+    runDB $ selectAlbums expression ((page - 1) * size) size
+
+-- | Returns the album with the given ID.
+querySingle :: ID -> App (Maybe (Entity Album))
+querySingle = runDB . selectAlbum
+
 -- | Updates the given album in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.
 update :: Entity Album -> App Validation
@@ -123,11 +127,6 @@ update (Entity id album) = do
         cleanTags
     
     return results
-
--- | Returns the page with the given number from the given album.
-getPage :: Entity Album -> Int -> Maybe Page
-getPage (Entity _ Album {..}) number = 
-    find (\x -> pageNumber x == number) albumPages
 
 ----------------------------------------------------------------------- Utility
 

@@ -14,13 +14,14 @@ import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad                 ( join )
 import Control.Monad.Reader          ( asks )
-import Data.Monoid                   ( mconcat )
-import Data.Text                     ( pack )
 import App.Template                  ( render )
 import App.Template.Image            ( toImagesContext, toImageSetContext )
 import App.Template.Album            ( toAlbumsContext, toAlbumContext
                                      , toPageContext )
+import Data.Monoid                   ( mconcat )
+import Data.Text                     ( pack )
 import Data.Textual                  ( splitOn )
+import Database.Engine               ( fromEntity )
 import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
 import Web.Spock                     ( (<//>), get, html, middleware, text
@@ -83,12 +84,13 @@ main = runApplication $ do
             Nothing      -> redirect "/"
             Just context -> html =<< render "album" context
     
-    -- Renders the details page for the page and album with the given IDs.
+    -- Renders the details page for the album page with the give album ID and 
+    -- page number.
     get ("album" <//> var <//> var) $ \id number -> do
         album <- Album.querySingle id
         
-        let page    = join $ Album.getPage <$> album <*> pure number
-            context =        toPageContext <$> album <*> page
+        let page    = join $ Album.getPage . fromEntity <$> album <*> pure number
+            context = toPageContext                     <$> album <*> page
         
         case context of
             Nothing      -> redirect "/"
