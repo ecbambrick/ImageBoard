@@ -11,6 +11,7 @@ import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
 import App.Paths                     ( getDataPath )
 import App.Validation                ( Validation(..) )
+import App.View                      ( albumPage )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad                 ( join )
 import Control.Monad.Reader          ( asks )
@@ -76,13 +77,11 @@ main = runApplication $ do
     
     -- Renders the album details page for the album with the given ID.
     get ("album" <//> var) $ \id -> do
-        album   <- Album.querySingle id
+        album <- Album.querySingle id
         
-        let context = toAlbumContext <$> album
-        
-        case context of
-            Nothing      -> redirect "/"
-            Just context -> html =<< render "album" context
+        case album of
+            Nothing    -> redirect "/"
+            Just album -> html (albumPage album)
     
     -- Renders the details page for the album page with the give album ID and 
     -- page number.
