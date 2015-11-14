@@ -11,7 +11,7 @@ import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
 import App.Paths                     ( getDataPath )
 import App.Validation                ( Validation(..) )
-import App.View                      ( albumPage )
+import App.View                      ( albumPage, albumsPage )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad                 ( join )
 import Control.Monad.Reader          ( asks )
@@ -67,13 +67,12 @@ main = runApplication $ do
     
     -- Renders the albums page with albums that match the query parameter.
     get "albums" $ do
-        page    <- optionalParam "page" 0
+        page    <- optionalParam "page" 1
         query   <- optionalParam "q" ""
         count   <- Album.count (parse query)
         albums  <- Album.query (parse query) page
-        results <- render "albums" (toAlbumsContext query page count albums)
         
-        html results
+        html (albumsPage query page count albums)
     
     -- Renders the album details page for the album with the given ID.
     get ("album" <//> var) $ \id -> do
