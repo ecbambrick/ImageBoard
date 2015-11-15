@@ -4,6 +4,7 @@ module Main where
 
 import qualified App.Core.Image as Image
 import qualified App.Core.Album as Album
+import qualified App.View       as View
 
 import App.Common                    ( runApplication )
 import App.Config                    ( Config(..) )
@@ -11,7 +12,6 @@ import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
 import App.Paths                     ( getDataPath )
 import App.Validation                ( Validation(..) )
-import App.View                      ( albumPage, albumsPage )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad                 ( join )
 import Control.Monad.Reader          ( asks )
@@ -72,7 +72,7 @@ main = runApplication $ do
         count   <- Album.count (parse query)
         albums  <- Album.query (parse query) page
         
-        html (albumsPage query page count albums)
+        html (View.albumsPage query page count albums)
     
     -- Renders the album details page for the album with the given ID.
     get ("album" <//> var) $ \id -> do
@@ -80,19 +80,18 @@ main = runApplication $ do
         
         case album of
             Nothing    -> redirect "/"
-            Just album -> html (albumPage album)
+            Just album -> html (View.albumPage album)
     
     -- Renders the details page for the album page with the give album ID and 
     -- page number.
     get ("album" <//> var <//> var) $ \id number -> do
         album <- Album.querySingle id
         
-        let page    = join $ Album.getPage . fromEntity <$> album <*> pure number
-            context = toPageContext                     <$> album <*> page
+        let page = flip Album.getPage number . fromEntity =<< album
         
-        case context of
-            Nothing      -> redirect "/"
-            Just context -> html =<< render "page" context
+        case page of
+            Nothing   -> redirect "/"
+            Just page -> html (View.pagePage id page)
     
     -- Renders the images page with images that match the query parameter.
     get "images" $ do

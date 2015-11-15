@@ -12,7 +12,7 @@ import Control.Monad    ( forM_, unless )
 import Data.Monoid      ( mempty )
 import Data.Text        ( Text, pack, empty )
 import Data.Text.Lazy   ( toStrict )
-import Database.Engine  ( Entity(..) )
+import Database.Engine  ( Entity(..), ID )
 import Lucid.Base       ( ToHtml(..), Html, renderText )
 import Lucid.Html5
 import Text.Printf      ( FieldFormat(..), PrintfArg(..), formatString, printf )
@@ -61,6 +61,11 @@ albumsPage query page total albums =
                 prevPage Albums page query
                 nextPage Albums page query
                 forM_ albums albumThumbnail
+
+pagePage :: ID -> Page -> Text
+pagePage id page @ Page {..} =
+    render $ document (printf "Album %i - page %i" id pageNumber) [] $ 
+        img_ [src_ (pack (Path.getPageURL id page))]
 
 -------------------------------------------------------------------- Components
 
