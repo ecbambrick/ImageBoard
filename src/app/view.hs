@@ -6,7 +6,7 @@ module App.View where
 import qualified App.Core.Album as Album
 import qualified App.Paths      as Path
 
-import App.Common       ( Album(..), Page(..) )
+import App.Common       ( Album(..), Image(..), Page(..) )
 import App.Expression   ( Expression, parse )
 import Control.Monad    ( forM_, unless )
 import Data.Monoid      ( mempty )
@@ -62,6 +62,22 @@ albumsPage query page total albums =
                 nextPage Albums page query
                 forM_ albums albumThumbnail
 
+-- | Renders a page for the given image as text containing HTML.
+imagesPage :: String -> Int -> Int -> [Entity Image] -> Text
+imagesPage query page total images =
+    render $ document (printf "Images (%i)" total) [] $
+        div_ [class_ "content"] $ do
+        
+            div_ [class_ "header"] $ do
+                div_ [class_ "left" ] $ searchForm query
+                div_ [class_ "right"] $ uploadForm
+                
+            div_ [class_ "gallery"] $ do
+                prevPage Images page query
+                nextPage Images page query
+                forM_ images imageThumbnail
+
+-- | Renders a page for the given album page as text containing HTML.
 pagePage :: ID -> Page -> Text
 pagePage id page @ Page {..} =
     render $ document (printf "Album %i - page %i" id pageNumber) [] $ 
@@ -75,6 +91,13 @@ albumThumbnail album @ (Entity id _) = a_ [href_ url] $ img_ [src_ thumb]
     
     where url   = pack $ printf "/album/%i" id
           thumb = pack $ Path.getAlbumThumbnailURL album
+
+-- | Returns a link to an image that is displayed as a thumbnail.
+imageThumbnail :: Entity Image -> Html ()
+imageThumbnail (Entity id image) = a_ [href_ url] $ img_ [src_ thumb]
+    
+    where url   = pack $ printf "/image/%i" id
+          thumb = pack $ Path.getImageThumbnailURL image
 
 -- | Creates an HTML document with the given title, list of javascript import
 -- | paths and HTML child as the body.

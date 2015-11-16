@@ -95,13 +95,12 @@ main = runApplication $ do
     
     -- Renders the images page with images that match the query parameter.
     get "images" $ do
-        page    <- optionalParam "page" 0
+        page    <- optionalParam "page" 1
         query   <- optionalParam "q" ""
         count   <- Image.count (parse query)
         images  <- Image.query (parse query) page
-        results <- render "images" (toImagesContext query page count images)
         
-        html results
+        html (View.imagesPage query page count images)
     
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
