@@ -396,8 +396,9 @@ selectAdjacentImage dir id expression = do
 selectCount :: String -> Expression -> Transaction Int
 selectCount table expression = do
     results <- SQL.query $ do
-        t <- from table 
-        satisfying expression t
+        p <- from "post"
+        t <- from table `on` ("post_id" *= p "id")
+        satisfying expression p
         retrieve [count]
         
     return (head results)
