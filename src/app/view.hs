@@ -9,7 +9,7 @@ import qualified App.Paths      as Path
 import App.Common       ( Album(..), Image(..), Page(..) )
 import App.Expression   ( Expression, parse )
 import Control.Monad    ( forM_, unless )
-import Data.Monoid      ( mempty )
+import Data.Monoid      ( mconcat, mempty )
 import Data.Text        ( Text, pack, empty )
 import Data.Text.Lazy   ( toStrict )
 import Database.Engine  ( Entity(..), ID )
@@ -36,9 +36,7 @@ albumPage :: Entity Album -> Text
 albumPage (Entity id album @ Album {..}) =
     render $ document (printf "Album %i" id) [] $ do
         
-        unless (null albumTagNames) $
-            ul_ [id_ "tags", class_ "listBox"] $ 
-                forM_ albumTagNames (li_ . toHtml)
+        tags albumTagNames
     
         forM_ albumPages $ \(Page _ number _) ->
             let page  = Album.getPage album number
@@ -61,6 +59,20 @@ albumsPage query page total albums =
                 prevPage Albums page query
                 nextPage Albums page query
                 forM_ albums albumThumbnail
+
+-- | Renders a page for the given image as text containing HTML.
+imagePage :: String -> Entity Image -> Entity Image -> Entity Image -> Text
+imagePage query (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
+    render $ document title scripts $ do
+    
+        tags imageTagNames
+        img_ [id_ "image", class_ "display", src_ url]
+    
+    where title   = "Image " ++ show id
+          url     = pack (Path.getImageURL image)
+          scripts = [ script "/static/utility.js"
+                    , script "/static/image.js"
+                    , imageScript prev next query ]
 
 -- | Renders a page for the given image as text containing HTML.
 imagesPage :: String -> Int -> Int -> [Entity Image] -> Text
@@ -101,14 +113,13 @@ imageThumbnail (Entity id image) = a_ [href_ url] $ img_ [src_ thumb]
 
 -- | Creates an HTML document with the given title, list of javascript import
 -- | paths and HTML child as the body.
-document :: String -> [Text] -> Html a -> Html a
+document :: String -> [Html ()] -> Html a -> Html a
 document title imports f = doctypehtml_ $ do
     head_ $ do
         title_ (toHtml title)
         meta_  [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
         link_  [rel_ "stylesheet", type_ "text/css", href_ "/static/style.css"]
-        forM_ imports $ \x -> 
-            script_ [type_ "application/javascript;version=1.7", src_ x] empty
+        mconcat imports
     body_ f
 
 -- | Returns a link to the next page of post results.
@@ -125,6 +136,13 @@ prevPage post page query = if page <= 1 then mempty else link
     where link = a_ [href_ url] $ div_ [class_ "thumb"] "previous"
           url  = pack $ printf "/%s/?page=%i%s" post (page - 1) q
           q    = if null query then "" else "&q=" ++ query
+
+-- | Returns an element containing tags based on the given list of tag names.
+tags :: [String] -> Html ()
+tags tagNames = 
+    unless (null tagNames) $
+        ul_ [id_ "tags", class_ "listBox"] $ 
+            forM_ tagNames (li_ . toHtml)
 
 -- | Returns a search form for filtering posts.
 searchForm :: String -> Html ()
@@ -147,6 +165,26 @@ uploadForm = form_
         input_  [type_ "file", name_ "uploadedFile"]
         input_  [type_ "text", name_ "tags", autocomplete_ "off"]
         button_ [type_ "submit"] "Upload"
+
+-------------------------------------------------------------------- JavaScript
+
+-- | Imports the JavaScript file with the given relative path.
+script :: Text -> Html ()
+script path = script_ [type_ "application/javascript;version=1.7", src_ path] empty
+
+-- | Registers event listeners for the image page.
+imageScript :: ID -> ID -> String -> Html ()
+imageScript prev next query =
+    script_ [type_ "application/javascript;version=1.7"] $ pack $ unlines
+        [ addListener "load"   resize
+        , addListener "resize" resize
+        , addListener "keyup"  navigation ]
+
+    where addListener :: String -> String -> String
+          addListener = printf "window.addEventListener(\"%s\", %s, false);"
+          navigation  = printf "Image.navigate(%i, %i, '%s')" prev next query
+          resize      = "Image.resize('image', 'tags')"
+
 
 ----------------------------------------------------------------------- Utility
 

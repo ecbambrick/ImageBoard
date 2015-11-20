@@ -107,8 +107,8 @@ main = runApplication $ do
         query               <- optionalParam "q" ""
         (prev, image, next) <- Image.queryTriple (parse query) id
         
-        let context = toImageSetContext <$> pure query <*> image <*> prev <*> next
+        let view = View.imagePage query <$> prev <*> image <*> next
         
-        case context of
-            Nothing      -> redirect "/"
-            Just context -> html =<< render "image" context
+        case view of
+            Nothing   -> redirect "/"
+            Just view -> html view
