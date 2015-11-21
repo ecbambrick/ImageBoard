@@ -46,8 +46,8 @@ albumPage (Entity id album @ Album {..}) =
             in a_ [href_ url] $ img_ [src_ thumb]
 
 -- | Renders a page for the given album as text containing HTML.
-albumsPage :: String -> Int -> Int -> [Entity Album] -> Text
-albumsPage query page total albums = 
+albumsPage :: String -> Int -> Int -> Int -> [Entity Album] -> Text
+albumsPage query page total pageSize albums = 
     render $ document (printf "Albums (%i)" total) [] $
         div_ [class_ "content"] $ do
         
@@ -57,7 +57,7 @@ albumsPage query page total albums =
                 
             div_ [class_ "gallery"] $ do
                 prevPage Albums page query
-                nextPage Albums page query
+                nextPage Albums page query total pageSize
                 forM_ albums albumThumbnail
 
 -- | Renders a page for the given image as text containing HTML.
@@ -75,8 +75,8 @@ imagePage query (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
                     , imageScript prev next query ]
 
 -- | Renders a page for the given image as text containing HTML.
-imagesPage :: String -> Int -> Int -> [Entity Image] -> Text
-imagesPage query page total images =
+imagesPage :: String -> Int -> Int ->  Int -> [Entity Image] -> Text
+imagesPage query page total pageSize images =
     render $ document (printf "Images (%i)" total) [] $
         div_ [class_ "content"] $ do
         
@@ -86,7 +86,7 @@ imagesPage query page total images =
                 
             div_ [class_ "gallery"] $ do
                 prevPage Images page query
-                nextPage Images page query
+                nextPage Images page query total pageSize
                 forM_ images imageThumbnail
         
     where imageThumbnail :: Entity Image -> Html ()
@@ -122,18 +122,25 @@ document title imports f = doctypehtml_ $ do
     body_ f
 
 -- | Returns a link to the next page of post results.
-nextPage :: IndexType -> Int -> String -> Html ()
-nextPage post page query = a_ [href_ url] $ div_ [class_ "thumb"] "next" 
-    
-    where url = pack $ printf "/%s?page=%i%s" post (page + 1) q
-          q   = if null query then "" else "&q=" ++ query
+nextPage :: IndexType -> Int -> String -> Int -> Int -> Html ()
+nextPage post page query total size = 
+    if page * size >= total 
+        then mempty 
+        else link
+
+    where link = a_ [href_ url] $ div_ [class_ "thumb"] "next" 
+          url  = pack $ printf "/%s?page=%i%s" post (page + 1) q
+          q    = if null query then "" else "&q=" ++ query
 
 -- | Returns a link to the previous page of post results.
 prevPage :: IndexType -> Int -> String -> Html ()
-prevPage post page query = if page <= 1 then mempty else link
+prevPage post page query = 
+    if page <= 1 
+        then mempty 
+        else link
     
     where link = a_ [href_ url] $ div_ [class_ "thumb"] "previous"
-          url  = pack $ printf "/%s/?page=%i%s" post (page - 1) q
+          url  = pack $ printf "/%s?page=%i%s" post (page - 1) q
           q    = if null query then "" else "&q=" ++ query
 
 -- | Returns an element containing tags based on the given list of tag names.

@@ -31,6 +31,7 @@ import Web.Spock.Extended            ( getFile, optionalParam )
 
 main = runApplication $ do
     storagePath <- asks configStoragePath
+    pageSize    <- asks configPageSize
     
     -- Enables access to thumbnails and images in the storage path.
     middleware $ staticPolicy $ mconcat
@@ -72,7 +73,7 @@ main = runApplication $ do
         count   <- Album.count (parse query)
         albums  <- Album.query (parse query) page
         
-        html (View.albumsPage query page count albums)
+        html (View.albumsPage query page count pageSize albums)
     
     -- Renders the album details page for the album with the given ID.
     get ("album" <//> var) $ \id -> do
@@ -95,12 +96,12 @@ main = runApplication $ do
     
     -- Renders the images page with images that match the query parameter.
     get "images" $ do
-        page    <- optionalParam "page" 1
-        query   <- optionalParam "q" ""
-        count   <- Image.count (parse query)
-        images  <- Image.query (parse query) page
+        page     <- optionalParam "page" 1
+        query    <- optionalParam "q" ""
+        count    <- Image.count (parse query)
+        images   <- Image.query (parse query) page
         
-        html (View.imagesPage query page count images)
+        html (View.imagesPage query page count pageSize images)
     
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
