@@ -3,7 +3,8 @@
 
 module Database.Engine
     ( Entity(..), ID, Transaction, Simple.FromRow, delete, fromEntity, insert
-    , query, runDatabase, Simple.field, Simple.fromRow, single, update ) where
+    , query, runDatabase, Simple.field, Simple.fromRow, single, update
+    , execute ) where
 
 import qualified Database.SQLite.Simple as Simple
 import qualified Database.Query.SQLite  as SQL
@@ -81,6 +82,12 @@ update :: String -> (Table -> Filter) -> [Mapping] -> Transaction ()
 update table filter mappings = do
     conn <- ask
     lift $ Simple.execute_ conn $ toQuery (SQL.update table filter mappings)
+
+-- | Executes the given string as literal SQL.
+execute :: String -> Transaction ()
+execute q = do
+    conn <- ask
+    lift $ Simple.execute_ conn $ toQuery q
 
 ----------------------------------------------------------------------- Utility
 
