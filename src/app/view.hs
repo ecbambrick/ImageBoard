@@ -52,7 +52,7 @@ albumsPage query page total albums =
         div_ [class_ "content"] $ do
         
             div_ [class_ "header"] $ do
-                div_ [class_ "left" ] $ searchForm query
+                div_ [class_ "left" ] $ searchForm Albums query
                 div_ [class_ "right"] $ uploadForm
                 
             div_ [class_ "gallery"] $ do
@@ -81,13 +81,19 @@ imagesPage query page total images =
         div_ [class_ "content"] $ do
         
             div_ [class_ "header"] $ do
-                div_ [class_ "left" ] $ searchForm query
+                div_ [class_ "left" ] $ searchForm Images query
                 div_ [class_ "right"] $ uploadForm
                 
             div_ [class_ "gallery"] $ do
                 prevPage Images page query
                 nextPage Images page query
                 forM_ images imageThumbnail
+        
+    where imageThumbnail :: Entity Image -> Html ()
+          imageThumbnail (Entity id image) = a_ [href_ url] $ img_ [src_ thumb]
+            where url   = pack $ printf "/image/%i%s" id q
+                  thumb = pack $ Path.getImageThumbnailURL image
+          q = if null query then "" else "?q=" ++ query
 
 -- | Renders a page for the given album page as text containing HTML.
 pagePage :: ID -> Page -> Text
@@ -103,13 +109,6 @@ albumThumbnail album @ (Entity id _) = a_ [href_ url] $ img_ [src_ thumb]
     
     where url   = pack $ printf "/album/%i" id
           thumb = pack $ Path.getAlbumThumbnailURL album
-
--- | Returns a link to an image that is displayed as a thumbnail.
-imageThumbnail :: Entity Image -> Html ()
-imageThumbnail (Entity id image) = a_ [href_ url] $ img_ [src_ thumb]
-    
-    where url   = pack $ printf "/image/%i" id
-          thumb = pack $ Path.getImageThumbnailURL image
 
 -- | Creates an HTML document with the given title, list of javascript import
 -- | paths and HTML child as the body.
@@ -145,10 +144,10 @@ tags tagNames =
             forM_ tagNames (li_ . toHtml)
 
 -- | Returns a search form for filtering posts.
-searchForm :: String -> Html ()
-searchForm query = form_ 
+searchForm :: IndexType -> String -> Html ()
+searchForm post query = form_ 
     [ name_ "search"
-    , action_ "albums"
+    , action_ (pack $ show post)
     , method_ "get" ] $ do
         input_ [type_ "text", name_ "q", value_ query']
         button_ [type_ "submit"] "Search"
@@ -184,7 +183,6 @@ imageScript prev next query =
           addListener = printf "window.addEventListener(\"%s\", %s, false);"
           navigation  = printf "Image.navigate(%i, %i, '%s')" prev next query
           resize      = "Image.resize('image', 'tags')"
-
 
 ----------------------------------------------------------------------- Utility
 
