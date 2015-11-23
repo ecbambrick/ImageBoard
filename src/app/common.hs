@@ -8,10 +8,15 @@
 module App.Common where
 
 import App.Config           ( Config(..), loadConfig )
+import Control.Monad        ( when )
 import Control.Monad.Reader ( MonadReader, ReaderT, ask, asks, local, runReaderT )
 import Control.Monad.Trans  ( MonadIO, lift )
 import Data.Time            ( UTCTime )
-import Database.Engine      ( Transaction, runDatabase )
+import Data.Textual         ( splitOn )
+import Database.Engine      ( Transaction, execute, runDatabase )
+import System.Directory     ( createDirectory, doesDirectoryExist
+                            , getTemporaryDirectory, removeDirectoryRecursive )
+import System.FilePath      ( (</>) )
 import Web.Spock            ( SpockT, ActionT, runSpock, spockT )
 
 ----------------------------------------------------------------------- Control
@@ -40,6 +45,28 @@ runDB :: Transaction a -> App a
 runDB command = do
     db <- asks configDatabaseConnection
     runDatabase db command
+
+-- | Runs the give application function using a blank database and a temporary 
+-- | storage directory. Used for testing.
+testApplication :: App a -> IO ()
+testApplication f = do 
+    testDir   <- fmap (</> "testing") getTemporaryDirectory
+    dirExists <- doesDirectoryExist testDir
+    schema    <- readFile "schema.sql"
+    
+    let database = testDir </> "database"
+    
+    when dirExists (removeDirectoryRecursive testDir)
+    createDirectory testDir
+    writeFile database ""
+    
+    runDatabase database $
+        let commands = filter (/= "\n") $ splitOn ";" schema
+        in  mapM_ execute commands
+    
+    runReaderT f (Config 8000 database testDir 100 256)
+    
+    removeDirectoryRecursive testDir
 
 -------------------------------------------------------------------------- Data
 
