@@ -40,7 +40,7 @@ import System.IO            ( IOMode(..), hClose, openFile, withFile )
 
 -- | Returns the total number of albums satisfying the given expression.
 count :: Expression -> App Int
-count expression = runDB (selectAlbumsCount expression)
+count = runDB . selectAlbumsCount
 
 -- | Deletes the album with the given ID from the database/filesystem.
 delete :: ID -> App ()
