@@ -9,6 +9,7 @@ import qualified App.Paths      as Path
 import App.Common       ( Album(..), Image(..), Page(..) )
 import App.Expression   ( Expression, parse )
 import Control.Monad    ( forM_, unless )
+import Data.List        ( intercalate )
 import Data.Monoid      ( mconcat, mempty )
 import Data.Text        ( Text, pack, empty )
 import Data.Text.Lazy   ( toStrict )
@@ -68,15 +69,30 @@ albumsPage query page total pageSize albums =
 -- | Renders a page for the given image as text containing HTML.
 imagePage :: String -> Entity Image -> Entity Image -> Entity Image -> Text
 imagePage query (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
-    render title scripts $ do
-        tags_ imageTagNames
-        img_  [id_ "image", class_ "display", src_ url]
+    render' title scripts $ do
+        aside_ $ do
+            elem_ "details" $ do
+                elem_ "title" (toHtml imageTitle)
+                elem_ "meta" $ do
+                    toHtml $ intercalate " | " 
+                        [ show imageWidth ++ "x" ++ show imageHeight
+                        , show imageFileSize
+                        , imageExtension ]
+                    br_ []
+                    toHtml imageHash
+                    br_ []
+                    toHtml ("uploaded " ++ show imageCreated)
+            elem_ "tags" $
+                forM_ imageTagNames $ \x ->
+                    span_ [class_ "tag"] (toHtml x)
+        main_ $
+            elem_ "image-container" $
+                img_ [id_ "image", src_ imageURL]
     
-    where title   = "Image " ++ show id
-          url     = pack (Path.getImageURL image)
-          scripts = [ script "/static/utility.js"
-                    , script "/static/image.js"
-                    , imageScript prev next query ]
+    where title    = "Image " ++ show id
+          imageURL = pack (Path.getImageURL image)
+          scripts  = [ script "/static/image.js"
+                     , imageScript prev next query ]
 
 -- | Renders a page for the given image as text containing HTML.
 imagesPage :: String -> Int -> Int -> Int -> [Entity Image] -> Text
@@ -118,6 +134,21 @@ document title imports f = doctypehtml_ $ do
         mconcat imports
     body_ f
 
+-- | Creates an HTML document with the given title, list of javascript import
+-- | paths and HTML child as the body. Uses an alternate style sheet.
+document' :: String -> [Html ()] -> Html a -> Html a
+document' title imports f = doctypehtml_ $ do
+    head_ $ do
+        title_ (toHtml title)
+        meta_  [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
+        link_  [rel_ "stylesheet", type_ "text/css", href_ "/static/style2.css"]
+        mconcat imports
+    body_ f
+
+-- | Returns a div element with the given ID.
+elem_ :: Text -> Html a -> Html a
+elem_ id = div_ [id_ id]
+
 -- | Returns a link to the next page of post results.
 nextPage_ :: IndexType -> Int -> String -> Int -> Int -> Html ()
 nextPage_ post page query total pageSize =  
@@ -153,10 +184,8 @@ searchForm_ post query = form_
     [ name_ "search"
     , action_ (pack $ show post)
     , method_ "get" ] $ do
-        input_ [type_ "text", name_ "q", value_ query']
+        input_ [type_ "text", name_ "q", value_ (pack query)]
         button_ [type_ "submit"] "Search"
-    
-    where query' = if null query then "" else pack query
 
 -- | Returns an upload form for uploading a new post.
 uploadForm_ :: Html ()
@@ -171,6 +200,11 @@ uploadForm_ = form_
 
 -------------------------------------------------------------------- JavaScript
 
+-- | Returns JavaScript that registers an event listener on the window with 
+-- | the given name to the given function.
+addListener :: String -> String -> String
+addListener = printf "window.addEventListener('%s', %s, false);"
+
 -- | Imports the JavaScript file with the given relative path.
 script :: Text -> Html ()
 script path = script_ [type_ "application/javascript;version=1.7", src_ path] empty
@@ -179,14 +213,9 @@ script path = script_ [type_ "application/javascript;version=1.7", src_ path] em
 imageScript :: ID -> ID -> String -> Html ()
 imageScript prev next query =
     script_ [type_ "application/javascript;version=1.7"] $ pack $ unlines
-        [ addListener "load"   resize
-        , addListener "resize" resize
-        , addListener "keyup"  navigation ]
+        [ addListener "keyup" navigation ]
 
-    where addListener :: String -> String -> String
-          addListener = printf "window.addEventListener(\"%s\", %s, false);"
-          navigation  = printf "Image.navigate(%i, %i, '%s')" prev next query
-          resize      = "Image.resize('image', 'tags')"
+    where navigation = printf "Image.navigate(%i, %i, '%s')" prev next query
 
 ----------------------------------------------------------------------- Utility
 
@@ -194,3 +223,8 @@ imageScript prev next query =
 -- | generate a head element.
 render :: String -> [Html ()] -> Html a -> Text
 render title imports f = toStrict $ renderText $ document title imports f
+
+-- | Renders the given HTML body as text, using the given title and imports to
+-- | generate a head element. Uses an alternate style sheet.
+render' :: String -> [Html ()] -> Html a -> Text
+render' title imports f = toStrict $ renderText $ document' title imports f
