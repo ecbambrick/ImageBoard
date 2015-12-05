@@ -5,7 +5,7 @@ module App.View where
 
 import qualified App.Core.Album  as Album
 import qualified App.Paths       as Path
-import qualified Data.URLEncoded as URL
+import qualified Network.URI     as URI
 
 import App.Common       ( Album(..), Image(..), Page(..) )
 import App.Expression   ( Expression, parse )
@@ -115,9 +115,9 @@ imagesPage query page total pageSize images =
             gallery_  images
                 
     where title    = printf "Images (%i)" total
-          query'   = if null query then "" else "?q=" ++ query
+          params   = parameters [("q", query)]
           gallery_ = mapM_ $ \(Entity id image) ->
-            let url   = pack $ printf "/image/%i%s" id query'
+            let url   = pack $ printf "/image/%i%s" id params
                 thumb = pack $ Path.getImageThumbnailURL image
 
             in a_ [href_ url] $ img_ [src_ thumb] :: Html ()
@@ -182,8 +182,8 @@ nextPage_ post page query total pageSize =
         else link
     
     where link   = a_ [href_ url] $ div_ [class_ "thumb"] "next" 
-          url    = pack $ printf "/%s?page=%i%s" post (page + 1) query'
-          query' = if null query then "" else "&q=" ++ query
+          params = parameters [("page", show (page + 1)), ("q", query)]
+          url    = pack $ printf "/%s%s" post params
 
 -- | Returns a link to the previous page of post results.
 prevPage_ :: IndexType -> Int -> String -> Html ()
@@ -193,8 +193,8 @@ prevPage_ post page query =
         else link
     
     where link   = a_ [href_ url] $ div_ [class_ "thumb"] "previous"
-          url    = pack $ printf "/%s/?page=%i%s" post (page - 1) query'
-          query' = if null query then "" else "&q=" ++ query
+          params = parameters [("page", show (page - 1)), ("q", query)]
+          url    = pack $ printf "/%s%s" post params
 
 -- | Returns an element containing tags based on the given list of tag names.
 tags_ :: [String] -> Html ()
@@ -255,7 +255,14 @@ imageScript prev next query =
 
 -- | Converts the given list of key-value pairs to a set of parameter values.
 parameters :: [(String, String)] -> String
-parameters = ("?" ++) . URL.export . URL.importList
+parameters params = 
+    let esc                = URI.escapeURIString URI.isUnreserved
+        encodePair ("", _) = ""
+        encodePair (_, "") = ""
+        encodePair (k,  v) = esc k ++ "=" ++ esc v
+        results            = intercalate "&" $ filter (not.null) $ map encodePair params
+        
+    in if null results then "" else "?" ++ results
 
 -- | Renders the given HTML body as text, using the given title and imports to
 -- | generate a head element.
