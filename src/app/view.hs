@@ -3,8 +3,9 @@
 
 module App.View where
 
-import qualified App.Core.Album as Album
-import qualified App.Paths      as Path
+import qualified App.Core.Album  as Album
+import qualified App.Paths       as Path
+import qualified Data.URLEncoded as URL
 
 import App.Common       ( Album(..), Image(..), Page(..) )
 import App.Expression   ( Expression, parse )
@@ -73,6 +74,7 @@ imagePage query (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
         aside_ $ do
             nav_ $ do
                 search_ Images query
+                actions_ [actions]
             elem_ "details" $ do
                 elem_ "title" (toHtml imageTitle)
                 elem_ "meta" $ do
@@ -92,9 +94,13 @@ imagePage query (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
                 img_ [id_ "image", src_ imageURL]
     
     where title    = "Image " ++ show id
+          params   = parameters [("q", query)]
           imageURL = pack (Path.getImageURL image)
           scripts  = [ script "/static/image.js"
                      , imageScript prev next query ]
+          actions  = [ ("arrow-left",  printf "/image/%i%s" prev params)
+                     , ("th-large",    printf "/images%s"        params)
+                     , ("arrow-right", printf "/image/%i%s" next params) ]
 
 -- | Renders a page for the given image as text containing HTML.
 imagesPage :: String -> Int -> Int -> Int -> [Entity Image] -> Text
@@ -149,6 +155,16 @@ document' title imports f = doctypehtml_ $ do
     body_ f
 
 -------------------------------------------------------------------- Components
+
+-- | Returns an HTML element containing links matching the given list of
+-- | icon/URL pairs.
+actions_ :: [[(String, String)]] -> Html ()
+actions_ actionGroups = do
+    elem_ "actions" $
+        forM_ actionGroups $ \actions ->
+            div_ $
+                forM_ actions $ \(icon, url) ->
+                    a_ [class_ (pack $ "fa fa-" ++ icon ++ " action"), href_ (pack url) ] mempty
 
 -- | Returns a div element with the given ID.
 elem_ :: Text -> Html a -> Html a
@@ -236,6 +252,10 @@ imageScript prev next query =
     where navigation = printf "Image.navigate(%i, %i, '%s')" prev next query
 
 ----------------------------------------------------------------------- Utility
+
+-- | Converts the given list of key-value pairs to a set of parameter values.
+parameters :: [(String, String)] -> String
+parameters = ("?" ++) . URL.export . URL.importList
 
 -- | Renders the given HTML body as text, using the given title and imports to
 -- | generate a head element.
