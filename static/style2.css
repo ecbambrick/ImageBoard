@@ -56,11 +56,11 @@ div#meta  {
     padding-top: 20px;
 }
 
-div#search {
+form#search {
     display: flex;
 }
 
-div#search > input {
+form#search > input {
     background-color: inherit;
     border: none;
     border-bottom: 1px solid #ddd;
@@ -70,7 +70,7 @@ div#search > input {
     padding-bottom: 10px;
 }
 
-div#search > button {
+form#search > button {
     background-color: inherit;
     border: none;
     border-bottom: 1px solid #ddd;

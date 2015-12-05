@@ -10,7 +10,7 @@ import App.Common       ( Album(..), Image(..), Page(..) )
 import App.Expression   ( Expression, parse )
 import Control.Monad    ( forM_, unless )
 import Data.List        ( intercalate )
-import Data.Monoid      ( mconcat, mempty )
+import Data.Monoid      ( (<>), mconcat, mempty )
 import Data.Text        ( Text, pack, empty )
 import Data.Text.Lazy   ( toStrict )
 import Database.Engine  ( Entity(..), ID )
@@ -71,6 +71,8 @@ imagePage :: String -> Entity Image -> Entity Image -> Entity Image -> Text
 imagePage query (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
     render' title scripts $ do
         aside_ $ do
+            nav_ $ do
+                search_ Images query
             elem_ "details" $ do
                 elem_ "title" (toHtml imageTitle)
                 elem_ "meta" $ do
@@ -121,7 +123,7 @@ pagePage id page @ Page {..} = render title [] (img_ [src_ url])
     where title = printf "Album %i - page %i" id pageNumber
           url   = pack (Path.getPageURL id page)
 
--------------------------------------------------------------------- Components
+----------------------------------------------------------------------- Headers
 
 -- | Creates an HTML document with the given title, list of javascript import
 -- | paths and HTML child as the body.
@@ -141,13 +143,20 @@ document' title imports f = doctypehtml_ $ do
     head_ $ do
         title_ (toHtml title)
         meta_  [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
-        link_  [rel_ "stylesheet", type_ "text/css", href_ "/static/style2.css"]
+        link_  [rel_ "stylesheet", href_ "/static/style2.css"]
+        link_  [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
         mconcat imports
     body_ f
+
+-------------------------------------------------------------------- Components
 
 -- | Returns a div element with the given ID.
 elem_ :: Text -> Html a -> Html a
 elem_ id = div_ [id_ id]
+
+-- | Returns an HTML element containing an icon.
+glyph_ :: Text -> Html ()
+glyph_ name = i_ [class_ ("fa fa-" <> name)] mempty
 
 -- | Returns a link to the next page of post results.
 nextPage_ :: IndexType -> Int -> String -> Int -> Int -> Html ()
@@ -177,6 +186,15 @@ tags_ tagNames =
     unless (null tagNames) $
         ul_ [id_ "tags", class_ "listBox"] $ 
             forM_ tagNames (li_ . toHtml)
+
+-- | Returns a search form for filtering posts.
+search_ :: IndexType -> String -> Html ()
+search_ post query = form_ 
+    [ id_ "search"
+    , action_ (pack $ "/" ++ show post)
+    , method_ "get" ] $ do
+        input_  [ id_ "search-text", type_ "text", name_ "q", value_ (pack query) ]
+        button_ [ id_ "search-action", type_ "submit" ] (glyph_ "search")
 
 -- | Returns a search form for filtering posts.
 searchForm_ :: IndexType -> String -> Html ()
