@@ -12,8 +12,7 @@ import Control.Monad.Trans      ( lift )
 import Data.Functor             ( (<$>) )
 import Data.Maybe               ( fromJust, isJust )
 import Data.Text                ( splitOn )
-import Data.Time.Clock          ( UTCTime(..) )
-import Data.Time.Extended       ( fromSeconds )
+import Data.DateTime            ( DateTime, fromSeconds )
 import Database.Engine          ( Entity(..), Transaction, fromEntity )
 import Database.SQLite.Simple   ( Query(..), execute_, query_, withConnection )
 import Test.HUnit               ( Test(..), Assertion, (@=?), runTestTT
@@ -570,8 +569,8 @@ testDatabase f = TestCase $ withConnection ":memory:" $ \conn -> do
                                  <$> splitOn ";" 
                                  <$> Text.readFile "schema.sql"
 
--- | Returns the UTC time that is the given number of seconds after the epoch.
-time :: Integer -> UTCTime
+-- | Returns the date time that is the given number of seconds after the epoch.
+time :: Integer -> DateTime
 time = fromSeconds
 
 -- | Returns all the pages from the database.

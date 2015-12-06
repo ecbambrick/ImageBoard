@@ -19,7 +19,7 @@ import Control.Monad        ( forM_, void )
 import Data.Int             ( Int64 )
 import Data.Maybe           ( isJust )
 import Data.Textual         ( toLower, trim, replace )
-import Data.Time.Extended   ( UTCTime, fromSeconds, toSeconds )
+import Data.DateTime        ( DateTime, fromSeconds, toSeconds )
 import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
                             , fromEntity, fromRow, field )
 import Database.Query       ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
@@ -416,7 +416,7 @@ bool :: (Functor f) => f Int -> f Bool
 bool = fmap (\x -> if x == 0 then False else True)
 
 -- | Maps the given integer to a UTC time.
-time :: (Functor f) => f Integer -> f UTCTime
+time :: (Functor f) => f Integer -> f DateTime
 time = fmap fromSeconds
 
 -- | Converts a boolean to an integer.

@@ -11,7 +11,7 @@ import App.Config           ( Config(..), loadConfig )
 import Control.Monad        ( when )
 import Control.Monad.Reader ( MonadReader, ReaderT, ask, asks, local, runReaderT )
 import Control.Monad.Trans  ( MonadIO, lift )
-import Data.Time            ( UTCTime )
+import Data.DateTime        ( DateTime, utcTimeZone )
 import Data.Textual         ( splitOn )
 import Database.Engine      ( Transaction, execute, runDatabase )
 import System.Directory     ( createDirectory, doesDirectoryExist
@@ -64,7 +64,7 @@ testApplication f = do
         let commands = filter (/= "\n") $ splitOn ";" schema
         in  mapM_ execute commands
     
-    runReaderT f (Config 8000 database testDir 100 256)
+    runReaderT f (Config 8000 database testDir 100 256 utcTimeZone)
     
     removeDirectoryRecursive testDir
 
@@ -83,8 +83,8 @@ data Image = Image
     , imageExtension   :: String
     , imageWidth       :: Int
     , imageHeight      :: Int
-    , imageCreated     :: UTCTime
-    , imageModified    :: UTCTime
+    , imageCreated     :: DateTime
+    , imageModified    :: DateTime
     , imageFileSize    :: Int
     , imageTagNames    :: [String]
     } deriving (Eq, Show)
@@ -94,8 +94,8 @@ data Image = Image
 data Album = Album
     { albumTitle       :: String
     , albumIsFavourite :: Bool
-    , albumCreated     :: UTCTime
-    , albumModified    :: UTCTime
+    , albumCreated     :: DateTime
+    , albumModified    :: DateTime
     , albumFileSize    :: Int
     , albumPages       :: [Page]
     , albumTagNames    :: [String]
