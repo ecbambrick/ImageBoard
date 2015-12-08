@@ -10,6 +10,7 @@ import qualified Network.URI     as URI
 import App.Common       ( Album(..), Image(..), Page(..) )
 import App.Expression   ( Expression, parse )
 import Control.Monad    ( forM_, unless )
+import Data.DateTime    ( TimeZone, defaultFormatDate )
 import Data.List        ( intercalate )
 import Data.Monoid      ( (<>), mconcat, mempty )
 import Data.Text        ( Text, pack, empty )
@@ -17,6 +18,7 @@ import Data.Text.Lazy   ( toStrict )
 import Database.Engine  ( Entity(..), ID )
 import Lucid.Base       ( ToHtml(..), Html, renderText )
 import Lucid.Html5
+import Numeric          ( showFFloat )
 import Text.Printf      ( FieldFormat(..), PrintfArg(..), formatString, printf )
 
 ------------------------------------------------------------------------- Types
@@ -68,8 +70,8 @@ albumsPage query page total pageSize albums =
             in a_ [href_ url] $ img_ [src_ thumb] :: Html ()
 
 -- | Renders a page for the given image as text containing HTML.
-imagePage :: String -> Entity Image -> Entity Image -> Entity Image -> Text
-imagePage query (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
+imagePage :: String -> TimeZone -> Entity Image -> Entity Image -> Entity Image -> Text
+imagePage query timeZone (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
     render' title scripts $ do
         aside_ $ do
             nav_ $ do
@@ -80,12 +82,12 @@ imagePage query (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
                 elem_ "meta" $ do
                     toHtml $ intercalate " | " 
                         [ show imageWidth ++ "x" ++ show imageHeight
-                        , show imageFileSize
+                        , formatSize imageFileSize
                         , imageExtension ]
                     br_ []
                     toHtml imageHash
                     br_ []
-                    toHtml ("uploaded " ++ show imageCreated)
+                    toHtml ("uploaded " ++ defaultFormatDate timeZone imageCreated)
             elem_ "tags" $
                 forM_ imageTagNames $ \x ->
                     span_ [class_ "tag"] (toHtml x)
@@ -252,6 +254,13 @@ imageScript prev next query =
     where navigation = printf "Image.navigate(%i, %i, '%s')" prev next query
 
 ----------------------------------------------------------------------- Utility
+
+-- | Formats the given integer as a file size.
+formatSize :: Int -> String
+formatSize value
+    | value <= 10^3 = "1kb"
+    | value >= 10^6 = showFFloat (Just 1) (fromIntegral value / 1000000) "mb"
+    | otherwise     = showFFloat (Just 0) (fromIntegral value / 1000)    "kb"
 
 -- | Converts the given list of key-value pairs to a set of parameter values.
 parameters :: [(String, String)] -> String

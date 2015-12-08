@@ -105,10 +105,11 @@ main = runApplication $ do
     
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
+        timeZone            <- asks configTimeZone
         query               <- optionalParam "q" ""
         (prev, image, next) <- Image.queryTriple (parse query) id
         
-        let view = View.imagePage query <$> prev <*> image <*> next
+        let view = View.imagePage query timeZone <$> prev <*> image <*> next
         
         case view of
             Nothing   -> redirect "/"
