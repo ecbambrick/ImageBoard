@@ -25,8 +25,8 @@ import Data.Textual                  ( splitOn )
 import Database.Engine               ( fromEntity )
 import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
-import Web.Spock                     ( (<//>), get, html, middleware, text
-                                     , post, redirect, root, var )
+import Web.Spock                     ( (<//>), delete, get, html, middleware
+                                     , text, post, redirect, root, var )
 import Web.Spock.Extended            ( getFile, optionalParam )
 
 main = runApplication $ do
@@ -114,3 +114,7 @@ main = runApplication $ do
         case view of
             Nothing   -> redirect "/"
             Just view -> html view
+    
+    -- Delets the image with the given id.
+    delete ("image" <//> var) $ \id -> do
+        Image.delete id
