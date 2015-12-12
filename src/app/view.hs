@@ -22,7 +22,10 @@ import Numeric          ( showFFloat )
 import Text.Printf      ( FieldFormat(..), PrintfArg(..), formatString, printf )
 
 ------------------------------------------------------------------------- Types
-    
+
+-- | The type of a UI action. Either a href link or an onclick script.
+data ActionType = Link String | Script String
+
 -- | The type of post displayed on an index page.
 data IndexType = Albums | Images
 
@@ -76,7 +79,7 @@ imagePage query timeZone (Entity prev _) (Entity id image @ Image {..}) (Entity 
         aside_ $ do
             nav_ $ do
                 search_ Images query
-                actions_ [actions]
+                actions_ [navigation, editing]
             elem_ "details" $ do
                 elem_ "title" (toHtml imageTitle)
                 elem_ "meta" $ do
@@ -95,14 +98,16 @@ imagePage query timeZone (Entity prev _) (Entity id image @ Image {..}) (Entity 
             elem_ "image-container" $
                 img_ [id_ "image", src_ imageURL]
     
-    where title    = "Image " ++ show id
-          params   = parameters [("q", query)]
-          imageURL = pack (Path.getImageURL image)
-          scripts  = [ script "/static/image.js"
-                     , imageScript prev next query ]
-          actions  = [ ("arrow-left",  printf "/image/%i%s" prev params)
-                     , ("th-large",    printf "/images%s"        params)
-                     , ("arrow-right", printf "/image/%i%s" next params) ]
+    where title       = "Image " ++ show id
+          params      = parameters [("q", query)]
+          imageURL    = pack (Path.getImageURL image)
+          scripts     = [ script "/static/request.js"
+                        , script "/static/image.js"
+                        , imageScript prev next query ]
+          navigation  = [ ("arrow-left",  Link   (printf "/image/%i%s"      prev params))
+                        , ("th-large",    Link   (printf "/images%s"             params))
+                        , ("arrow-right", Link   (printf "/image/%i%s"      next params)) ]
+          editing     = [ ("trash",       Script (printf "Image.del(%i, '%s')" id query)) ]
 
 -- | Renders a page for the given image as text containing HTML.
 imagesPage :: String -> Int -> Int -> Int -> [Entity Image] -> Text
@@ -160,13 +165,18 @@ document' title imports f = doctypehtml_ $ do
 
 -- | Returns an HTML element containing links matching the given list of
 -- | icon/URL pairs.
-actions_ :: [[(String, String)]] -> Html ()
-actions_ actionGroups = do
+actions_ :: [[(String, ActionType)]] -> Html ()
+actions_ actionGroups = 
     elem_ "actions" $
         forM_ actionGroups $ \actions ->
             div_ $
-                forM_ actions $ \(icon, url) ->
-                    a_ [class_ (pack $ "fa fa-" ++ icon ++ " action"), href_ (pack url) ] mempty
+                forM_ actions $ \(icon, action) ->
+                    let iconClass = pack ("fa fa-" ++ icon ++ " action")
+                        link x    = a_ [class_ iconClass, x] mempty :: Html ()
+                        
+                    in case action of
+                        Link url -> link $ href_    (pack url)
+                        Script f -> link $ onclick_ (pack f)
 
 -- | Returns a div element with the given ID.
 elem_ :: Text -> Html a -> Html a
