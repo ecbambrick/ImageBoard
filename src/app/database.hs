@@ -5,9 +5,9 @@
 module App.Database
     ( deleteImage, insertImage, selectHashExists, selectImagesCount
     , selectImage, selectImages, selectNextImage, selectPreviousImage
-    , updateImage, deleteAlbum, insertAlbum, selectAlbum, selectAlbums
-    , selectAlbumsCount, updateAlbum, selectTags, attachTags, cleanTags
-    , detachTags ) where
+    , selectRandomImage, updateImage, deleteAlbum, insertAlbum, selectAlbum
+    , selectAlbums, selectAlbumsCount, updateAlbum, selectTags, attachTags
+    , cleanTags, detachTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
@@ -25,7 +25,7 @@ import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
 import Database.Query       ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
                             , (.=), (.>), (.<), (*=), (<<), asc, clearOrder
                             , count, desc, exists, limit, from, nay, offset, on
-                            , retrieve, wherever )
+                            , randomOrder, retrieve, wherever )
 
 ------------------------------------------------------------------------- Types
 
@@ -121,6 +121,18 @@ selectNextImage = selectAdjacentImage Next
 -- | given ID. If no image exists, nothing is returned.
 selectPreviousImage :: ID -> Expression -> Transaction (Maybe (Entity Image))
 selectPreviousImage = selectAdjacentImage Prev
+
+-- | Returns a random image from the database that satisfies the given 
+-- | expression. If no image exists, nothing is returned.
+selectRandomImage :: Expression -> Transaction (Maybe (Entity Image))
+selectRandomImage expression = do
+    results <- SQL.single $ do
+        i <- images 
+        satisfying expression i
+        randomOrder
+        limit 1
+    
+    Traversable.sequence (withImageTags <$> results)
 
 -- | Updates the image in the database.
 updateImage :: Entity Image -> Transaction ()

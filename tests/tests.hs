@@ -6,10 +6,11 @@ import App.Common               ( Album(..), Image(..), Page(..), Tag(..)
                                 , (<$$>) )
 import App.Database
 import App.Expression           ( parse )
-import Control.Monad            ( when )
+import Control.Monad            ( when, replicateM )
 import Control.Monad.Reader     ( runReaderT, ask )
 import Control.Monad.Trans      ( lift )
 import Data.Functor             ( (<$>) )
+import Data.List                ( nub )
 import Data.Maybe               ( fromJust, isJust )
 import Data.Text                ( splitOn )
 import Data.DateTime            ( DateTime, fromSeconds )
@@ -23,6 +24,7 @@ main = runTestTT $ TestList
     , selectImageTest
     , selectNextImageTest
     , selectPreviousImageTest
+    , selectRandomImageTest
     , selectImagesTest
     , selectImagesCountTest
     , deleteImageTest
@@ -153,6 +155,37 @@ selectPreviousImageTest = testDatabase $ do
         image1'   @=? image1
         id2'      @=? id2
         image2'   @=? image2
+
+-- | Tests the selectRandomImage function.
+selectRandomImageTest :: Test
+selectRandomImageTest = testDatabase $ do
+    let image1 = Image "t1" True  "h1" "e1" 1 2 (time 1) (time 2) 3 []
+        image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 []
+        image3 = Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 []
+        image4 = Image "t4" False "h4" "e4" 4 2 (time 7) (time 8) 9 []
+        
+        tags1 = ["test", "hello", "goodbye"]
+        tags2 = ["another", "couple", "test"]
+        tags3 = ["hello", "blahblah", "test"]
+    
+    id1 <- insertImage image1
+    id2 <- insertImage image2
+    id3 <- insertImage image3
+    id4 <- insertImage image4
+    
+    attachTags tags1 id1
+    attachTags tags2 id2
+    attachTags tags3 id3
+    
+    (Just (Entity id image)) <- selectRandomImage (parse "another")
+    noImage                  <- selectRandomImage (parse "asdasda")
+    images                   <- replicateM 100 (selectRandomImage [])
+    
+    lift $ do
+        image2 { imageTagNames = tags2 } @=? image
+        2                                @=? id
+        Nothing                          @=? noImage
+        True                             @=? length (nub images) > 1
 
 -- | Tests the selectImages function.
 selectImagesTest :: Test
