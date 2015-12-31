@@ -133,7 +133,7 @@ update (Entity id image) = do
         results = validate image <> isFound
     
     when (isValid results) $ runDB $ do
-        let newTags = imageTagNames image
+        let newTags = Tag.cleanTags $ imageTagNames image
             oldTags = imageTagNames . fromEntity . fromJust $ previous
     
         updateImage (Entity id image { imageModified = now })

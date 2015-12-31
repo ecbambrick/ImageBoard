@@ -118,7 +118,7 @@ update (Entity id album) = do
         results = validate album <> isFound
     
     when (isValid results) $ runDB $ do
-        let newTags = albumTagNames album
+        let newTags = Tag.cleanTags $ albumTagNames album
             oldTags = albumTagNames . fromEntity . fromJust $ previous
     
         updateAlbum (Entity id album { albumModified = now })
