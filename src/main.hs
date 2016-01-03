@@ -6,7 +6,7 @@ import qualified App.Core.Image as Image
 import qualified App.Core.Album as Album
 import qualified App.View       as View
 
-import App.Common                    ( runApplication )
+import App.Common                    ( Image(..), runApplication )
 import App.Config                    ( Config(..) )
 import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
@@ -19,10 +19,10 @@ import App.Template                  ( render )
 import App.Template.Image            ( toImagesContext, toImageSetContext )
 import App.Template.Album            ( toAlbumsContext, toAlbumContext
                                      , toPageContext )
-import Data.Monoid                   ( mconcat )
+import Data.Monoid                   ( (<>), mconcat )
 import Data.Text                     ( pack )
-import Data.Textual                  ( splitOn )
-import Database.Engine               ( fromEntity )
+import Data.Textual                  ( display, intercalate, splitOn )
+import Database.Engine               ( Entity(..), fromEntity )
 import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
 import Web.Spock                     ( (<//>), delete, get, html, middleware
@@ -114,6 +114,25 @@ main = runApplication $ do
         case view of
             Nothing   -> redirect "/"
             Just view -> html view
+    
+    -- Updates the image with the given id with the given POST data.
+    post ("image" <//> var) $ \id -> do
+        entity  <- Image.querySingle id
+        
+        case entity of
+            Nothing               -> text $ pack "bad id"
+            Just (Entity _ image) -> do            
+                let originalTitle = imageTitle image
+                    originalTags  = intercalate "," (imageTagNames image)
+                
+                title   <- optionalParam "title" originalTitle
+                tags    <- splitOn "," <$> optionalParam "tags" originalTags
+                results <- Image.update (Entity id image { imageTitle    = title
+                                                         , imageTagNames = tags })
+                
+                case results of
+                    Valid     -> redirect ("/image/" <> display id)
+                    Invalid e -> text $ pack (show e)
     
     -- Delets the image with the given id.
     delete ("image" <//> var) $ \id -> do
