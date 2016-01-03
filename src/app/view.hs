@@ -3,28 +3,27 @@
 
 module App.View where
 
-import qualified App.Core.Album  as Album
-import qualified App.Paths       as Path
-import qualified Network.URI     as URI
+import qualified App.Core.Album          as Album
+import qualified App.Paths               as Path
+import qualified Data.Aeson              as Aeson
+import qualified Network.URI             as URI
+import qualified Data.Text.Lazy.Encoding as Encoding
 
 import App.Common       ( Album(..), Image(..), Page(..) )
 import App.Expression   ( Expression, parse )
 import Control.Monad    ( forM_, unless )
 import Data.DateTime    ( TimeZone, defaultFormatDate )
-import Data.List        ( intercalate )
 import Data.Monoid      ( (<>), mconcat, mempty )
 import Data.Text        ( Text, pack, empty )
 import Data.Text.Lazy   ( toStrict )
+import Data.Textual     ( display, intercalate )
 import Database.Engine  ( Entity(..), ID )
-import Lucid.Base       ( ToHtml(..), Html, renderText )
+import Lucid.Base       ( Attribute, ToHtml(..), Html, renderText )
 import Lucid.Html5
 import Numeric          ( showFFloat )
 import Text.Printf      ( FieldFormat(..), PrintfArg(..), formatString, printf )
 
 ------------------------------------------------------------------------- Types
-
--- | The type of a UI action. Either a href link or an onclick script.
-data ActionType = Link String | Script String
 
 -- | The type of post displayed on an index page.
 data IndexType = Albums | Images
@@ -75,11 +74,24 @@ albumsPage query page total pageSize albums =
 -- | Renders a page for the given image as text containing HTML.
 imagePage :: String -> TimeZone -> Entity Image -> Entity Image -> Entity Image -> Text
 imagePage query timeZone (Entity prev _) (Entity id image @ Image {..}) (Entity next _) =
-    render' title scripts $ do
+
+    let title   = "Image " <> toHtml (show id)
+        params  = parameters [("q", query)]
+        args    = [escapeJS prev, escapeJS id, escapeJS next, escapeJS query]
+        onload  = "Image.initializePage(" <> intercalate ", " args <> ")"
+        
+    in render' title onload $ do
         aside_ $ do
             nav_ $ do
                 search_ Images query
-                actions_ [navigation, editing]
+                elem_ "actions" $ do
+                    div_ $ do
+                        actionLink_ "arrow-left"  [href_ (pack (printf "/image/%i%s" prev params))]
+                        actionLink_ "th-large"    [href_ (pack (printf "/images%s"        params))]
+                        actionLink_ "arrow-right" [href_ (pack (printf "/image/%i%s" next params))]
+                    div_ $ do
+                        actionLink_ "pencil" [id_ "edit-show", href_ "#"]
+                        actionLink_ "trash"  [id_ "delete",    href_ "#"]
             elem_ "details" $ do
                 elem_ "title" (toHtml imageTitle)
                 elem_ "meta" $ do
@@ -96,18 +108,20 @@ imagePage query timeZone (Entity prev _) (Entity id image @ Image {..}) (Entity 
                     span_ [class_ "tag"] (toHtml x)
         main_ $
             elem_ "image-container" $
-                img_ [id_ "image", src_ imageURL]
-    
-    where title       = "Image " ++ show id
-          params      = parameters [("q", query)]
-          imageURL    = pack (Path.getImageURL image)
-          scripts     = [ script "/static/request.js"
-                        , script "/static/image.js"
-                        , imageScript prev next query ]
-          navigation  = [ ("arrow-left",  Link   (printf "/image/%i%s"      prev params))
-                        , ("th-large",    Link   (printf "/images%s"             params))
-                        , ("arrow-right", Link   (printf "/image/%i%s"      next params)) ]
-          editing     = [ ("trash",       Script (printf "Image.del(%i, '%s')" id query)) ]
+                img_ [id_ "image", src_ (pack (Path.getImageURL image))]
+        form_ 
+            [ id_ "edit-form" 
+            , action_ ("/image/" <> display id)
+            , method_ "post" ] $ do
+            div_ [class_ "edit-pair"] $ do
+                span_ "Title"
+                input_ [id_ "edit-title", name_ "title", type_ "text"]
+            div_ [class_ "edit-pair"] $ do
+                span_ "Tags"
+                textarea_ [id_ "edit-tags", name_ "tags", rows_ "4"] mempty
+            div_ [id_ "edit-actions"] $ do
+                actionLink_ "check" [id_ "edit-submit", href_ "#"]
+                actionLink_ "times" [id_ "edit-cancel", href_ "#"]
 
 -- | Renders a page for the given image as text containing HTML.
 imagesPage :: String -> Int -> Int -> Int -> [Entity Image] -> Text
@@ -149,34 +163,28 @@ document title imports f = doctypehtml_ $ do
         mconcat imports
     body_ f
 
--- | Creates an HTML document with the given title, list of javascript import
--- | paths and HTML child as the body. Uses an alternate style sheet.
-document' :: String -> [Html ()] -> Html a -> Html a
-document' title imports f = doctypehtml_ $ do
+-- | Creates an HTML document with the given title, JavaScript on-load function,
+-- | and HTML child as the body. Uses an alternate style sheet.
+document' :: Html () -> Text -> Html a -> Html a
+document' title onload f = doctypehtml_ $ do
     head_ $ do
-        title_ (toHtml title)
-        meta_  [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
-        link_  [rel_ "stylesheet", href_ "/static/style2.css"]
-        link_  [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
-        mconcat imports
+        title_  title
+        meta_   [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
+        link_   [rel_ "stylesheet", href_ "/static/style2.css"]
+        link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
+        script_ [type_ "application/javascript;version=1.7", src_ "/static/request.js"] empty
+        script_ [type_ "application/javascript;version=1.7", src_ "/static/image.js"]   empty
+        script_ [type_ "application/javascript;version=1.7"] $
+            "document.addEventListener(\"DOMContentLoaded\", () => " <> onload <> ");"
     body_ f
 
 -------------------------------------------------------------------- Components
 
--- | Returns an HTML element containing links matching the given list of
--- | icon/URL pairs.
-actions_ :: [[(String, ActionType)]] -> Html ()
-actions_ actionGroups = 
-    elem_ "actions" $
-        forM_ actionGroups $ \actions ->
-            div_ $
-                forM_ actions $ \(icon, action) ->
-                    let iconClass = pack ("fa fa-" ++ icon ++ " action")
-                        link x    = a_ [class_ iconClass, x] mempty :: Html ()
-                        
-                    in case action of
-                        Link url -> link $ href_    (pack url)
-                        Script f -> link $ onclick_ (pack f)
+-- Returns an a element with the given attributes. Additionally, it will 
+-- use the "action" class and be displayed as the icon with the given name.
+actionLink_ :: Text -> [Attribute] -> Html ()
+actionLink_ icon attributes = a_ (attributes ++ [classes]) mempty
+    where classes = class_ ("action fa fa-" <> icon)
 
 -- | Returns a div element with the given ID.
 elem_ :: Text -> Html a -> Html a
@@ -244,25 +252,6 @@ uploadForm_ = form_
         input_  [type_ "text", name_ "tags", autocomplete_ "off"]
         button_ [type_ "submit"] "Upload"
 
--------------------------------------------------------------------- JavaScript
-
--- | Returns JavaScript that registers an event listener on the window with 
--- | the given name to the given function.
-addListener :: String -> String -> String
-addListener = printf "window.addEventListener('%s', %s, false);"
-
--- | Imports the JavaScript file with the given relative path.
-script :: Text -> Html ()
-script path = script_ [type_ "application/javascript;version=1.7", src_ path] empty
-
--- | Registers event listeners for the image page.
-imageScript :: ID -> ID -> String -> Html ()
-imageScript prev next query =
-    script_ [type_ "application/javascript;version=1.7"] $ pack $ unlines
-        [ addListener "keyup" navigation ]
-
-    where navigation = printf "Image.navigate(%i, %i, '%s')" prev next query
-
 ----------------------------------------------------------------------- Utility
 
 -- | Formats the given integer as a file size.
@@ -275,10 +264,10 @@ formatSize value
 -- | Converts the given list of key-value pairs to a set of parameter values.
 parameters :: [(String, String)] -> String
 parameters params = 
-    let esc                = URI.escapeURIString URI.isUnreserved
+    let escape             = URI.escapeURIString URI.isUnreserved
         encodePair ("", _) = ""
         encodePair (_, "") = ""
-        encodePair (k,  v) = esc k ++ "=" ++ esc v
+        encodePair (k,  v) = escape k ++ "=" ++ escape v
         results            = intercalate "&" $ filter (not.null) $ map encodePair params
         
     in if null results then "" else "?" ++ results
@@ -288,7 +277,11 @@ parameters params =
 render :: String -> [Html ()] -> Html a -> Text
 render title imports f = toStrict $ renderText $ document title imports f
 
--- | Renders the given HTML body as text, using the given title and imports to
--- | generate a head element. Uses an alternate style sheet.
-render' :: String -> [Html ()] -> Html a -> Text
-render' title imports f = toStrict $ renderText $ document' title imports f
+-- | Renders the given HTML body as text, using the given title and JavaScript 
+-- | on-load function to create a head element.
+render' :: Html () -> Text -> Html a -> Text
+render' title onload f = toStrict $ renderText $ document' title onload f
+
+-- Converts the given JSON-encodable data into an escaped JavaScript string.
+escapeJS :: (Aeson.ToJSON a) => a -> Text
+escapeJS = toStrict . Encoding.decodeUtf8 . Aeson.encode 

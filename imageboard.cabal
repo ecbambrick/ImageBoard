@@ -59,6 +59,7 @@ executable imageboard
         unordered-containers    >= 0.2  && < 0.3,
         wai-middleware-static   >= 0.7  && < 0.8,
         zip-archive             >= 0.2  && < 0.3,
+        aeson,
         async,
         bytestring,
         directory,
