@@ -293,7 +293,7 @@ albums :: Query Table
 albums = do
     p  <- from "post"
     a  <- from "album" `on` ("post_id" *= p "id")
-    desc (p "modified")
+    desc (p "created")
     desc (p "id")
     retrieve [ p "id", p "title", p "is_favourite", p "created", p "modified"
              , a "file_size" ]
@@ -304,7 +304,7 @@ images :: Query Table
 images = do
     p <- from "post"
     i <- from "image" `on` ("post_id" *= p "id")
-    desc (p "modified")
+    desc (p "created")
     desc (p "id")
     retrieve [ p "id", p "title", p "is_favourite", i "hash", i "extension"
              , i "width", i "height", p "created", p "modified", i "file_size" ]
@@ -386,7 +386,7 @@ selectAdjacentImage dir id expression = do
             satisfying expression p
             clearOrder
             wherever (p "id" `operator` m)
-            ordering (p "modified")
+            ordering (p "created")
             ordering (p "id")
         
     firstImage <- case modified of
@@ -395,7 +395,7 @@ selectAdjacentImage dir id expression = do
             p <- images 
             satisfying expression p
             clearOrder
-            ordering (p "modified")
+            ordering (p "created")
             ordering (p "id")
     
     case (nextImage, firstImage) of
