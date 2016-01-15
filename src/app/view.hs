@@ -5,7 +5,7 @@ module App.View where
 
 import qualified App.Core.Album          as Album
 import qualified App.Paths               as Path
-import qualified Data.Aeson              as Aeson
+import qualified Text.JavaScript         as JS
 import qualified Network.URI             as URI
 import qualified Data.Text.Lazy.Encoding as Encoding
 
@@ -77,7 +77,7 @@ imagePage query timeZone (Entity prev _) (Entity id image @ Image {..}) (Entity 
 
     let title   = "Image " <> toHtml (show id)
         params  = parameters [("q", query)]
-        args    = [escapeJS prev, escapeJS id, escapeJS next, escapeJS query]
+        args    = [JS.escape prev, JS.escape id, JS.escape next, JS.escape query]
         onload  = "Image.initializePage(" <> intercalate ", " args <> ")"
         
     in render' title onload $ do
@@ -281,7 +281,3 @@ render title imports f = toStrict $ renderText $ document title imports f
 -- | on-load function to create a head element.
 render' :: Html () -> Text -> Html a -> Text
 render' title onload f = toStrict $ renderText $ document' title onload f
-
--- Converts the given JSON-encodable data into an escaped JavaScript string.
-escapeJS :: (Aeson.ToJSON a) => a -> Text
-escapeJS = toStrict . Encoding.decodeUtf8 . Aeson.encode 

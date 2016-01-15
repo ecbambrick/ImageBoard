@@ -45,6 +45,7 @@ executable imageboard
         Database.Query.SQLite,
         Graphics.Thumbnail,
         System.IO.Metadata,
+        Text.JavaScript,
         Web.Spock.Extended
     
     build-depends:
