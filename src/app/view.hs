@@ -77,8 +77,8 @@ imagePage query timeZone (Entity prev _) (Entity id image @ Image {..}) (Entity 
 
     let title   = "Image " <> toHtml (show id)
         params  = parameters [("q", query)]
-        args    = [JS.escape prev, JS.escape id, JS.escape next, JS.escape query]
-        onload  = "Image.initializePage(" <> intercalate ", " args <> ")"
+        args    = [JS.toJSON prev, JS.toJSON id, JS.toJSON next, JS.toJSON query]
+        onload  = JS.functionCall "Image.initializePage" args
         
     in render' title onload $ do
         aside_ $ do
@@ -166,7 +166,7 @@ document title imports f = doctypehtml_ $ do
 -- | Creates an HTML document with the given title, JavaScript on-load function,
 -- | and HTML child as the body. Uses an alternate style sheet.
 document' :: Html () -> Text -> Html a -> Html a
-document' title onload f = doctypehtml_ $ do
+document' title function html = doctypehtml_ $ do
     head_ $ do
         title_  title
         meta_   [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
@@ -174,9 +174,8 @@ document' title onload f = doctypehtml_ $ do
         link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
         script_ [type_ "application/javascript;version=1.7", src_ "/static/request.js"] empty
         script_ [type_ "application/javascript;version=1.7", src_ "/static/image.js"]   empty
-        script_ [type_ "application/javascript;version=1.7"] $
-            "document.addEventListener(\"DOMContentLoaded\", () => " <> onload <> ");"
-    body_ f
+        script_ [type_ "application/javascript;version=1.7"] (JS.onDocumentLoad function)
+    body_ html
 
 -------------------------------------------------------------------- Components
 
