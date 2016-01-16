@@ -37,6 +37,7 @@ executable imageboard
         App.Template.Image,
         App.Validation,
         App.View,
+        App.View.Element,
         Data.Ord.Extended,
         Data.DateTime,
         Data.Textual,
