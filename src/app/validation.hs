@@ -42,7 +42,7 @@ isValidTag (Property name x)
     | all isSpace x      = Invalid [Error name x "only whitespace"]
     | any isInvalidTag x = Invalid [Error name x "invalid characters"]
     | otherwise          = Valid
-    where isInvalidTag x = not (isAlphaNum x || elem x ".- ")
+    where isInvalidTag x = not (isAlphaNum x || isSpace x || elem x ".-")
 
 ----------------------------------------------------------------------- Utility
 

@@ -7,7 +7,7 @@ import App.Common       ( Tag(..), App, runDB )
 import App.Validation   ( Property(..), Validation, isValidTag )
 import App.Database     ( selectTags )
 import Data.List        ( nub )
-import Data.Textual     ( strip, toLower )
+import Data.Textual     ( trim, toLower )
 import Database.Engine  ( Entity )
 
 -------------------------------------------------------------------------- CRUD
@@ -25,4 +25,4 @@ validate (Tag name) = isValidTag (Property "tag" name)
 
 -- | Sanitizes the given list of tag names.
 cleanTags :: [String] -> [String]
-cleanTags = filter (not . null) . nub . map (toLower . strip)
+cleanTags = filter (not . null) . nub . map (toLower . trim)
