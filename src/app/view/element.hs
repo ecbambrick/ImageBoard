@@ -34,9 +34,10 @@ document title initialize html =
         head_ $ do
             title_  (toHtml title)
             meta_   [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
-            link_   [rel_ "stylesheet", href_ "/static/style2.css"]
+            link_   [rel_ "stylesheet", href_ "/static/style.css"]
             link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
             script_ [type_ ecma6, src_ "/static/request.js"] empty
+            script_ [type_ ecma6, src_ "/static/images.js"] empty
             script_ [type_ ecma6, src_ "/static/image.js"] empty
             script_ [type_ ecma6] (JS.onDocumentLoad initialize)
         body_ html
@@ -64,12 +65,12 @@ actions = div_ [id_ "actions"]
 -- | Returns an HTML form for editing a post.
 editForm :: Text -> Html a -> Html ()
 editForm actionURL html = 
-    let attributes = [ id_ "edit-form", action_ actionURL, method_ "post" ]
-    in form_ attributes $ do
-        html
-        div_ [id_ "edit-actions"] $ do
-            action Check "edit-submit"
-            action Cross "edit-cancel"
+    div_ [class_ "overlay", id_ "edit-screen"] $
+        form_ [id_ "edit-form", action_ actionURL, method_ "post"] $ do
+            html
+            div_ [id_ "edit-actions"] $ do
+                action Check "edit-submit"
+                action Cross "edit-cancel"
 
 -- | Returns an HTML element for displaying an icon.
 glyph :: Text -> Html ()
@@ -103,11 +104,12 @@ searchBox action query =
         , action_ (renderAction action)
         , method_ "get" ] $ do
             input_  [ id_ "search-text",   type_ "text", name_ "q", value_ (pack query) ]
-            button_ [ id_ "search-action", type_ "submit" ] (glyph "search")
+            button_ [ id_ "search-action", type_ "submit", tabindex_ "-1" ] $ 
+                glyph "search"
 
 -- | Returns an HTML element representing a side panel.
 sidePanel :: Html a -> Html a
-sidePanel = aside_
+sidePanel = aside_ . div_ [class_ "panel"]
 
 -- | Returns an HTML element containing the given list of tag names.
 tags :: [String] -> Html ()

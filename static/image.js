@@ -23,6 +23,7 @@ Image.initializePage = (previousId, currentId, nextId, query) => {
     let deleteAction = document.getElementById("delete");
     let title        = document.getElementById("title");
     let editShow     = document.getElementById("edit-show");
+    let editScreen   = document.getElementById("edit-screen");
     let editForm     = document.getElementById("edit-form");
     let editTitle    = document.getElementById("edit-title");
     let editTags     = document.getElementById("edit-tags");
@@ -30,30 +31,48 @@ Image.initializePage = (previousId, currentId, nextId, query) => {
     let editSubmit   = document.getElementById("edit-submit");
     
     deleteAction.onclick = ()  => Image.del(currentId, query);
-    editCancel.onclick   = ()  => Image.toggleEdit(title, tags, editForm, editTitle, editTags);
-    editShow.onclick     = ()  => Image.toggleEdit(title, tags, editForm, editTitle, editTags);
+    editCancel.onclick   = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
+    editShow.onclick     = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editSubmit.onclick   = ()  => { editForm.submit(); return false; }
-    document.onkeyup     = (e) => Image.navigate(previousId, nextId, query, e);
+    document.onkeyup     = (e) => Image.navigate(previousId, nextId, query, editScreen, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another 
 // page based on keyboard input.
-Image.navigate = (previousID, nextID, query, e) => {
+Image.navigate = (previousID, nextID, query, editScreen, e) => {
+    let activeType = document.activeElement.type;
+    
+    if (activeType == "text" || activeType == "textarea") {
+        return;
+    }
+    
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
-    let noQuery = query.length === 0;
-    let q = noQuery ? "" : "?q=" + query;
+    let editting  = editScreen != null && editScreen.style.display !== "";
+    let q         = query.length === 0 ? "" : "?q=" + query;
+    
+    // escape
+    if (editting && !modifiers && e.keyCode === 27) {
+        document.getElementById("edit-cancel").click();
     
     // shift + space
-    if (e.shiftKey && e.keyCode === 32) {
+    } else if (e.shiftKey && e.keyCode === 32) {
         window.location.href = "/image/" + previousID + q;
     
     // space
     } else if (!modifiers && e.keyCode === 32) {
         window.location.href = "/image/" + nextID + q;
     
-    // escape
-    } else if (!modifiers && e.keyCode === 27) {
-        window.location.href = noQuery ? "/" : "/images" + q;
+    // s
+    } else if (!modifiers && e.keyCode === 83) {
+        document.getElementById("search-text").select();
+        
+    // e
+    } else if (!modifiers && e.keyCode === 69) {
+        document.getElementById("edit-show").click();
+    
+    // l
+    } else if (!modifiers && e.keyCode === 76) {
+        window.location.href = "/images" + q;
     }
 }
 
