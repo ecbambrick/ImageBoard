@@ -72,6 +72,14 @@ editForm actionURL html =
                 action Check "edit-submit"
                 action Cross "edit-cancel"
 
+-- | Returns an HTML element for displaying a grid of thumbnails.
+gallery :: [(Text, String)] -> Html ()
+gallery items =
+    div_ [id_ "gallery"] $ 
+        forM_ items $ \(url, thumbnail) ->
+            let style = "background-image: url('" <> thumbnail <> "');"
+            in div_ (a_ [href_ url, style_ (pack style)] mempty)
+
 -- | Returns an HTML element for displaying an icon.
 glyph :: Text -> Html ()
 glyph name = i_ [class_ ("fa fa-" <> name)] mempty
@@ -111,6 +119,11 @@ searchBox action query =
 sidePanel :: Html a -> Html a
 sidePanel = aside_ . div_ [class_ "panel"]
 
+-- | Returns an HTML elements representing an empty space between other 
+-- | elements.
+spacer :: Html ()
+spacer = div_ [class_ "spacer"] mempty
+
 -- | Returns an HTML element containing the given list of tag names.
 tags :: [String] -> Html ()
 tags tagNames = 
@@ -130,6 +143,21 @@ textBoxField label name id =
     div_ [class_ "edit-pair"] $ do
         span_ (toHtml label)
         input_ [id_ id, name_ name, type_ "text"]
+
+uploadForm :: Html ()
+uploadForm = do
+    h1_ "New File"
+    form_
+        [ id_ "upload"
+        , name_ "upload"
+        , action_ "/upload"
+        , method_ "post"
+        , enctype_ "multipart/form-data" ] $ do
+            textBoxField "Title" "title" "upload-title"
+            textBoxField "Tags"  "tags"  "upload-tags"
+            div_ [class_ "browse"] $ 
+                input_  [type_ "file", name_ "uploadedFile"]
+            button_ [type_ "submit", class_ "action"] ("Upload " <> glyph "arrow-up")
 
 ----------------------------------------------------------------------- Utility
 

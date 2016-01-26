@@ -195,3 +195,115 @@ span.tag {
     word-break: break-word;
     word-wrap: break-word;
 }
+
+/* --------------------------------------------------------------------- Text */
+
+h1 {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+    font-weight: normal;
+    font-size: 16px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* ------------------------------------------------------------------- Layout */
+
+.spacer {
+    align-items: center;
+    display: flex;
+    flex: 1;
+}
+
+/* ------------------------------------------------------------------ Gallery */
+
+#gallery {
+    display: flex;
+    flex: 1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: 0 auto;
+    margin-bottom: -5px;
+    margin-right: -5px;
+    overflow: visible;
+}
+
+#gallery div {
+    flex: 1;
+    flex-basis: 128px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    min-width: 128px;
+    min-height: 128px;
+    position: relative;
+}
+
+#gallery div:nth-child(5n) {
+    flex-basis: 224px;
+}
+
+#gallery div:nth-child(2n+1) {
+    flex-basis: 160px;
+}
+
+#gallery div:nth-child(7n+4) {
+    flex-basis: 320px;
+    min-height: 224px;
+}
+
+#gallery div a {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    height: 100%;
+    position: absolute;
+    width: 100%;
+}
+
+#gallery div a:hover {
+    opacity: 0.8;
+}
+
+/* -------------------------------------------------------------- Uplaod Form */
+
+#upload {
+    display: flex;
+    flex: 0;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+#upload > * {
+    margin: 0;
+    margin-bottom: 10px;
+    overflow: hidden;
+    padding: 0;
+}
+
+#upload > button {
+    background-color: inherit;
+    border: none;
+    color: inherit;
+    flex: 0;
+    font-size: inherit;
+    font-family: inherit;
+    padding: 5px 8px;
+}
+
+#upload > button:hover {
+    background-color: #ddd;
+    color: #222;
+    cursor: pointer;
+}
+
+#upload > .browse-wrapper {
+    margin: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+#upload > .browse {
+    border: 1px solid #333;
+}
