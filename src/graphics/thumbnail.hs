@@ -9,18 +9,17 @@ import Text.Printf      ( printf )
 -- | save it to the second given file path.
 createThumbnail :: Int -> FilePath -> FilePath -> IO ()
 createThumbnail size from to = do
+
+    let cmd   = printf (unwords text) size size
+        from' = if takeExtension from == ".gif" then from ++ "[0]" else from
+        to'   = replaceExtension to "jpg"
+        text  = [ "convert"
+                , "-background white"
+                , "-format jpg"
+                , "-thumbnail \"%dx%d\""
+                , "\"" ++ from' ++ "\""
+                , "\"" ++ to'   ++ "\"" ]
+
     createDirectoryIfMissing True (takeDirectory to)
     waitForProcess =<< runCommand cmd
     return ()
-    where 
-        cmd  = printf text (size * 2) (size * 2) size size size size
-        text = unwords 
-            [ "convert"
-            , "-define jpeg:size=%dx%d"
-            , "-background white"
-            , "-format jpg"
-            , "-thumbnail \"%dx%d^\""
-            , "-gravity center"
-            , "-extent %dx%d"
-            , if takeExtension from == ".gif" then from ++ "[0]" else from
-            , replaceExtension to "jpg" ]
