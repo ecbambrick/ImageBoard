@@ -6,7 +6,7 @@ import qualified App.Core.Image as Image
 import qualified App.Core.Album as Album
 import qualified App.View       as View
 
-import App.Common                    ( Image(..), runApplication )
+import App.Common                    ( Album(..), Image(..), runApplication )
 import App.Config                    ( Config(..) )
 import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
@@ -27,6 +27,7 @@ import Web.Spock                     ( (<//>), delete, get, html, middleware
 import Web.Spock.Extended            ( getFile, optionalParam )
 
 main = runApplication $ do
+    timeZone    <- asks configTimeZone
     storagePath <- asks configStoragePath
     pageSize    <- asks configPageSize
 
@@ -37,7 +38,7 @@ main = runApplication $ do
         , hasPrefix getDataPath
         , addBase storagePath ]
 
-    -- Enables access to other static content such as javascript and css files.
+    -- Enables access to other static content such as JavaScript and CSS files.
     middleware $ staticPolicy $ mconcat
         [ noDots
         , isNotAbsolute
@@ -65,20 +66,21 @@ main = runApplication $ do
 
     -- Renders the albums page with albums that match the query parameter.
     get "albums" $ do
-        page    <- optionalParam "page" 1
-        query   <- optionalParam "q" ""
-        count   <- Album.count (parse query)
-        albums  <- Album.query (parse query) page
+        page   <- optionalParam "page" 1
+        query  <- optionalParam "q" ""
+        count  <- Album.count (parse query)
+        albums <- Album.query (parse query) page
 
         html (View.albumsView query page count pageSize albums)
 
     -- Renders the album details page for the album with the given ID.
     get ("album" <//> var) $ \id -> do
+        query <- optionalParam "q" ""
         album <- Album.querySingle id
 
         case album of
             Nothing    -> redirect "/"
-            Just album -> html (View.albumView album)
+            Just album -> html (View.albumView query timeZone album)
 
     -- Renders the details page for the album page with the give album ID and
     -- page number.
@@ -91,18 +93,40 @@ main = runApplication $ do
             Nothing   -> redirect "/"
             Just page -> html (View.pageView id page)
 
+    -- Updates the album with the given id with the given POST data.
+    post ("album" <//> var) $ \id -> do
+        entity <- Album.querySingle id
+
+        case entity of
+            Nothing               -> text $ pack "bad id"
+            Just (Entity _ album) -> do
+                let originalTitle = albumTitle album
+                    originalTags  = intercalate "," (albumTagNames album)
+
+                title   <- optionalParam "title" originalTitle
+                tags    <- splitOn "," <$> optionalParam "tags" originalTags
+                results <- Album.update (Entity id album { albumTitle    = title
+                                                         , albumTagNames = tags })
+
+                case results of
+                    Valid     -> redirect ("/album/" <> display id)
+                    Invalid e -> text $ pack (show e)
+
+    -- Delets the album with the given id.
+    delete ("album" <//> var) $ \id -> do
+        Album.delete id
+
     -- Renders the images page with images that match the query parameter.
     get "images" $ do
-        page     <- optionalParam "page" 1
-        query    <- optionalParam "q" ""
-        count    <- Image.count (parse query)
-        images   <- Image.query (parse query) page
+        page   <- optionalParam "page" 1
+        query  <- optionalParam "q" ""
+        count  <- Image.count (parse query)
+        images <- Image.query (parse query) page
 
         html (View.imagesView query page count pageSize images)
 
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
-        timeZone            <- asks configTimeZone
         query               <- optionalParam "q" ""
         (prev, image, next) <- Image.queryTriple (parse query) id
 
@@ -114,7 +138,7 @@ main = runApplication $ do
 
     -- Updates the image with the given id with the given POST data.
     post ("image" <//> var) $ \id -> do
-        entity  <- Image.querySingle id
+        entity <- Image.querySingle id
 
         case entity of
             Nothing               -> text $ pack "bad id"

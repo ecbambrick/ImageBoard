@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module App.View ( albumView, albumsView, imageView, imagesView, pageView ) where
 
@@ -21,20 +22,74 @@ import Lucid.Base       ( Html(..), renderText )
 ------------------------------------------------------------------------- Views
 
 -- | Renders a view for the given album as text containing HTML.
-albumView :: Entity Album -> Text
-albumView album = Text.empty
+albumView :: String -> TimeZone -> Entity Album -> Text
+albumView query timeZone (Entity id album @ Album{..}) =
+
+    let title  = "Album " <> display id
+        onload = JS.functionCall "Album.initializePage" args
+        args   = [ JS.toJSON id
+                 , JS.toJSON query ]
+
+    in render $
+        Elem.document title onload $ do
+            Elem.sidePanel $ do
+                Elem.actions $ do
+                    Elem.actionGroup $ do
+                        Elem.actionLink Elem.Grid (albumsURL 1 query)
+                    Elem.actionGroup $ do
+                        Elem.action Elem.Pencil "edit-show"
+                        Elem.action Elem.Trash  "delete"
+                Elem.albumDetails album timeZone
+                Elem.tags (albumTagNames)
+            Elem.gallery $
+                flip map albumPages $ \page @ Page {..} ->
+                    ( pageURL id pageNumber
+                    , Path.getPageThumbnailURL id page)
+            Elem.editForm (albumURL id "") $ do
+                Elem.textBoxField  "Title" "title" "edit-title"
+                Elem.textAreaField "Tags"  "tags"  "edit-tags"
 
 -- | Renders an index view for albums as text containing HTML.
 albumsView :: String -> Int -> Int -> Int -> [Entity Album] -> Text
-albumsView query page total pageSize albums = Text.empty
+albumsView query page total pageSize albums =
+
+    let prevAvailable = page > 1
+        nextAvailable = page * pageSize < total
+        title         = "Albums (" <> display total <> ")"
+        onload        = JS.functionCall "Albums.initializePage" args
+        args          = [ JS.toJSON prevAvailable
+                        , JS.toJSON nextAvailable
+                        , JS.toJSON page
+                        , JS.toJSON query ]
+
+    in render $
+        Elem.document title onload $ do
+        Elem.sidePanel $ do
+            Elem.searchBox Elem.AlbumSearch query
+            Elem.actions $ do
+                Elem.actionGroup $ do
+                    when prevAvailable $
+                        Elem.actionLink Elem.LeftArrow (albumsURL (page - 1) query)
+                Elem.actionGroup $ do
+                    when nextAvailable $
+                        Elem.actionLink Elem.RightArrow (albumsURL (page + 1) query)
+            Elem.spacer
+            Elem.uploadForm
+        Elem.gallery $
+            flip map albums $ \(Entity id album) ->
+                ( albumURL id query
+                , Path.getAlbumThumbnailURL (Entity id album))
 
 -- | Renders a view for the given image as text containing HTML.
 imageView :: String -> TimeZone -> Entity Image -> Entity Image -> Entity Image -> Text
 imageView query timeZone (Entity prev _) (Entity curr image) (Entity next _) =
 
     let title  = "Image " <> display curr
-        args   = [JS.toJSON prev, JS.toJSON curr, JS.toJSON next, JS.toJSON query]
         onload = JS.functionCall "Image.initializePage" args
+        args   = [ JS.toJSON prev
+                 , JS.toJSON curr
+                 , JS.toJSON next
+                 , JS.toJSON query ]
 
     in render $
         Elem.document title onload $ do
@@ -89,9 +144,22 @@ imagesView query page total pageSize images =
 -- | Renders a view for the give page of the given album as text containing
 -- | HTML.
 pageView :: ID -> Page -> Text
-pageView id page = Text.empty
+pageView id page =
+
+    let title  = "page " <> display page
+        onload = JS.functionCall "Page.initializePage" []
+
+    in render $
+        Elem.document title onload $ do
+            Elem.image (Text.pack (Path.getPageURL id page))
 
 ----------------------------------------------------------------------- Utility
+
+albumURL :: ID -> String -> Text
+albumURL id query = "/album/" <> display id <> parameters [("q", query)]
+
+albumsURL :: Int -> String -> Text
+albumsURL page query = "/albums/" <> parameters [ ("page", show page), ("q", query) ]
 
 -- | Returns a relative URL for the image view with the given ID and query.
 imageURL :: ID -> String -> Text
@@ -101,6 +169,9 @@ imageURL id query = "/image/" <> display id <> parameters [("q", query)]
 -- | and query.
 imagesURL :: Int -> String -> Text
 imagesURL page query = "/images/" <> parameters [ ("page", show page), ("q", query) ]
+
+pageURL :: ID -> Int -> Text
+pageURL id page = "/album/" <> display id <> "/" <> display page
 
 -- | Converts the given list of key-value pairs to a set of parameter values.
 parameters :: [(String, String)] -> Text

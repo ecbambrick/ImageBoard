@@ -5,7 +5,7 @@ module App.View.Element where
 
 import qualified Text.JavaScript as JS
 
-import App.Common    ( Image(..) )
+import App.Common    ( Album(..), Image(..) )
 import Control.Monad ( forM_ )
 import Data.DateTime ( TimeZone(..), defaultFormatDate )
 import Data.Monoid   ( (<>), mempty )
@@ -25,7 +25,7 @@ data Icon = LeftArrow | RightArrow | Grid | Pencil | Trash | Check | Cross
 
 -------------------------------------------------------------------- Components
 
--- | Returns an HTML document with the given title, initialization function and 
+-- | Returns an HTML document with the given title, initialization function and
 -- | body.
 document :: Text -> Text -> Html a -> Html a
 document title initialize html =
@@ -37,14 +37,16 @@ document title initialize html =
             link_   [rel_ "stylesheet", href_ "/static/style.css"]
             link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
             script_ [type_ ecma6, src_ "/static/request.js"] empty
-            script_ [type_ ecma6, src_ "/static/images.js"] empty
+            script_ [type_ ecma6, src_ "/static/album.js"] empty
+            script_ [type_ ecma6, src_ "/static/albums.js"] empty
             script_ [type_ ecma6, src_ "/static/image.js"] empty
+            script_ [type_ ecma6, src_ "/static/images.js"] empty
             script_ [type_ ecma6] (JS.onDocumentLoad initialize)
         body_ html
 
 -- | Returns an HTML link with the given icon and ID.
 action :: Icon -> Text -> Html ()
-action icon id = 
+action icon id =
     let classes = "action fa " <> renderIcon icon
     in a_ [id_ id, href_ "#", class_ classes] mempty
 
@@ -54,7 +56,7 @@ actionGroup = div_
 
 -- Returns an a HTML link with the given icon and URL reference.
 actionLink :: Icon -> Text -> Html ()
-actionLink icon link = 
+actionLink icon link =
     let classes = "action fa " <> renderIcon icon
     in a_ [href_ link, class_ classes] mempty
 
@@ -62,9 +64,21 @@ actionLink icon link =
 actions :: Html a -> Html a
 actions = div_ [id_ "actions"]
 
+albumDetails :: Album -> TimeZone -> Html ()
+albumDetails Album {..} timeZone =
+    div_ [id_ "details"] $ do
+        div_ [id_ "title"] $ do
+            toHtml albumTitle
+        div_ [id_ "meta"] $ do
+            toHtml $ intercalate " | "
+                [ show (length albumPages) ++ " pages"
+                , formatSize albumFileSize ]
+            br_ []
+            toHtml ("uploaded " ++ defaultFormatDate timeZone albumCreated)
+
 -- | Returns an HTML form for editing a post.
 editForm :: Text -> Html a -> Html ()
-editForm actionURL html = 
+editForm actionURL html =
     div_ [class_ "overlay", id_ "edit-screen"] $
         form_ [id_ "edit-form", action_ actionURL, method_ "post"] $ do
             html
@@ -75,7 +89,7 @@ editForm actionURL html =
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery :: [(Text, String)] -> Html ()
 gallery items =
-    div_ [id_ "gallery"] $ 
+    div_ [id_ "gallery"] $
         forM_ items $ \(url, thumbnail) ->
             let style = "background-image: url('" <> thumbnail <> "');"
             in div_ (a_ [href_ url, style_ (pack style)] mempty)
@@ -95,7 +109,7 @@ imageDetails Image {..} timeZone =
         div_ [id_ "title"] $ do
             toHtml imageTitle
         div_ [id_ "meta"] $ do
-            toHtml $ intercalate " | " 
+            toHtml $ intercalate " | "
                 [ show imageWidth ++ "x" ++ show imageHeight
                 , formatSize imageFileSize
                 , imageExtension ]
@@ -106,40 +120,40 @@ imageDetails Image {..} timeZone =
 
 -- | Returns an HTML form for filtering posts.
 searchBox :: SearchAction -> String -> Html ()
-searchBox action query = 
-    form_ 
+searchBox action query =
+    form_
         [ id_ "search"
         , action_ (renderAction action)
         , method_ "get" ] $ do
             input_  [ id_ "search-text",   type_ "text", name_ "q", value_ (pack query) ]
-            button_ [ id_ "search-action", type_ "submit", tabindex_ "-1" ] $ 
+            button_ [ id_ "search-action", type_ "submit", tabindex_ "-1" ] $
                 glyph "search"
 
 -- | Returns an HTML element representing a side panel.
 sidePanel :: Html a -> Html a
 sidePanel = aside_ . div_ [class_ "panel"]
 
--- | Returns an HTML elements representing an empty space between other 
+-- | Returns an HTML elements representing an empty space between other
 -- | elements.
 spacer :: Html ()
 spacer = div_ [class_ "spacer"] mempty
 
 -- | Returns an HTML element containing the given list of tag names.
 tags :: [String] -> Html ()
-tags tagNames = 
+tags tagNames =
     let toElement = span_ [class_ "tag"] . toHtml
     in div_ [id_ "tags"] (forM_ tagNames toElement)
 
 -- | Returns an HTML element for modifying a post property using a text box.
 textAreaField :: Text -> Text -> Text -> Html ()
-textAreaField label name id = 
+textAreaField label name id =
     div_ [class_ "edit-pair"] $ do
         span_ (toHtml label)
         textarea_ [id_ id, name_ name, rows_ "4"] mempty
 
 -- | Returns an HTML element for modifying a post property using a text area.
 textBoxField :: Text -> Text -> Text -> Html ()
-textBoxField label name id = 
+textBoxField label name id =
     div_ [class_ "edit-pair"] $ do
         span_ (toHtml label)
         input_ [id_ id, name_ name, type_ "text"]
@@ -155,7 +169,7 @@ uploadForm = do
         , enctype_ "multipart/form-data" ] $ do
             textBoxField "Title" "title" "upload-title"
             textBoxField "Tags"  "tags"  "upload-tags"
-            div_ [class_ "browse"] $ 
+            div_ [class_ "browse"] $
                 input_  [type_ "file", name_ "uploadedFile"]
             button_ [type_ "submit", class_ "action"] ("Upload " <> glyph "arrow-up")
 
