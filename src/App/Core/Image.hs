@@ -6,16 +6,13 @@ module App.Core.Image
     ( count, delete, insert, query, querySingle, queryTriple, update ) where
 
 import qualified App.Core.Tag as Tag
+import qualified App.Database as DB
+import qualified App.Path     as Path
 
-import App.Common           ( Tag(..), Image(..), App, runDB )
+import App.Common           ( DeletionMode(..), Tag(..), Image(..), App, runDB )
 import App.Config           ( Config(..) )
 import App.Expression       ( Expression )
-import App.Database         ( attachTags, detachTags, cleanTags, deleteImage
-                            , insertImage, selectHashExists, selectImagesCount
-                            , selectImage, selectImages, selectNextImage
-                            , selectPreviousImage, updateImage )
 import App.FileType         ( ImageFile, File(..) )
-import App.Path             ( getImagePath, getImageThumbnailPath )
 import App.Validation       ( Error(..), Property(..), Validation, isPositive
                             , isValid, verify )
 import Control.Applicative  ( (<$>), (<*>) )
@@ -42,31 +39,33 @@ type Triple a = (a, a, a)
 
 -- | Returns the total number of images satisfying the given expression.
 count :: Expression -> App Int
-count = runDB . selectImagesCount
+count = runDB . DB.selectImagesCount
 
--- | Deletes the image with the given ID from the database/filesystem.
-delete :: ID -> App ()
-delete id = do
+-- | Deletes the image with the given ID. If the delete is permanent, it is
+-- | removed from the database/file system; otherwise, it is just marked as
+-- | deleted.
+delete :: DeletionMode -> ID -> App ()
+delete MarkAsDeleted id = runDB (DB.markPostAsDeleted id)
+delete PermanentlyDelete id = do
     image <- querySingle id
 
     case image of
-        Just (Entity _ image) -> delete' image
-        Nothing               -> return ()
+        Nothing -> do
+            return ()
 
-    where
-    delete' image = do
-        imagePath   <- getImagePath image
-        thumbPath   <- getImageThumbnailPath image
-        imageExists <- liftIO $ doesFileExist imagePath
-        thumbExists <- liftIO $ doesFileExist thumbPath
+        Just (Entity _ image) -> do
+            imagePath   <- Path.getImagePath image
+            thumbPath   <- Path.getImageThumbnailPath image
+            imageExists <- liftIO $ doesFileExist imagePath
+            thumbExists <- liftIO $ doesFileExist thumbPath
 
-        runDB $ do
-            deleteImage id
-            cleanTags
+            runDB $ do
+                DB.deletePost id
+                DB.cleanTags
 
-        liftIO $ do
-            when imageExists (removeFile imagePath)
-            when thumbExists (removeFile thumbPath)
+            liftIO $ do
+                when imageExists (removeFile imagePath)
+                when thumbExists (removeFile thumbPath)
 
 -- | Inserts a new image into the database/filesystem based on the given file,
 -- | title and tags. Returns valid if the insertion was sucessful; otherwise
@@ -80,7 +79,7 @@ insert file title tagNames = do
     now         <- liftIO $ getCurrentTime
     size        <- liftIO $ fromIntegral <$> getSize fromPath
     (w, h)      <- liftIO $ getDimensions fromPath
-    hashExists  <- runDB  $ selectHashExists hash
+    hashExists  <- runDB  $ DB.selectHashExists hash
     thumbSize   <- asks   $ configThumbnailSize
 
     let isDuplicate = verify (not hashExists) (Error "hash" hash "duplicate hash")
@@ -89,11 +88,11 @@ insert file title tagNames = do
         results     = validate image <> isDuplicate
 
     when (isValid results) $ do
-        toPath    <- getImagePath image
-        thumbPath <- getImageThumbnailPath image
+        toPath    <- Path.getImagePath image
+        thumbPath <- Path.getImageThumbnailPath image
 
         runDB $ do
-            insertImage image >>= attachTags tags
+            DB.insertImage image >>= DB.attachTags tags
 
         liftIO $ do
             createDirectoryIfMissing True $ takeDirectory toPath
@@ -106,19 +105,19 @@ insert file title tagNames = do
 query :: Expression -> Int -> App [Entity Image]
 query expression page = do
     size <- asks configPageSize
-    runDB $ selectImages expression ((page - 1) * size) size
+    runDB $ DB.selectImages expression ((page - 1) * size) size
 
 -- | Returns the image with the given ID.
 querySingle :: ID -> App (Maybe (Entity Image))
-querySingle = runDB . selectImage
+querySingle = runDB . DB.selectImage
 
 -- | Returns the image with the given ID along with the two adjacent images
 -- | based on the given filter.
 queryTriple :: Expression -> ID -> App (Triple (Maybe (Entity Image)))
 queryTriple expression id = runDB $ do
-    main <- selectImage id
-    next <- selectNextImage id expression
-    prev <- selectPreviousImage id expression
+    main <- DB.selectImage id
+    next <- DB.selectNextImage id expression
+    prev <- DB.selectPreviousImage id expression
 
     return (prev, main, next)
 
@@ -127,7 +126,7 @@ queryTriple expression id = runDB $ do
 update :: Entity Image -> App Validation
 update (Entity id image) = do
     now      <- liftIO $ getCurrentTime
-    previous <- runDB  $ selectImage id
+    previous <- runDB  $ DB.selectImage id
 
     let isFound = verify (isJust previous) (Error "id" (show id) "ID not found")
         results = validate image <> isFound
@@ -136,10 +135,10 @@ update (Entity id image) = do
         let newTags = Tag.cleanTags $ imageTagNames image
             oldTags = imageTagNames . fromEntity . fromJust $ previous
 
-        updateImage (Entity id image { imageModified = now })
-        detachTags (oldTags \\ newTags) id
-        attachTags (newTags \\ oldTags) id
-        cleanTags
+        DB.updateImage (Entity id image { imageModified = now })
+        DB.detachTags (oldTags \\ newTags) id
+        DB.attachTags (newTags \\ oldTags) id
+        DB.cleanTags
 
     return results
 

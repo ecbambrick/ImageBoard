@@ -70,6 +70,11 @@ testApplication f = do
 
 -------------------------------------------------------------------------- Data
 
+-- | The method with which to delete a post. Posts that are marked as deleted
+-- | will remain in the database and file system until they are permanently
+-- | deleted.
+data DeletionMode = MarkAsDeleted | PermanentlyDelete
+
 -- | A tag can be attached to an image or album as additional meta data.
 data Tag = Tag
     { tagName :: String

@@ -4,7 +4,8 @@ CREATE TABLE post (
     title           TEXT,
     is_favourite    INTEGER     NOT NULL,
     created         INTEGER     NOT NULL,
-    modified        INTEGER     NOT NULL
+    modified        INTEGER     NOT NULL,
+    is_deleted      INTEGER     NOT NULL
 );
 
 DROP TABLE IF EXISTS image;
@@ -16,9 +17,9 @@ CREATE TABLE image (
     height      INTEGER     NOT NULL,
     file_size   INTEGER     NOT NULL,
     extension   TEXT        NOT NULL,
-    
-    FOREIGN KEY (post_id) REFERENCES post (id) 
-        ON UPDATE CASCADE 
+
+    FOREIGN KEY (post_id) REFERENCES post (id)
+        ON UPDATE CASCADE
         ON DELETE CASCADE
 );
 
@@ -29,9 +30,9 @@ CREATE TABLE album (
     id          INTEGER     PRIMARY KEY AUTOINCREMENT,
     post_id     INTEGER     NOT NULL,
     file_size   INTEGER     NOT NULL,
-    
+
     FOREIGN KEY (post_id) REFERENCES post (id)
-        ON UPDATE CASCADE 
+        ON UPDATE CASCADE
         ON DELETE CASCADE
 );
 
@@ -42,7 +43,7 @@ CREATE TABLE page (
     title       TEXT        NOT NULL,
     number      INTEGER     NOT NULL,
     extension   TEXT        NOT NULL,
-    
+
     FOREIGN KEY (album_id) REFERENCES album (id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
@@ -66,13 +67,13 @@ DROP TABLE IF EXISTS post_tag;
 CREATE TABLE post_tag (
     post_id INTEGER     NOT NULL,
     tag_id  INTEGER     NOT NULL,
-    
+
     PRIMARY KEY (post_id, tag_id),
-    
+
     FOREIGN KEY (post_id) REFERENCES post(id)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
-    
+
     FOREIGN KEY (tag_id) REFERENCES tag(id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
@@ -82,14 +83,14 @@ DROP TABLE IF EXISTS tag_category;
 CREATE TABLE tag_category (
     tag_id      INTEGER     NOT NULL,
     category_id INTEGER     NOT NULL,
-    
+
     PRIMARY KEY(tag_id, category_id),
-    
+
     FOREIGN KEY(tag_id) REFERENCES tag(id)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
-        
-    FOREIGN KEY(category_id) REFERENCES category(id) 
+
+    FOREIGN KEY(category_id) REFERENCES category(id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
 );

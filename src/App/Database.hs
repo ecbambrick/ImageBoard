@@ -3,15 +3,15 @@
 {-# LANGUAGE LambdaCase        #-}
 
 module App.Database
-    ( deleteImage, insertImage, selectHashExists, selectImagesCount
-    , selectImage, selectImages, selectNextImage, selectPreviousImage
-    , selectRandomImage, updateImage, deleteAlbum, insertAlbum, selectAlbum
-    , selectAlbums, selectAlbumsCount, updateAlbum, selectTags, attachTags
-    , cleanTags, detachTags ) where
+    ( deletePost, markPostAsDeleted, insertImage, selectHashExists
+    , selectImagesCount, selectImage, selectImages, selectNextImage
+    , selectPreviousImage, selectRandomImage, updateImage, insertAlbum
+    , selectAlbum, selectAlbums, selectAlbumsCount, updateAlbum, selectTags
+    , attachTags, cleanTags, detachTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
-                                
+
 import App.Common           ( Album(..), Image(..), Page(..), Tag(..), (<$$>) )
 import App.Expression       ( Token(..), Expression )
 import Control.Applicative  ( (<$>), (<*>), pure )
@@ -44,7 +44,7 @@ instance FromRow (Entity Album) where
         album  <- Album  <$> field      <*> bool field <*> time field
                          <*> time field <*> field      <*> pure []
                          <*> pure []
-                         
+
         return (entity album)
 
 instance FromRow (Entity Image) where
@@ -54,16 +54,16 @@ instance FromRow (Entity Image) where
                          <*> field      <*> field      <*> field
                          <*> time field <*> time field <*> field
                          <*> pure []
-                         
+
         return (entity image)
 
 instance FromRow (Entity Page) where
     fromRow = do
         entity <- Entity <$> field
         page   <- Page   <$> field <*> field <*> field
-                         
+
         return (entity page)
-    
+
 instance FromRow (Entity Tag) where
     fromRow = do
         entity <- Entity <$> field
@@ -71,11 +71,17 @@ instance FromRow (Entity Tag) where
 
         return (entity tag)
 
------------------------------------------------------------------------- Images
+------------------------------------------------------------------------- Posts
 
--- | Deletes the image with the given ID.
-deleteImage :: ID -> Transaction ()
-deleteImage id = SQL.delete "post" ("id" *= id)
+-- | Marks the post with the given ID as deleted.
+markPostAsDeleted :: ID -> Transaction ()
+markPostAsDeleted id = SQL.update "post" ("id" *= id) [ "is_deleted" << "1" ]
+
+-- | Deletes the post with the given ID.
+deletePost :: ID -> Transaction ()
+deletePost id = SQL.delete "post" ("id" *= id)
+
+------------------------------------------------------------------------ Images
 
 -- | Inserts a new image into the database and returns its ID.
 insertImage :: Image -> Transaction ID
@@ -85,7 +91,7 @@ insertImage Image {..} = do
         , "created"      << toSeconds imageCreated
         , "modified"     << toSeconds imageModified
         , "is_favourite" << fromBool imageIsFavourite ]
-        
+
     SQL.insert "image"
         [ "post_id"      << postID
         , "hash"         << imageHash
@@ -101,7 +107,7 @@ insertImage Image {..} = do
 selectImage :: ID -> Transaction (Maybe (Entity Image))
 selectImage id = do
     results <- SQL.single (images >>= wherever . ("id" *= id))
-    
+
     Traversable.sequence (withImageTags <$> results)
 
 -- | Gets a list of images from the database. If a non-empty expression is
@@ -109,7 +115,7 @@ selectImage id = do
 selectImages :: Expression -> Int -> Int -> Transaction [Entity Image]
 selectImages expression from count = do
     results <- SQL.query (images >>= paginated expression from count)
-    
+
     Traversable.sequence (withImageTags <$> results)
 
 -- | Returns the image from the database ordered after the image with the
@@ -131,7 +137,7 @@ selectRandomImage expression = do
         satisfying expression i
         randomOrder
         limit 1
-    
+
     Traversable.sequence (withImageTags <$> results)
 
 -- | Updates the image in the database.
@@ -149,7 +155,7 @@ selectHashExists hash = do
         wherever (i "hash" .= hash)
         retrieve [i "id"]
         :: Transaction (Maybe Int)
-    
+
     return (isJust results)
 
 -- | Returns the total number of images that satisfy the given expression.
@@ -179,7 +185,7 @@ cleanTags = do
             pt <- from "post_tag"
             wherever (pt "tag_id" .= t "id")
         :: Transaction [ID]
-    
+
     forM_ orphanTags $ \id ->
         SQL.delete "tag" ("id" *= id)
 
@@ -191,7 +197,7 @@ attachTag postID tagName = do
     tagID' <- case tagID of
         Nothing -> SQL.insert "tag" [ "name" << tagName ]
         Just id -> return id
-    
+
     void $ SQL.insert "post_tag"
         [ "post_id" << postID
         , "tag_id"  << tagID' ]
@@ -206,7 +212,7 @@ attachTags tagNames postID = mapM_ (attachTag postID) tagNames
 detachTag :: ID -> String -> Transaction ()
 detachTag postID tagName = do
     tagID <- selectTagIDByName tagName
-    
+
     case tagID of
         Nothing -> return ()
         Just id -> SQL.delete "post_tag" $ \pt -> pt "tag_id"  .= id
@@ -219,10 +225,6 @@ detachTags tagNames postID = mapM_ (detachTag postID) tagNames
 
 ------------------------------------------------------------------------ Albums
 
--- | Deletes the album with the given ID.
-deleteAlbum :: ID -> Transaction ()
-deleteAlbum id = SQL.delete "post" ("id" *= id)
-
 -- | Inserts a new album into the database and returns its ID.
 insertAlbum :: Album -> Transaction ID
 insertAlbum Album {..} = do
@@ -231,11 +233,11 @@ insertAlbum Album {..} = do
         , "created"      << toSeconds albumCreated
         , "modified"     << toSeconds albumModified
         , "is_favourite" << fromBool albumIsFavourite ]
-        
+
     albumID <- SQL.insert "album"
         [ "post_id"      << postID
         , "file_size"    << albumFileSize ]
-    
+
     forM_ albumPages $ \Page {..} -> SQL.insert "page"
         [ "album_id"     << albumID
         , "title"        << pageTitle
@@ -251,7 +253,7 @@ selectAlbum id = do
     results          <- SQL.single (albums >>= wherever . ("id" *= id))
     withPages        <- Traversable.sequence (withPages     <$> results)
     withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
-    
+
     return withPagesAndTags
 
 -- | Gets a list of albums from the database. If a non-empty expression is
@@ -261,7 +263,7 @@ selectAlbums expression from count = do
     results          <- SQL.query (albums >>= paginated expression from count)
     withPages        <- Traversable.sequence (withPages <$> results)
     withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
-    
+
     return withPagesAndTags
 
 -- | Returns the total number of albums that satisfy the given expression.
@@ -274,7 +276,7 @@ updateAlbum (Entity id (Album {..})) = SQL.update "post" ("id" *= id)
     [ "title"        << albumTitle
     , "is_favourite" << albumIsFavourite
     , "modified"     << toSeconds albumModified ]
-    
+
 ------------------------------------------------------------------------- Pages
 
 -- | Returns the list of all pages owned by the album with the given ID.
@@ -295,6 +297,7 @@ albums = do
     a  <- from "album" `on` ("post_id" *= p "id")
     desc (p "created")
     desc (p "id")
+    wherever (p "is_deleted" .= False)
     retrieve [ p "id", p "title", p "is_favourite", p "created", p "modified"
              , a "file_size" ]
     return p
@@ -306,6 +309,7 @@ images = do
     i <- from "image" `on` ("post_id" *= p "id")
     desc (p "created")
     desc (p "id")
+    wherever (p "is_deleted" .= False)
     retrieve [ p "id", p "title", p "is_favourite", i "hash", i "extension"
              , i "width", i "height", p "created", p "modified", i "file_size" ]
     return p
@@ -325,7 +329,7 @@ satisfying [] _         = return ()
 satisfying expression p = forM_ expression $ \case
     Included token -> wherever $       exists $ query (escape token)
     Excluded token -> wherever $ nay . exists $ query (escape token)
-    
+
     where escape  = toLower . trim
           query x = do
               pt <- from "post_tag"
@@ -372,13 +376,13 @@ selectAdjacentImage dir id expression = do
     let (operator, ordering) = case dir of
             Next -> ((.<), desc)
             Prev -> ((.>), asc )
-                    
+
     modified <- SQL.single $ do
         p <- from "post"
         wherever (p "id" .= id)
         retrieve [p "id"]
         :: Transaction (Maybe Int)
-        
+
     nextImage <- case modified of
         Nothing -> return Nothing
         Just m  -> SQL.single $ do
@@ -388,7 +392,7 @@ selectAdjacentImage dir id expression = do
             wherever (p "id" `operator` m)
             ordering (p "created")
             ordering (p "id")
-        
+
     firstImage <- case modified of
         Nothing -> return Nothing
         Just m  -> SQL.single $ do
@@ -397,7 +401,7 @@ selectAdjacentImage dir id expression = do
             clearOrder
             ordering (p "created")
             ordering (p "id")
-    
+
     case (nextImage, firstImage) of
         (Just image, _) -> Just <$> withImageTags image
         (_, Just image) -> Just <$> withImageTags image
@@ -410,9 +414,10 @@ selectCount table expression = do
     results <- SQL.query $ do
         p <- from "post"
         t <- from table `on` ("post_id" *= p "id")
+        wherever (p "is_deleted" .= False)
         satisfying expression p
         retrieve [count]
-        
+
     return (head results)
 
 -- | Returns the ID of the tag with the given name or nothing if the tag name

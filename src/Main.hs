@@ -6,7 +6,8 @@ import qualified App.Core.Image as Image
 import qualified App.Core.Album as Album
 import qualified App.View       as View
 
-import App.Common                    ( Album(..), Image(..), runApplication )
+import App.Common                    ( Album(..), DeletionMode(..), Image(..)
+                                     , runApplication )
 import App.Config                    ( Config(..) )
 import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
@@ -114,7 +115,11 @@ main = runApplication $ do
 
     -- Delets the album with the given id.
     delete ("album" <//> var) $ \id -> do
-        Album.delete id
+        permanent <- optionalParam "permanent" False
+
+        if permanent
+            then Album.delete PermanentlyDelete id
+            else Album.delete MarkAsDeleted     id
 
     -- Renders the images page with images that match the query parameter.
     get "images" $ do
@@ -157,4 +162,8 @@ main = runApplication $ do
 
     -- Delets the image with the given id.
     delete ("image" <//> var) $ \id -> do
-        Image.delete id
+        permanent <- optionalParam "permanent" False
+
+        if permanent
+            then Image.delete PermanentlyDelete id
+            else Image.delete MarkAsDeleted     id

@@ -7,16 +7,14 @@ module App.Core.Album
 
 import qualified App.Core.Tag    as Tag
 import qualified Data.ByteString as ByteString
+import qualified App.Database    as DB
+import qualified App.Path        as Path
 
-import App.Common           ( Album(..), Page(..), Tag(..), App, runDB )
+import App.Common           ( Album(..), DeletionMode(..), Page(..), Tag(..)
+                            , App, runDB )
 import App.Config           ( Config(..) )
-import App.Database         ( deleteAlbum, insertAlbum, selectAlbum
-                            , selectAlbums, updateAlbum, selectAlbumsCount
-                            , attachTags, detachTags, cleanTags )
 import App.Expression       ( Expression )
 import App.FileType         ( ArchiveFile, File(..) )
-import App.Path             ( getAlbumPath, getAlbumThumbnailPath, getPagePath
-                            , getPageThumbnailPath )
 import App.Validation       ( Error(..), Validation(..), isValid, verify )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
 import Control.Applicative  ( (<$>) )
@@ -40,17 +38,20 @@ import System.IO            ( IOMode(..), hClose, openFile, withFile )
 
 -- | Returns the total number of albums satisfying the given expression.
 count :: Expression -> App Int
-count = runDB . selectAlbumsCount
+count = runDB . DB.selectAlbumsCount
 
--- | Deletes the album with the given ID from the database/filesystem.
-delete :: ID -> App ()
-delete id = do
-    path       <- getAlbumPath id
+-- | Deletes the album with the given ID. If the delete is permanent, it is
+-- | removed from the database/file system; otherwise, it is just marked as
+-- | deleted.
+delete :: DeletionMode -> ID -> App ()
+delete MarkAsDeleted id = runDB (DB.markPostAsDeleted id)
+delete PermanentlyDelete id = do
+    path       <- Path.getAlbumPath id
     pathExists <- liftIO $ doesDirectoryExist path
 
     runDB $ do
-        deleteAlbum id
-        cleanTags
+        DB.deletePost id
+        DB.cleanTags
 
     liftIO $ do
         when pathExists (removeDirectoryRecursive path)
@@ -79,14 +80,14 @@ insert file title tagNames = do
 
     when (isValid results) $ do
         id <- runDB $ do
-            id <- insertAlbum album
-            attachTags tags id
+            id <- DB.insertAlbum album
+            DB.attachTags tags id
             return id
 
         when anyEntries $ do
-            basePath  <- getAlbumPath id
-            firstPath <- getPagePath id (toPage (head entries) 1)
-            thumbPath <- getAlbumThumbnailPath id
+            basePath  <- Path.getAlbumPath id
+            firstPath <- Path.getPagePath id (toPage (head entries) 1)
+            thumbPath <- Path.getAlbumThumbnailPath id
             thumbSize <- asks configThumbnailSize
 
             liftIO $ createDirectoryIfMissing True basePath
@@ -101,18 +102,18 @@ insert file title tagNames = do
 query :: Expression -> Int -> App [Entity Album]
 query expression page = do
     size <- asks configPageSize
-    runDB $ selectAlbums expression ((page - 1) * size) size
+    runDB $ DB.selectAlbums expression ((page - 1) * size) size
 
 -- | Returns the album with the given ID.
 querySingle :: ID -> App (Maybe (Entity Album))
-querySingle = runDB . selectAlbum
+querySingle = runDB . DB.selectAlbum
 
 -- | Updates the given album in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.
 update :: Entity Album -> App Validation
 update (Entity id album) = do
     now      <- liftIO $ getCurrentTime
-    previous <- runDB  $ selectAlbum id
+    previous <- runDB  $ DB.selectAlbum id
 
     let isFound = verify (isJust previous) (Error "id" (show id) "ID not found")
         results = validate album <> isFound
@@ -121,10 +122,10 @@ update (Entity id album) = do
         let newTags = Tag.cleanTags $ albumTagNames album
             oldTags = albumTagNames . fromEntity . fromJust $ previous
 
-        updateAlbum (Entity id album { albumModified = now })
-        detachTags (oldTags \\ newTags) id
-        attachTags (newTags \\ oldTags) id
-        cleanTags
+        DB.updateAlbum (Entity id album { albumModified = now })
+        DB.detachTags (oldTags \\ newTags) id
+        DB.attachTags (newTags \\ oldTags) id
+        DB.cleanTags
 
     return results
 
@@ -141,8 +142,8 @@ extractFile id (entry, index) = do
     let contents = fromEntry entry
         page     = toPage entry index
 
-    extractPath   <- getPagePath id page
-    thumbnailPath <- getPageThumbnailPath id page
+    extractPath   <- Path.getPagePath id page
+    thumbnailPath <- Path.getPageThumbnailPath id page
     thumbSize     <- asks configThumbnailSize
 
     liftIO $ do
