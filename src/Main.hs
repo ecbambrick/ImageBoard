@@ -19,7 +19,7 @@ import Control.Monad.Trans           ( liftIO )
 import Control.Monad.Reader          ( asks )
 import Data.Monoid                   ( (<>), mconcat )
 import Data.Text                     ( pack )
-import Data.Textual                  ( display, intercalate, splitOn )
+import Data.Textual                  ( display, intercalate, strip, splitOn )
 import Database.Engine               ( Entity(..), fromEntity )
 import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
@@ -67,8 +67,8 @@ main = runApplication $ do
 
     -- Renders the albums page with albums that match the query parameter.
     get "albums" $ do
+        query  <- strip <$> optionalParam "q" ""
         page   <- optionalParam "page" 1
-        query  <- optionalParam "q" ""
         count  <- Album.count (parse query)
         albums <- Album.query (parse query) page
 
@@ -76,7 +76,7 @@ main = runApplication $ do
 
     -- Renders the album details page for the album with the given ID.
     get ("album" <//> var) $ \id -> do
-        query <- optionalParam "q" ""
+        query <- strip <$> optionalParam "q" ""
         album <- Album.querySingle id
 
         case album of
@@ -123,8 +123,8 @@ main = runApplication $ do
 
     -- Renders the images page with images that match the query parameter.
     get "images" $ do
+        query  <- strip <$> optionalParam "q" ""
         page   <- optionalParam "page" 1
-        query  <- optionalParam "q" ""
         count  <- Image.count (parse query)
         images <- Image.query (parse query) page
 
@@ -132,7 +132,7 @@ main = runApplication $ do
 
     -- Renders the image details page for the image with the given ID.
     get ("image" <//> var) $ \id -> do
-        query               <- optionalParam "q" ""
+        query               <- strip <$> optionalParam "q" ""
         (prev, image, next) <- Image.queryTriple (parse query) id
 
         let view = View.imageView query timeZone <$> prev <*> image <*> next
