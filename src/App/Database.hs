@@ -90,7 +90,8 @@ insertImage Image {..} = do
         [ "title"        << imageTitle
         , "created"      << toSeconds imageCreated
         , "modified"     << toSeconds imageModified
-        , "is_favourite" << fromBool imageIsFavourite ]
+        , "is_favourite" << fromBool imageIsFavourite
+        , "is_deleted"   << fromBool False ]
 
     SQL.insert "image"
         [ "post_id"      << postID
@@ -232,7 +233,8 @@ insertAlbum Album {..} = do
         [ "title"        << albumTitle
         , "created"      << toSeconds albumCreated
         , "modified"     << toSeconds albumModified
-        , "is_favourite" << fromBool albumIsFavourite ]
+        , "is_favourite" << fromBool albumIsFavourite
+        , "is_deleted"   << fromBool False ]
 
     albumID <- SQL.insert "album"
         [ "post_id"      << postID
