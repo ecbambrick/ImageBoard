@@ -5,10 +5,11 @@
 module App.Core.Album
     ( count, delete, getPage, insert, query, querySingle, update ) where
 
-import qualified App.Core.Tag    as Tag
 import qualified Data.ByteString as ByteString
 import qualified App.Database    as DB
+import qualified Graphics.FFmpeg as Graphics
 import qualified App.Path        as Path
+import qualified App.Core.Tag    as Tag
 
 import App.Common           ( Album(..), DeletionMode(..), Page(..), Tag(..)
                             , App, runDB )
@@ -28,7 +29,6 @@ import Data.Maybe           ( isJust, fromJust )
 import Data.Monoid          ( (<>), mconcat )
 import Data.Ord.Extended    ( comparingAlphaNum )
 import Database.Engine      ( Entity(..), ID, fromEntity )
-import Graphics.Thumbnail   ( createThumbnail )
 import System.FilePath      ( takeBaseName, takeExtension )
 import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist
                             , removeDirectoryRecursive )
@@ -65,13 +65,13 @@ getPage Album {..} number = find (\x -> number == pageNumber x) albumPages
 -- | invalid.
 insert :: ArchiveFile -> String -> [String] -> App Validation
 insert file title tagNames = do
-    handle  <- liftIO $ openFile (getPath file) ReadMode
-    archive <- liftIO $ toArchive <$> hGetContents handle
+    file    <- liftIO $ openFile (getPath file) ReadMode
+    archive <- liftIO $ toArchive <$> hGetContents file
     now     <- liftIO $ getCurrentTime
 
     let entries    = sortBy (comparingAlphaNum eRelativePath) (zEntries archive)
         anyEntries = not (null entries)
-        entryPairs = zip entries [1..length entries]
+        entryPairs = zip entries [1..]
         pages      = map (uncurry toPage) entryPairs
         fileSize   = sum $ map (fromIntegral . eUncompressedSize) entries
         tags       = Tag.cleanTags tagNames
@@ -92,9 +92,9 @@ insert file title tagNames = do
 
             liftIO $ createDirectoryIfMissing True basePath
             mapM_ (extractFile id) entryPairs
-            liftIO $ createThumbnail thumbSize firstPath thumbPath
+            liftIO $ Graphics.createThumbnail thumbSize firstPath thumbPath
 
-    liftIO $ hClose handle
+    liftIO $ hClose file
 
     return results
 
@@ -148,7 +148,7 @@ extractFile id (entry, index) = do
 
     liftIO $ do
         withFile extractPath WriteMode (flip hPut contents)
-        createThumbnail thumbSize extractPath thumbnailPath
+        Graphics.createThumbnail thumbSize extractPath thumbnailPath
 
 -- | Creates a new page from the given zip file entry and index.
 toPage :: Entry -> Int -> Page

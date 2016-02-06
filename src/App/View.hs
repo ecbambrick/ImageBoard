@@ -85,6 +85,7 @@ imageView :: String -> TimeZone -> Entity Image -> Entity Image -> Entity Image 
 imageView query timeZone (Entity prev _) (Entity curr image) (Entity next _) =
 
     let title  = "Image " <> display curr
+        source = Text.pack (Path.getImageURL image)
         onload = JS.functionCall "Image.initializePage" args
         args   = [ JS.toJSON prev
                  , JS.toJSON curr
@@ -105,7 +106,9 @@ imageView query timeZone (Entity prev _) (Entity curr image) (Entity next _) =
                         Elem.action Elem.Trash  "delete"
                 Elem.imageDetails image timeZone
                 Elem.tags (imageTagNames image)
-            Elem.image (Text.pack (Path.getImageURL image))
+            if isVideo image
+                then Elem.video source
+                else Elem.image source
             Elem.editForm (imageURL curr "") $ do
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
@@ -170,8 +173,14 @@ imageURL id query = "/image/" <> display id <> parameters [("q", query)]
 imagesURL :: Int -> String -> Text
 imagesURL page query = "/images/" <> parameters [ ("page", show page), ("q", query) ]
 
+-- | Returns a relative URL for the page view for the given album ID and page
+-- | number.
 pageURL :: ID -> Int -> Text
 pageURL id page = "/album/" <> display id <> "/" <> display page
+
+-- | Returns whether or not the given image is a video.
+isVideo :: Image -> Bool
+isVideo Image {..} = imageExtension == "webm"
 
 -- | Converts the given list of key-value pairs to a set of parameter values.
 parameters :: [(String, String)] -> Text

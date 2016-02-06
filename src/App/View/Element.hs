@@ -100,7 +100,7 @@ glyph name = i_ [class_ ("fa fa-" <> name)] mempty
 
 -- | Returns an HTML element for displaying an image.
 image :: Text -> Html ()
-image url = main_ $ div_ [id_ "image-container"] (img_ [id_ "image", src_ url])
+image url = main_ $ div_ [id_ "image-container"] $ img_ [id_ "image", src_ url]
 
 -- | Returns an HTML element for displaying image meta data.
 imageDetails :: Image -> TimeZone -> Html ()
@@ -172,6 +172,12 @@ uploadForm = do
             div_ [class_ "browse"] $
                 input_  [type_ "file", name_ "uploadedFile"]
             button_ [type_ "submit", class_ "action"] ("Upload " <> glyph "arrow-up")
+
+-- | Returns an HTML element for displaying a video.
+video :: Text -> Html ()
+video url =
+    main_ $ div_ [id_ "image-container"] $
+        video_ [id_ "video", src_ url, autoplay_ "", loop_ "", controls_ ""] mempty
 
 ----------------------------------------------------------------------- Utility
 

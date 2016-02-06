@@ -39,7 +39,7 @@ executable imageboard
         Database.Engine,
         Database.Query,
         Database.Query.SQLite,
-        Graphics.Thumbnail,
+        Graphics.FFmpeg,
         System.IO.Metadata,
         Text.JavaScript,
         Web.Spock.Extended
@@ -48,8 +48,6 @@ executable imageboard
         base                    >= 4.8  && < 4.9,
         configurator            >= 0.3  && < 0.4,
         cryptohash              >= 0.11 && < 0.12,
-        hastache                >= 0.6  && < 0.7,
-        JuicyPixels             >= 3.2  && < 3.3,
         lucid                   >= 2.9  && < 2.10,
         network-uri             >= 2.6  && < 2.7,
         Spock                   >= 0.10 && < 0.11,
@@ -68,6 +66,7 @@ executable imageboard
         parsec,
         path-pieces,
         process,
+        regex-compat,
         text,
         time,
         wai

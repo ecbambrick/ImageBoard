@@ -29,7 +29,7 @@ instance File ImageFile where
     getExtension (ImageFile _  ext) = ext
 
 -- | The list of valid image file types.
-validImageTypes = [ "bmp", "gif", "jpg", "jpeg", "png" ]
+validImageTypes = [ "bmp", "gif", "jpg", "jpeg", "png", "webm" ]
 
 -- | The list of valid archive file types.
 validArchiveTypes = [ "cbz", "zip" ]

@@ -5,9 +5,10 @@
 module App.Core.Image
     ( count, delete, insert, query, querySingle, queryTriple, update ) where
 
-import qualified App.Core.Tag as Tag
-import qualified App.Database as DB
-import qualified App.Path     as Path
+import qualified App.Database    as DB
+import qualified Graphics.FFmpeg as Graphics
+import qualified App.Path        as Path
+import qualified App.Core.Tag    as Tag
 
 import App.Common           ( DeletionMode(..), Tag(..), Image(..), App, runDB )
 import App.Config           ( Config(..) )
@@ -24,11 +25,10 @@ import Data.List            ( (\\) )
 import Data.Maybe           ( isJust, fromJust )
 import Data.Monoid          ( (<>), mconcat )
 import Database.Engine      ( Entity(..), ID, fromEntity )
-import Graphics.Thumbnail   ( createThumbnail )
 import System.Directory     ( copyFile, createDirectoryIfMissing, doesFileExist
                             , removeFile )
 import System.FilePath      ( takeDirectory )
-import System.IO.Metadata   ( getHash, getDimensions, getSize )
+import System.IO.Metadata   ( getHash, getSize )
 
 ------------------------------------------------------------------------- Types
 
@@ -78,8 +78,8 @@ insert file title tagNames = do
     hash        <- liftIO $ getHash fromPath
     now         <- liftIO $ getCurrentTime
     size        <- liftIO $ fromIntegral <$> getSize fromPath
-    (w, h)      <- liftIO $ getDimensions fromPath
     hashExists  <- runDB  $ DB.selectHashExists hash
+    (w, h)      <- liftIO $ Graphics.getDimensions fromPath
     thumbSize   <- asks   $ configThumbnailSize
 
     let isDuplicate = verify (not hashExists) (Error "hash" hash "duplicate hash")
@@ -97,7 +97,7 @@ insert file title tagNames = do
         liftIO $ do
             createDirectoryIfMissing True $ takeDirectory toPath
             copyFile fromPath toPath
-            createThumbnail thumbSize toPath thumbPath
+            Graphics.createThumbnail thumbSize toPath thumbPath
 
     return results
 
