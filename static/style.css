@@ -22,13 +22,13 @@ a:hover {
 
 aside {
     display: flex;
-    position: relative; 
+    position: relative;
     flex: 0 0 340px;
 }
 
 aside div.panel {
     position: fixed;
-    margin: 0 auto; 
+    margin: 0 auto;
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -83,7 +83,7 @@ div.edit-pair > *:first-child {
 div.edit-pair > *:last-child {
     width: 80%;
 }
-            
+
 div.edit-pair > span {
     padding: 10px 0;
 }
@@ -167,7 +167,7 @@ form#search > button:hover {
     color: #222;
     cursor: pointer;
 }
-img#image {
+img#image, video#video {
     max-height: calc(100vh - 40px);
     width: 100%;
 }
