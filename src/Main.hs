@@ -51,15 +51,17 @@ main = runApplication $ do
         title           <- optionalParam "title" ""
         tags            <- splitOn "," <$> optionalParam "tags" ""
 
-        results <- case (getFileType path name) of
-            ArchiveType file -> Album.insert file title tags
-            ImageType   file -> Image.insert file title tags
-            InvalidType ""   -> text $ pack ("invalid file type")
-            InvalidType ext  -> text $ pack ("invalid file type: " ++ ext)
+        case getFileType path name of
+            ArchiveType file -> do
+                Album.insert file title tags
+                redirect "albums"
 
-        case results of
-            Valid     -> redirect "/"
-            Invalid e -> text $ pack (show e)
+            ImageType file -> do
+                Image.insert file title tags
+                redirect "images"
+
+            InvalidType _ -> do
+                text ("invalid file type")
 
     -- Redirects to the images page.
     get root $ do
