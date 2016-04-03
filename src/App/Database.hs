@@ -5,9 +5,9 @@
 module App.Database
     ( deletePost, markPostAsDeleted, insertImage, selectHashExists
     , selectImagesCount, selectImage, selectImages, selectNextImage
-    , selectPreviousImage, selectRandomImage, updateImage, insertAlbum
-    , selectAlbum, selectAlbums, selectAlbumsCount, updateAlbum, selectTags
-    , attachTags, cleanTags, detachTags ) where
+    , selectPreviousImage, selectRandomImage, selectRandomImages, updateImage
+    , insertAlbum, selectAlbum, selectAlbums, selectAlbumsCount, updateAlbum
+    , selectTags, attachTags, cleanTags, detachTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
@@ -17,7 +17,7 @@ import App.Expression       ( Token(..), Expression )
 import Control.Applicative  ( (<$>), (<*>), pure )
 import Control.Monad        ( forM_, void )
 import Data.Int             ( Int64 )
-import Data.Maybe           ( isJust )
+import Data.Maybe           ( isJust, listToMaybe )
 import Data.Textual         ( toLower, trim, replace )
 import Data.DateTime        ( DateTime, fromSeconds, toSeconds )
 import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
@@ -132,12 +132,16 @@ selectPreviousImage = selectAdjacentImage Prev
 -- | Returns a random image from the database that satisfies the given
 -- | expression. If no image exists, nothing is returned.
 selectRandomImage :: Expression -> Transaction (Maybe (Entity Image))
-selectRandomImage expression = do
-    results <- SQL.single $ do
+selectRandomImage expression = listToMaybe <$> selectRandomImages expression 1
+
+-- | Returns random images from the database that satisfy the given
+-- | expression.
+selectRandomImages :: Expression -> Int -> Transaction [Entity Image]
+selectRandomImages expression count = do
+    results <- SQL.query $ do
         i <- images
-        satisfying expression i
+        paginated expression 0 count i
         randomOrder
-        limit 1
 
     Traversable.sequence (withImageTags <$> results)
 

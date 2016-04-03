@@ -10,7 +10,7 @@ import Control.Monad            ( when, replicateM )
 import Control.Monad.Reader     ( runReaderT, ask )
 import Control.Monad.Trans      ( lift )
 import Data.Functor             ( (<$>) )
-import Data.List                ( nub )
+import Data.List                ( nub, sort )
 import Data.Maybe               ( fromJust, isJust )
 import Data.Text                ( splitOn )
 import Data.DateTime            ( DateTime, fromSeconds )
@@ -24,7 +24,7 @@ main = runTestTT $ TestList
     , selectImageTest
     , selectNextImageTest
     , selectPreviousImageTest
-    , selectRandomImageTest
+    , selectRandomImagesTest
     , selectImagesTest
     , selectImagesCountTest
     , deleteImageTest
@@ -51,10 +51,10 @@ deleteImageTest = testDatabase $ do
 
     numResults1 <- selectImagesCount []
 
-    deleteImage id2
+    deletePost id2
     numResults2 <- selectImagesCount []
 
-    deleteImage 999
+    deletePost 999
     numResults3 <- selectImagesCount []
 
     image1 <- selectImage id1
@@ -156,17 +156,17 @@ selectPreviousImageTest = testDatabase $ do
         id2'      @=? id2
         image2'   @=? image2
 
--- | Tests the selectRandomImage function.
-selectRandomImageTest :: Test
-selectRandomImageTest = testDatabase $ do
+-- | Tests the selectRandomImage and selectRandomImages functions.
+selectRandomImagesTest :: Test
+selectRandomImagesTest = testDatabase $ do
     let image1 = Image "t1" True  "h1" "e1" 1 2 (time 1) (time 2) 3 []
         image2 = Image "t2" True  "h2" "e2" 1 3 (time 3) (time 4) 5 []
         image3 = Image "t3" False "h3" "e3" 9 7 (time 5) (time 6) 6 []
         image4 = Image "t4" False "h4" "e4" 4 2 (time 7) (time 8) 9 []
 
-        tags1 = ["test", "hello", "goodbye"]
+        tags1 = ["goodbye", "hello",  "test"]
         tags2 = ["another", "couple", "test"]
-        tags3 = ["hello", "blahblah", "test"]
+        tags3 = ["blahblah", "hello", "test"]
 
     id1 <- insertImage image1
     id2 <- insertImage image2
@@ -177,15 +177,23 @@ selectRandomImageTest = testDatabase $ do
     attachTags tags2 id2
     attachTags tags3 id3
 
-    (Just (Entity id image)) <- selectRandomImage (parse "another")
-    noImage                  <- selectRandomImage (parse "asdasda")
+    (Just (Entity id image)) <- selectRandomImage  (parse "another")
+    allImages                <- selectRandomImages (parse "") 10
+    noImage                  <- selectRandomImage  (parse "asdasda")
     images                   <- replicateM 100 (selectRandomImage [])
 
     lift $ do
         image2 { imageTagNames = tags2 } @=? image
         2                                @=? id
         Nothing                          @=? noImage
-        True                             @=? length (nub images) > 1
+        4                                @=? length (nub images)
+
+    lift $ do
+        length allImages @=? 4
+        True @=? Entity id1 image1 { imageTagNames = tags1 } `elem` allImages
+        True @=? Entity id2 image2 { imageTagNames = tags2 } `elem` allImages
+        True @=? Entity id3 image3 { imageTagNames = tags3 } `elem` allImages
+        True @=? Entity id4 image4 { imageTagNames = []    } `elem` allImages
 
 -- | Tests the selectImages function.
 selectImagesTest :: Test
@@ -319,10 +327,10 @@ deleteAlbumTest = testDatabase $ do
 
     numResults1 <- selectAlbumsCount []
 
-    deleteAlbum id2
+    deletePost id2
     numResults2 <- selectAlbumsCount []
 
-    deleteAlbum 999
+    deletePost 999
     numResults3 <- selectAlbumsCount []
 
     album1 <- selectAlbum id1
@@ -528,7 +536,7 @@ cleanTagsTest = testDatabase $ do
 
     results1 <- selectTags
 
-    deleteImage id1
+    deletePost id1
     cleanTags
 
     results2 @ [(Entity _ (Tag name1)),
