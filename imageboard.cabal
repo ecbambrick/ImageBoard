@@ -29,6 +29,7 @@ executable imageboard
         App.Database,
         App.Expression,
         App.FileType,
+        App.Import
         App.Path,
         App.Server,
         App.Validation,

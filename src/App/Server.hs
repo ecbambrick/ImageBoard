@@ -32,9 +32,6 @@ run = runApplication $ do
     storagePath <- asks configStoragePath
     pageSize    <- asks configPageSize
 
-    -- Create a database if there is not already one.
-    -- Database.create =<< asks configDatabaseConnection
-
     -- Enables access to thumbnails and images in the storage path.
     middleware $ staticPolicy $ mconcat
         [ noDots
