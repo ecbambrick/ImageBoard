@@ -2,7 +2,7 @@ module Graphics.FFmpeg where
 
 import System.Directory  ( createDirectoryIfMissing )
 import System.FilePath   ( takeDirectory )
-import System.Process    ( callProcess, readProcessWithExitCode )
+import System.Process    ( callProcess, readProcess )
 import Text.Regex        ( matchRegex, mkRegex )
 
 -- | Generates a thumbnail of the given size for the image or video file at
@@ -22,9 +22,9 @@ createThumbnail size from to = do
 -- | Returns the width and height of the given image or video file.
 getDimensions :: FilePath -> IO (Int, Int)
 getDimensions path = do
-    (_, _, results) <- readProcessWithExitCode "ffmpeg" ["-i", path] []
+    results <- readProcess "ffprobe" ["-show_entries", "stream=height,width", path] []
 
-    let regex       = mkRegex "([0-9]+)x([0-9]+)"
-        Just [w, h] = matchRegex regex results
+    let Just [w] = matchRegex (mkRegex "^width=([0-9]+)$")  results
+        Just [h] = matchRegex (mkRegex "^height=([0-9]+)$") results
 
     return (read w, read h)
