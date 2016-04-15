@@ -1,24 +1,28 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module App.Database
-    ( deletePost, markPostAsDeleted, insertImage, selectHashExists
-    , selectImagesCount, selectImage, selectImages, selectNextImage
-    , selectPreviousImage, selectRandomImage, selectRandomImages, updateImage
-    , insertAlbum, selectAlbum, selectAlbums, selectAlbumsCount, updateAlbum
-    , selectTags, attachTags, cleanTags, detachTags ) where
+    ( createDatabase, deleteDatabase, deletePost, markPostAsDeleted
+    , insertImage, selectHashExists, selectImagesCount, selectImage
+    , selectImages, selectNextImage, selectPreviousImage, selectRandomImage
+    , selectRandomImages, updateImage, insertAlbum, selectAlbum, selectAlbums
+    , selectAlbumsCount, updateAlbum, selectTags, attachTags, cleanTags
+    , detachTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
 
-import App.Common           ( Album(..), Image(..), Page(..), Tag(..), (<$$>) )
+import App.Common           ( Album(..), Image(..), Page(..), Tag(..), App, (<$$>) )
+import App.Config           ( Config(..) )
 import App.Expression       ( Token(..), Expression )
 import Control.Applicative  ( (<$>), (<*>), pure )
-import Control.Monad        ( forM_, void )
+import Control.Monad.Reader ( asks, liftIO, forM_, void, unless )
 import Data.Int             ( Int64 )
 import Data.Maybe           ( isJust, listToMaybe )
-import Data.Textual         ( toLower, trim, replace )
+import Data.Textual         ( replace, splitOn, toLower, trim )
 import Data.DateTime        ( DateTime, fromSeconds, toSeconds )
 import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
                             , fromEntity, fromRow, field )
@@ -26,6 +30,7 @@ import Database.Query       ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
                             , (.=), (.>), (.<), (*=), (<<), asc, clearOrder
                             , count, desc, exists, limit, from, nay, offset, on
                             , randomOrder, retrieve, wherever )
+import System.Directory     ( doesFileExist, removeFile )
 
 ------------------------------------------------------------------------- Types
 
@@ -70,6 +75,29 @@ instance FromRow (Entity Tag) where
         tag    <- Tag    <$> field
 
         return (entity tag)
+
+---------------------------------------------------------------------- Database
+
+-- | Creates a new database using the configuration's database connection
+-- | string. If a database already exists, this function will do nothing.
+createDatabase :: App ()
+createDatabase = do
+    database <- asks configDatabaseConnection
+    exists   <- liftIO $ doesFileExist database
+    schema   <- liftIO $ readFile "schema.sql"
+
+    liftIO $ unless exists $ do
+        SQL.runDatabase database $ do
+            let commands = filter (/= "\n") $ splitOn ";" schema
+            mapM_ SQL.execute commands
+
+-- | Deletes the database specified in the configuration's database connection
+-- | string. If the database does not exist, this function will do nothing.
+deleteDatabase :: App ()
+deleteDatabase = do
+    database <- asks configDatabaseConnection
+
+    liftIO $ removeFile database
 
 ------------------------------------------------------------------------- Posts
 
