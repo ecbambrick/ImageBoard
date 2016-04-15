@@ -12,13 +12,15 @@ import System.FilePath      ( (</>), (<.>) )
 
 ------------------------------------------------------------------- Application
 
--- | Returns the base path of static data.
-getDataPath :: String
-getDataPath = "data"
+-- | Returns the URL prefix for requesting data files.
+getDataPrefix :: String
+getDataPrefix = "data"
 
 -- | Returns the path of the template with the given name.
-getTemplatePath :: String -> FilePath
-getTemplatePath name = "templates" </> name <.> "html"
+getDataPath :: (MonadReader Config m) => m FilePath
+getDataPath = do
+    storagePath <- asks configStoragePath
+    return (storagePath </> "data")
 
 ------------------------------------------------------------------------ Images
 

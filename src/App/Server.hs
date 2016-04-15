@@ -11,7 +11,7 @@ import App.Common                    ( Album(..), DeletionMode(..), Image(..)
 import App.Config                    ( Config(..) )
 import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
-import App.Path                      ( getDataPath )
+import App.Path                      ( getDataPrefix )
 import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
 import Control.Monad                 ( join )
@@ -36,7 +36,7 @@ run = runApplication $ do
     middleware $ staticPolicy $ mconcat
         [ noDots
         , isNotAbsolute
-        , hasPrefix getDataPath
+        , hasPrefix getDataPrefix
         , addBase storagePath ]
 
     -- Enables access to other static content such as JavaScript and CSS files.
