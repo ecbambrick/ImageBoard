@@ -22,6 +22,7 @@ executable imageboard
 
     other-modules:
         App.Core.Album,
+        App.Core.Everything,
         App.Core.Image,
         App.Core.Tag,
         App.Common,
