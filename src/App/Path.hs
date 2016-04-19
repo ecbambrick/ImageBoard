@@ -5,12 +5,25 @@ module App.Path where
 
 import App.Common           ( Album(..), Image(..), Page(..) )
 import App.Config           ( Config(..) )
-import Control.Monad.Reader ( MonadReader, asks )
+import Control.Exception    ( ErrorCall(..), throwIO )
+import Control.Monad.Reader ( MonadIO, MonadReader, asks, liftIO, unless )
 import Data.Textual         ( replace )
 import Database.Engine      ( Entity(..), ID )
-import System.FilePath      ( (</>), (<.>) )
+import System.Directory     ( doesDirectoryExist )
+import System.FilePath      ( (</>), (<.>), isValid )
 
 ------------------------------------------------------------------- Application
+
+-- | Asserts that the configured data path is valid.
+assertDataPath :: (MonadIO m, MonadReader Config m) => m ()
+assertDataPath = do
+    storagePath     <- asks configStoragePath
+    directoryExists <- liftIO $ doesDirectoryExist storagePath
+
+    unless (directoryExists && isValid storagePath) $ do
+        liftIO $ throwIO $ ErrorCall "Invalid data path. Please verify in app.cfg"
+
+    return ()
 
 -- | Returns the URL prefix for requesting data files.
 getDataPrefix :: String
