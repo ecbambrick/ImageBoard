@@ -1,23 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import qualified Data.Text    as Text
 import qualified Data.Text.IO as Text
 
-import App.Common               ( Album(..), Image(..), Page(..), Tag(..)
-                                , (<$$>) )
+import App.Core.Types         ( Album(..), Image(..), Page(..), Tag(..) )
 import App.Database
-import App.Expression           ( parse )
-import Control.Monad            ( when, replicateM )
-import Control.Monad.Reader     ( runReaderT, ask )
-import Control.Monad.Trans      ( lift )
-import Data.Functor             ( (<$>) )
-import Data.List                ( nub, sort )
-import Data.Maybe               ( fromJust, isJust )
-import Data.Text                ( splitOn )
-import Data.DateTime            ( DateTime, fromSeconds )
-import Database.Engine          ( Entity(..), Transaction, fromEntity )
-import Database.SQLite.Simple   ( Query(..), execute_, query_, withConnection )
-import Test.HUnit               ( Test(..), Assertion, (@=?), runTestTT
-                                , assertFailure )
+import App.Expression         ( parse )
+import Control.Monad          ( when, replicateM )
+import Control.Monad.Reader   ( runReaderT, ask, lift )
+import Data.Functor           ( (<$>) )
+import Data.List              ( nub )
+import Data.Maybe             ( fromJust, isJust )
+import Data.DateTime          ( DateTime, fromSeconds )
+import Database.Engine        ( Entity(..), Transaction, fromEntity )
+import Database.SQLite.Simple ( Query(..), execute_, query_, withConnection )
+import Test.HUnit             ( Test(..), Assertion, (@=?), runTestTT, assertFailure )
 
 main = runTestTT $ TestList
     [ insertImageTest
@@ -607,7 +604,7 @@ testDatabase f = TestCase $ withConnection ":memory:" $ \conn -> do
     execute_ conn "PRAGMA foreign_keys = ON;"
     runReaderT f conn
     where getDatabaseMigration = filter (/="\n")
-                                 <$> splitOn ";"
+                                 <$> Text.splitOn ";"
                                  <$> Text.readFile "schema.sql"
 
 -- | Returns the date time that is the given number of seconds after the epoch.

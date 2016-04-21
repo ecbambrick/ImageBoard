@@ -5,15 +5,15 @@ module App.View.Element where
 
 import qualified Text.JavaScript as JS
 
-import App.Common    ( Album(..), Image(..) )
-import Control.Monad ( forM_ )
-import Data.DateTime ( TimeZone(..), defaultFormatDate )
-import Data.Monoid   ( (<>), mempty )
-import Data.Text     ( Text, empty, pack )
-import Data.Textual  ( display, intercalate )
-import Lucid.Base    ( Html, toHtml )
+import App.Core.Types ( Album(..), Image(..) )
+import Control.Monad  ( forM_ )
+import Data.DateTime  ( TimeZone(..), defaultFormatDate )
+import Data.Monoid    ( (<>), mempty )
+import Data.Text      ( Text, empty, pack )
+import Data.Textual   ( display, intercalate )
+import Lucid.Base     ( Html, toHtml )
 import Lucid.Html5
-import Numeric       ( showFFloat )
+import Numeric        ( showFFloat )
 
 ------------------------------------------------------------------------- Types
 

@@ -10,8 +10,9 @@ import qualified Graphics.FFmpeg as Graphics
 import qualified App.Path        as Path
 import qualified App.Core.Tag    as Tag
 
-import App.Common           ( DeletionMode(..), Tag(..), Image(..), App, runDB )
 import App.Config           ( Config(..) )
+import App.Control          ( runDB )
+import App.Core.Types       ( DeletionMode(..), Tag(..), Image(..), App )
 import App.Expression       ( Expression )
 import App.FileType         ( ImageFile, File(..) )
 import App.Validation       ( Error(..), Property(..), Validation, isPositive

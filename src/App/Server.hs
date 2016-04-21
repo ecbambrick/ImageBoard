@@ -6,28 +6,27 @@ import qualified App.Core.Image as Image
 import qualified App.Core.Album as Album
 import qualified App.View       as View
 
-import App.Common                    ( Album(..), DeletionMode(..), Image(..)
-                                     , runApplication )
 import App.Config                    ( Config(..) )
+import App.Core.Types                ( Album(..), DeletionMode(..), Image(..) )
 import App.Expression                ( parse )
 import App.FileType                  ( FileType(..), getFileType )
 import App.Path                      ( getDataPrefix )
 import App.Validation                ( Validation(..) )
 import Control.Applicative           ( (<$>), (<*>), pure )
-import Control.Monad                 ( join )
-import Control.Monad.Trans           ( liftIO )
-import Control.Monad.Reader          ( asks )
+import Control.Monad.Reader          ( ReaderT, asks, liftIO, join )
 import Data.Monoid                   ( (<>), mconcat )
 import Data.Text                     ( pack )
 import Data.Textual                  ( display, intercalate, strip, splitOn )
 import Database.Engine               ( Entity(..), fromEntity )
 import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
-import Web.Spock                     ( (<//>), delete, get, html, middleware
-                                     , text, post, redirect, root, var )
+import Web.Spock                     ( SpockT, (<//>), delete, get, html, var
+                                     , middleware, text, post, redirect, root )
 import Web.Spock.Extended            ( getFile, optionalParam )
 
-run = runApplication $ do
+-- | The route handling for the web service.
+routes :: SpockT (ReaderT Config IO) ()
+routes = do
     timeZone    <- asks configTimeZone
     storagePath <- asks configStoragePath
     pageSize    <- asks configPageSize

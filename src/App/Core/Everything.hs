@@ -6,7 +6,7 @@ module App.Core.Everything where
 import qualified App.Database as Database
 import qualified App.Path     as Path
 
-import App.Common          ( App )
+import App.Core.Types      ( App )
 import Control.Monad       ( when )
 import Control.Monad.Trans ( liftIO )
 import System.Directory    ( doesDirectoryExist, removeDirectoryRecursive )

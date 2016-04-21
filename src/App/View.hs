@@ -10,14 +10,14 @@ import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText
 import qualified Text.JavaScript  as JS
 
-import App.Common       ( Album(..), Image(..), Page(..) )
-import Control.Monad    ( when )
-import Data.Monoid      ( (<>) )
-import Data.Text        ( Text )
-import Data.Textual     ( display, intercalate )
-import Data.DateTime    ( TimeZone )
-import Database.Engine  ( ID, Entity(..) )
-import Lucid.Base       ( Html(..), renderText )
+import App.Core.Types  ( Album(..), Image(..), Page(..) )
+import Control.Monad   ( when )
+import Data.Monoid     ( (<>) )
+import Data.Text       ( Text )
+import Data.Textual    ( display, intercalate )
+import Data.DateTime   ( TimeZone )
+import Database.Engine ( ID, Entity(..) )
+import Lucid.Base      ( Html(..), renderText )
 
 ------------------------------------------------------------------------- Views
 

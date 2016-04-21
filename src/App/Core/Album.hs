@@ -11,9 +11,9 @@ import qualified Graphics.FFmpeg as Graphics
 import qualified App.Path        as Path
 import qualified App.Core.Tag    as Tag
 
-import App.Common           ( Album(..), DeletionMode(..), Page(..), Tag(..)
-                            , App, runDB )
 import App.Config           ( Config(..) )
+import App.Control          ( runDB )
+import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), Tag(..), App )
 import App.Expression       ( Expression )
 import App.FileType         ( ArchiveFile, File(..) )
 import App.Validation       ( Error(..), Validation(..), isValid, verify )

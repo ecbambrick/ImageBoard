@@ -15,22 +15,23 @@ module App.Database
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
 
-import App.Common           ( Album(..), Image(..), Page(..), Tag(..), App, (<$$>) )
-import App.Config           ( Config(..) )
-import App.Expression       ( Token(..), Expression )
-import Control.Applicative  ( (<$>), (<*>), pure )
-import Control.Monad.Reader ( asks, liftIO, forM_, void, unless )
-import Data.Int             ( Int64 )
-import Data.Maybe           ( isJust, listToMaybe )
-import Data.Textual         ( replace, splitOn, toLower, trim )
-import Data.DateTime        ( DateTime, fromSeconds, toSeconds )
-import Database.Engine      ( Entity(..), Transaction(..), ID, FromRow
-                            , fromEntity, fromRow, field )
-import Database.Query       ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
-                            , (.=), (.>), (.<), (*=), (<<), asc, clearOrder
-                            , count, desc, exists, limit, from, nay, offset, on
-                            , randomOrder, retrieve, wherever )
-import System.Directory     ( doesFileExist, removeFile )
+import App.Config            ( Config(..) )
+import App.Core.Types        ( Album(..), Image(..), Page(..), Tag(..), App )
+import App.Expression        ( Token(..), Expression )
+import Control.Applicative   ( (<$>), (<*>), pure )
+import Control.Monad.Reader  ( asks, liftIO, forM_, void, unless )
+import Data.DateTime         ( DateTime, fromSeconds, toSeconds )
+import Data.Functor.Extended ( (<$$>) )
+import Data.Int              ( Int64 )
+import Data.Maybe            ( isJust, listToMaybe )
+import Data.Textual          ( replace, splitOn, toLower, trim )
+import Database.Engine       ( Entity(..), Transaction(..), ID, FromRow
+                             , fromEntity, fromRow, field )
+import Database.Query        ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
+                             , (.=), (.>), (.<), (*=), (<<), asc, clearOrder
+                             , count, desc, exists, limit, from, nay, offset, on
+                             , randomOrder, retrieve, wherever )
+import System.Directory      ( doesFileExist, removeFile )
 
 ------------------------------------------------------------------------- Types
 

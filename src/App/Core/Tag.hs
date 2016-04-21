@@ -3,7 +3,8 @@
 
 module App.Core.Tag where
 
-import App.Common       ( Tag(..), App, runDB )
+import App.Control      ( runDB )
+import App.Core.Types   ( Tag(..), App )
 import App.Validation   ( Property(..), Validation, isValidTag )
 import App.Database     ( selectTags )
 import Data.List        ( nub )
