@@ -50,6 +50,12 @@ data Page = Page
     , pageExtension :: String
     } deriving (Eq, Show)
 
+-- | A scope contains an alias for an expression to simplify querying.
+data Scope = Scope
+    { scopeName       :: String
+    , scopeExpression :: String
+    } deriving (Eq, Show)
+
 -- | A tag can be attached to an image or album as additional meta data.
 data Tag = Tag
     { tagName :: String
