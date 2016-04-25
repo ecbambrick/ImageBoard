@@ -94,3 +94,10 @@ CREATE TABLE tag_category (
         ON UPDATE CASCADE
         ON DELETE CASCADE
 );
+
+DROP TABLE IF EXISTS scope;
+CREATE TABLE scope (
+    id          INTEGER     PRIMARY KEY AUTOINCREMENT,
+    name        TEXT        UNIQUE NOT NULL,
+    expression  TEXT        NOT NULL
+);
