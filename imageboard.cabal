@@ -24,6 +24,7 @@ executable imageboard
         App.Core.Album,
         App.Core.Everything,
         App.Core.Image,
+        App.Core.Scope,
         App.Core.Tag,
         App.Core.Types,
         App.Control,
