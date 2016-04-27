@@ -9,14 +9,14 @@ module App.Database
     , insertImage, selectHashExists, selectImagesCount, selectImage
     , selectImages, selectNextImage, selectPreviousImage, selectRandomImage
     , selectRandomImages, updateImage, insertAlbum, selectAlbum, selectAlbums
-    , selectAlbumsCount, updateAlbum, selectTags, attachTags, cleanTags
-    , detachTags ) where
+    , selectAlbumsCount, updateAlbum, deleteScope, insertScope, selectScope
+    , updateScope, selectTags, attachTags, cleanTags, detachTags ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
 
 import App.Config            ( Config(..) )
-import App.Core.Types        ( Album(..), Image(..), Page(..), Tag(..), App )
+import App.Core.Types        ( Album(..), Image(..), Page(..), Scope(..), Tag(..), App )
 import App.Expression        ( Token(..), Expression )
 import Control.Applicative   ( (<$>), (<*>), pure )
 import Control.Monad.Reader  ( asks, liftIO, forM_, void, unless )
@@ -76,6 +76,13 @@ instance FromRow (Entity Tag) where
         tag    <- Tag    <$> field
 
         return (entity tag)
+
+instance FromRow (Entity Scope) where
+    fromRow = do
+        entity <- Entity <$> field
+        scope  <- Scope  <$> field <*> field
+
+        return (entity scope)
 
 ---------------------------------------------------------------------- Database
 
@@ -322,6 +329,32 @@ selectPagesByAlbum postID = SQL.query $ do
     wherever (a "post_id" .= postID)
     retrieve [ p "id", p "title", p "number", p "extension" ]
     asc (p "number")
+
+------------------------------------------------------------------------ Scopes
+
+-- | Deletes the scope with the given name.
+deleteScope :: String -> Transaction ()
+deleteScope name = SQL.delete "scope" ("name" *= name)
+
+-- | Inserts a new scope into the database.
+insertScope :: Scope -> Transaction ID
+insertScope Scope {..} = SQL.insert "scope"
+    [ "name"       << scopeName
+    , "expression" << scopeExpression ]
+
+-- | Returns the scope from the database with the given name. If no scope
+-- | exists, nothing is returned.
+selectScope :: String -> Transaction (Maybe (Entity Scope))
+selectScope name = SQL.single $ do
+    s <- from "scope"
+    wherever (s "name" .= name)
+    retrieve [s "id", s "name", s "expression"]
+
+-- | Updates the scope in the database.
+updateScope :: Entity Scope -> Transaction ()
+updateScope (Entity id Scope {..}) = SQL.update "scope" ("id" *= id)
+    [ "name"       << scopeName
+    , "expression" << scopeExpression ]
 
 ---------------------------------------------------------------- Query segments
 
