@@ -7,7 +7,7 @@ import qualified App.Control         as Application
 import qualified App.Core.Everything as Everything
 import qualified App.Import          as Import
 import qualified App.Path            as Path
-import qualified App.Server          as Server
+import qualified App.Web.Server      as Server
 import qualified System.Console.Args as CLI
 
 import Control.Monad.Reader ( liftIO, when )

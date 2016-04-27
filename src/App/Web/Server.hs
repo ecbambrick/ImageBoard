@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module App.Server where
+module App.Web.Server where
 
 import qualified App.Core.Image as Image
 import qualified App.Core.Album as Album
-import qualified App.View       as View
+import qualified App.Web.View   as View
 
 import App.Config                    ( Config(..) )
 import App.Core.Types                ( Album(..), DeletionMode(..), Image(..) )

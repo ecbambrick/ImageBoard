@@ -34,10 +34,10 @@ executable imageboard
         App.FileType,
         App.Import
         App.Path,
-        App.Server,
         App.Validation,
-        App.View,
-        App.View.Element,
+        App.Web.Element,
+        App.Web.Server,
+        App.Web.View,
         Data.Functor.Extended,
         Data.Ord.Extended,
         Data.DateTime,

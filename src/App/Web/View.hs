@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module App.View ( albumView, albumsView, imageView, imagesView, pageView ) where
+module App.Web.View ( albumView, albumsView, imageView, imagesView, pageView ) where
 
 import qualified App.Path         as Path
-import qualified App.View.Element as Elem
+import qualified App.Web.Element  as Elem
 import qualified Network.URI      as URI
 import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText

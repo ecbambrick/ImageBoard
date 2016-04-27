@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module App.View.Element where
+module App.Web.Element where
 
 import qualified Text.JavaScript as JS
 
