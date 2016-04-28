@@ -37,6 +37,7 @@ document title initialize html =
             link_   [rel_ "stylesheet", href_ "/static/style.css"]
             link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
             script_ [type_ ecma6, src_ "/static/request.js"] empty
+            script_ [type_ ecma6, src_ "/static/route.js"] empty
             script_ [type_ ecma6, src_ "/static/album.js"] empty
             script_ [type_ ecma6, src_ "/static/albums.js"] empty
             script_ [type_ ecma6, src_ "/static/image.js"] empty

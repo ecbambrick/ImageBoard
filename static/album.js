@@ -4,13 +4,10 @@ let Album = {}
 // Deletes the album with the given id and returns to the index, including the
 // query, if it exists.
 Album.del = (id, query) => {
-    let url = query.length === 0 ? "/albums" : "/albums?q=" + query;
-    let proceed = window.confirm("Delete?");
-
-    if (proceed) {
+    if (window.confirm("Delete?")) {
         Request
-            .del("/album/" + id)
-            .then(_ => window.location.href = url)
+            .del(Route.album(id))
+            .then(_ => window.location.href = Route.albums(1, query))
             .catch(x => alert("Deletion failed: " + x));
     }
 
@@ -48,7 +45,6 @@ Album.navigate = (id, query, editScreen, e) => {
 
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
     let editting  = editScreen != null && editScreen.style.display !== "";
-    let q         = query.length === 0 ? "" : "?q=" + query;
 
     // escape
     if (editting && !modifiers && e.keyCode === 27) {
@@ -64,7 +60,7 @@ Album.navigate = (id, query, editScreen, e) => {
 
     // l
     } else if (!modifiers && e.keyCode === 76) {
-        window.location.href = "/albums" + q;
+        window.location.href = Route.albums(1, query);
     }
 }
 

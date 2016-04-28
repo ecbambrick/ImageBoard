@@ -17,15 +17,14 @@ Albums.navigate = (canPrev, canNext, page, query, e) => {
 
     let position  = Albums.getPagePosition();
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
-    let q         = "&q=" + query;
 
     // shift + space
     if (e.shiftKey && e.keyCode === 32 && position.top && canPrev) {
-        window.location.href = "/albums/" + "?page=" + (page - 1) + q;
+        window.location.href = Route.albums(page - 1, query);
 
     // space
     } else if (!modifiers && e.keyCode === 32 && position.bottom && canNext) {
-        window.location.href = "/albums/" + "?page=" + (page + 1) + q;
+        window.location.href = Route.albums(page + 1, query);
     }
 }
 

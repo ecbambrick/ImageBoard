@@ -4,16 +4,13 @@ let Image = {}
 // Deletes the image with the given id and returns to the index, including the
 // query, if it exists.
 Image.del = (id, query) => {
-    let url = query.length === 0 ? "/images" : "/images?q=" + query;
-    let proceed = window.confirm("Delete?");
-    
-    if (proceed) {
+    if (window.confirm("Delete?")) {
         Request
-            .del("/image/" + id)
-            .then(_ => window.location.href = url)
+            .del(Route.image(id, ""))
+            .then(_ => window.location.href = Route.images(1, query))
             .catch(x => alert("Deletion failed: " + x));
     }
-    
+
     return false;
 }
 
@@ -29,7 +26,7 @@ Image.initializePage = (previousId, currentId, nextId, query) => {
     let editTags     = document.getElementById("edit-tags");
     let editCancel   = document.getElementById("edit-cancel");
     let editSubmit   = document.getElementById("edit-submit");
-    
+
     deleteAction.onclick = ()  => Image.del(currentId, query);
     editCancel.onclick   = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editShow.onclick     = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
@@ -37,52 +34,51 @@ Image.initializePage = (previousId, currentId, nextId, query) => {
     document.onkeyup     = (e) => Image.navigate(previousId, nextId, query, editScreen, e);
 }
 
-// Returns a function that will take a keyboard event and navigate to another 
+// Returns a function that will take a keyboard event and navigate to another
 // page based on keyboard input.
 Image.navigate = (previousID, nextID, query, editScreen, e) => {
     let activeType = document.activeElement.type;
-    
+
     if (activeType == "text" || activeType == "textarea") {
         return;
     }
-    
+
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
     let editting  = editScreen != null && editScreen.style.display !== "";
-    let q         = query.length === 0 ? "" : "?q=" + query;
-    
+
     // escape
     if (editting && !modifiers && e.keyCode === 27) {
         document.getElementById("edit-cancel").click();
-    
+
     // shift + space
     } else if (e.shiftKey && e.keyCode === 32) {
-        window.location.href = "/image/" + previousID + q;
-    
+        window.location.href = Route.image(previousID, query);
+
     // space
     } else if (!modifiers && e.keyCode === 32) {
-        window.location.href = "/image/" + nextID + q;
-    
+        window.location.href = Route.image(nextID, query);
+
     // s
     } else if (!modifiers && e.keyCode === 83) {
         document.getElementById("search-text").select();
-        
+
     // e
     } else if (!modifiers && e.keyCode === 69) {
         document.getElementById("edit-show").click();
-    
+
     // l
     } else if (!modifiers && e.keyCode === 76) {
-        window.location.href = "/images" + q;
+        window.location.href = Route.images(1, query);
     }
 }
 
 // Toggle the display of the edit form.
 Image.toggleEdit = (title, tags, editForm, editTitle, editTags) => {
     let display = editForm.style.display === "" ? "flex" : "";
-    
+
     editTitle.value        = title.innerHTML;
     editTags.value         = tags.map(x => x.innerHTML).join(", ");
     editForm.style.display = display;
-    
+
     return false;
 }
