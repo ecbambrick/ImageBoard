@@ -4,6 +4,7 @@ module App.Web.Server where
 
 import qualified App.Core.Image as Image
 import qualified App.Core.Album as Album
+import qualified App.Web.Route  as Route
 import qualified App.Web.View   as View
 
 import App.Config                    ( Config(..) )
@@ -20,8 +21,8 @@ import Data.Textual                  ( display, intercalate, strip, splitOn )
 import Database.Engine               ( Entity(..), fromEntity )
 import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
                                      , noDots, staticPolicy )
-import Web.Spock                     ( SpockT, (<//>), delete, get, html, var
-                                     , middleware, text, post, redirect, root )
+import Web.Spock                     ( SpockT, delete, get, html, middleware
+                                     , text, post, redirect, renderRoute, root )
 import Web.Spock.Extended            ( getFile, optionalParam )
 
 -- | The route handling for the web service.
@@ -44,8 +45,12 @@ routes = do
         , isNotAbsolute
         , hasPrefix "static" ]
 
+    -- Redirects to the images page.
+    get root $ do
+        redirect (Route.images 1 "")
+
     -- Upload an image or album.
-    post "upload" $ do
+    post Route.uploadRoute $ do
         (name, _, path) <- getFile "uploadedFile"
         title           <- optionalParam "title" ""
         tags            <- splitOn "," <$> optionalParam "tags" ""
@@ -53,21 +58,17 @@ routes = do
         case getFileType path name of
             ArchiveType file -> do
                 Album.insert file title tags
-                redirect "albums"
+                redirect (Route.albums 1 "")
 
             ImageType file -> do
                 Image.insert file title tags
-                redirect "images"
+                redirect (Route.images 1 "")
 
             InvalidType _ -> do
                 text ("invalid file type")
 
-    -- Redirects to the images page.
-    get root $ do
-        redirect "images"
-
     -- Renders the albums page with albums that match the query parameter.
-    get "albums" $ do
+    get Route.albumsRoute $ do
         query  <- strip <$> optionalParam "q" ""
         page   <- optionalParam "page" 1
         count  <- Album.count (parse query)
@@ -76,27 +77,27 @@ routes = do
         html (View.albumsView query page count pageSize albums)
 
     -- Renders the album details page for the album with the given ID.
-    get ("album" <//> var) $ \id -> do
+    get Route.albumRoute $ \id -> do
         query <- strip <$> optionalParam "q" ""
         album <- Album.querySingle id
 
         case album of
-            Nothing    -> redirect "/"
+            Nothing    -> redirect (Route.albums 1 query)
             Just album -> html (View.albumView query timeZone album)
 
     -- Renders the details page for the album page with the give album ID and
     -- page number.
-    get ("album" <//> var <//> var) $ \id number -> do
+    get Route.pageRoute $ \id number -> do
         album <- Album.querySingle id
 
         let page = flip Album.getPage number . fromEntity =<< album
 
         case page of
-            Nothing   -> redirect "/"
+            Nothing   -> redirect (Route.album id)
             Just page -> html (View.pageView id page)
 
     -- Updates the album with the given id with the given POST data.
-    post ("album" <//> var) $ \id -> do
+    post Route.albumRoute $ \id -> do
         entity <- Album.querySingle id
 
         case entity of
@@ -111,11 +112,11 @@ routes = do
                                                          , albumTagNames = tags })
 
                 case results of
-                    Valid     -> redirect ("/album/" <> display id)
+                    Valid     -> redirect (Route.album id)
                     Invalid e -> text $ pack (show e)
 
     -- Delets the album with the given id.
-    delete ("album" <//> var) $ \id -> do
+    delete Route.albumRoute $ \id -> do
         permanent <- optionalParam "permanent" False
 
         if permanent
@@ -123,7 +124,7 @@ routes = do
             else Album.delete MarkAsDeleted     id
 
     -- Renders the images page with images that match the query parameter.
-    get "images" $ do
+    get Route.imagesRoute $ do
         query  <- strip <$> optionalParam "q" ""
         page   <- optionalParam "page" 1
         count  <- Image.count (parse query)
@@ -132,18 +133,18 @@ routes = do
         html (View.imagesView query page count pageSize images)
 
     -- Renders the image details page for the image with the given ID.
-    get ("image" <//> var) $ \id -> do
+    get Route.imageRoute $ \id -> do
         query               <- strip <$> optionalParam "q" ""
         (prev, image, next) <- Image.queryTriple (parse query) id
 
         let view = View.imageView query timeZone <$> prev <*> image <*> next
 
         case view of
-            Nothing   -> redirect "/"
+            Nothing   -> redirect (Route.images 1 query)
             Just view -> html view
 
     -- Updates the image with the given id with the given POST data.
-    post ("image" <//> var) $ \id -> do
+    post Route.imageRoute $ \id -> do
         entity <- Image.querySingle id
 
         case entity of
@@ -158,11 +159,11 @@ routes = do
                                                          , imageTagNames = tags })
 
                 case results of
-                    Valid     -> redirect ("/image/" <> display id)
+                    Valid     -> redirect (Route.image id "")
                     Invalid e -> text $ pack (show e)
 
     -- Delets the image with the given id.
-    delete ("image" <//> var) $ \id -> do
+    delete Route.imageRoute $ \id -> do
         permanent <- optionalParam "permanent" False
 
         if permanent

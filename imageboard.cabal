@@ -36,6 +36,7 @@ executable imageboard
         App.Path,
         App.Validation,
         App.Web.Element,
+        App.Web.Route,
         App.Web.Server,
         App.Web.View,
         Data.Functor.Extended,
