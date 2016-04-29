@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
-module App.Core.Scope ( delete, insertOrUpdate, querySingle ) where
+module App.Core.Scope ( defaultName, delete, insertOrUpdate, querySingle ) where
 
 import qualified App.Database as DB
+import qualified App.Path     as Path
 
 import App.Control           ( runDB )
 import App.Core.Types        ( Scope(..), App )
@@ -44,5 +45,7 @@ querySingle name  = fromEntity <$$> runDB (DB.selectScope name)
 -- | Returns valid if the given scope is valid; otherwise invalid.
 validate :: Scope -> Validation
 validate (Scope name _) =
-    let nameError = Error "name" name "name cannot be 'all'"
-    in verify (name /= "all") nameError
+    let nameError    = Error "name" name "Invalid name"
+        invalidNames = [ defaultName, Path.getDataPrefix, Path.getStaticPrefix]
+
+    in verify (name `notElem` invalidNames) nameError

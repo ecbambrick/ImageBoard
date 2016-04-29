@@ -27,6 +27,10 @@ assertDataPath = do
 getDataPrefix :: String
 getDataPrefix = "data"
 
+-- | Returns the URL prefix for requesting static files.
+getStaticPrefix :: String
+getStaticPrefix = "static"
+
 -- | Returns the path of the template with the given name.
 getDataPath :: (MonadReader Config m) => m FilePath
 getDataPath = do
