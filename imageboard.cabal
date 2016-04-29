@@ -70,6 +70,7 @@ executable imageboard
         deepseq,
         directory,
         filepath,
+        http-types,
         HUnit,
         mtl,
         parsec,
