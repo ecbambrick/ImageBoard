@@ -3,10 +3,10 @@ let Album = {}
 
 // Deletes the album with the given id and returns to the index, including the
 // query, if it exists.
-Album.del = (id, query) => {
+Album.del = (scope, id, query) => {
     if (window.confirm("Delete?")) {
         Request
-            .del(Route.album(id))
+            .del(Route.album(scope, id))
             .then(_ => window.location.href = Route.albums(1, query))
             .catch(x => alert("Deletion failed: " + x));
     }
@@ -15,7 +15,7 @@ Album.del = (id, query) => {
 }
 
 // Initializes event handling for the album page.
-Album.initializePage = (id, query) => {
+Album.initializePage = (scope, id, query) => {
     let tags         = [].slice.call(document.getElementsByClassName("tag"));
     let deleteAction = document.getElementById("delete");
     let title        = document.getElementById("title");
@@ -27,16 +27,16 @@ Album.initializePage = (id, query) => {
     let editCancel   = document.getElementById("edit-cancel");
     let editSubmit   = document.getElementById("edit-submit");
 
-    deleteAction.onclick = ()  => Album.del(id, query);
+    deleteAction.onclick = ()  => Album.del(scope, id, query);
     editCancel.onclick   = ()  => Album.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editShow.onclick     = ()  => Album.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editSubmit.onclick   = ()  => { editForm.submit(); return false; }
-    document.onkeyup     = (e) => Album.navigate(id, query, editScreen, e);
+    document.onkeyup     = (e) => Album.navigate(scope, id, query, editScreen, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another
 // page based on keyboard input.
-Album.navigate = (id, query, editScreen, e) => {
+Album.navigate = (scope, id, query, editScreen, e) => {
     let activeType = document.activeElement.type;
 
     if (activeType == "text" || activeType == "textarea") {

@@ -2,13 +2,13 @@
 let Albums = {}
 
 // Initializes event handling for the albums page.
-Albums.initializePage = (canPrev, canNext, page, query) => {
-    document.onkeyup = (e) => Albums.navigate(canPrev, canNext, page, query, e);
+Albums.initializePage = (scope, canPrev, canNext, page, query) => {
+    document.onkeyup = (e) => Albums.navigate(scope, canPrev, canNext, page, query, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another
 // page based on keyboard input.
-Albums.navigate = (canPrev, canNext, page, query, e) => {
+Albums.navigate = (scope, canPrev, canNext, page, query, e) => {
     let activeType = document.activeElement.type;
 
     if (activeType == "text" || activeType == "textarea") {
@@ -20,11 +20,11 @@ Albums.navigate = (canPrev, canNext, page, query, e) => {
 
     // shift + space
     if (e.shiftKey && e.keyCode === 32 && position.top && canPrev) {
-        window.location.href = Route.albums(page - 1, query);
+        window.location.href = Route.albums(scope, page - 1, query);
 
     // space
     } else if (!modifiers && e.keyCode === 32 && position.bottom && canNext) {
-        window.location.href = Route.albums(page + 1, query);
+        window.location.href = Route.albums(scope, page + 1, query);
     }
 }
 

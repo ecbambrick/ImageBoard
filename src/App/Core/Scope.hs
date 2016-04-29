@@ -15,6 +15,10 @@ import Database.Engine       ( Entity(..), fromEntity )
 
 -------------------------------------------------------------------------- CRUD
 
+-- | The scope name for displaying all results.
+defaultName :: String
+defaultName = "all"
+
 -- | Deletes the scope with the given name.
 delete :: String -> App ()
 delete name = runDB $ DB.deleteScope name

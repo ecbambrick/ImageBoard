@@ -3,9 +3,10 @@
 
 module App.Web.Element where
 
+import qualified App.Web.Route   as Route
 import qualified Text.JavaScript as JS
 
-import App.Core.Types ( Album(..), Image(..) )
+import App.Core.Types ( Album(..), Image(..), Scope(..) )
 import Control.Monad  ( forM_ )
 import Data.DateTime  ( TimeZone(..), defaultFormatDate )
 import Data.Monoid    ( (<>), mempty )
@@ -16,9 +17,6 @@ import Lucid.Html5
 import Numeric        ( showFFloat )
 
 ------------------------------------------------------------------------- Types
-
--- | The type of post to search by.
-data SearchAction = AlbumSearch | ImageSearch
 
 -- | A UI icon.
 data Icon = LeftArrow | RightArrow | Grid | Pencil | Trash | Check | Cross
@@ -120,11 +118,11 @@ imageDetails Image {..} timeZone =
             toHtml ("uploaded " ++ defaultFormatDate timeZone imageCreated)
 
 -- | Returns an HTML form for filtering posts.
-searchBox :: SearchAction -> String -> Html ()
-searchBox action query =
+searchBox :: Text -> String -> Html ()
+searchBox actionURL query =
     form_
         [ id_ "search"
-        , action_ (renderAction action)
+        , action_ actionURL
         , method_ "get" ] $ do
             input_  [ id_ "search-text",   type_ "text", name_ "q", value_ (pack query) ]
             button_ [ id_ "search-action", type_ "submit", tabindex_ "-1" ] $
@@ -159,13 +157,13 @@ textBoxField label name id =
         span_ (toHtml label)
         input_ [id_ id, name_ name, type_ "text"]
 
-uploadForm :: Html ()
-uploadForm = do
+uploadForm :: Maybe Scope -> Html ()
+uploadForm scope = do
     h1_ "New File"
     form_
         [ id_ "upload"
         , name_ "upload"
-        , action_ "/upload"
+        , action_ (Route.upload scope)
         , method_ "post"
         , enctype_ "multipart/form-data" ] $ do
             textBoxField "Title" "title" "upload-title"
@@ -188,11 +186,6 @@ formatSize value
     | value <= 10^3 = "1kb"
     | value >= 10^6 = showFFloat (Just 1) (fromIntegral value / 1000000) "mb"
     | otherwise     = showFFloat (Just 0) (fromIntegral value / 1000)    "kb"
-
--- | Renders the given form action as a URL.
-renderAction :: SearchAction -> Text
-renderAction ImageSearch = "/images/"
-renderAction AlbumSearch = "/albums/"
 
 -- | Renders the given icon as a CSS class.
 renderIcon :: Icon -> Text
