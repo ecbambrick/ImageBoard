@@ -1,21 +1,20 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes       #-}
 
 module Main where
 
 import qualified App.Control         as Application
 import qualified App.Core.Everything as Everything
+import qualified App.Core.Scope      as Scope
 import qualified App.Import          as Import
-import qualified App.Path            as Path
 import qualified App.Web.Server      as Server
 import qualified System.Console.Args as CLI
 
+import App.Validation       ( isValid )
 import Control.Monad.Reader ( liftIO, when )
 import Data.Functor         ( (<$>) )
 import Data.Textual         ( toLower )
 
 main = CLI.cli "Image board." $ do
-
     let runApplication = CLI.run . Application.runApplication
         runServer      = CLI.run . Application.runServer
 
@@ -46,3 +45,16 @@ main = CLI.cli "Image board." $ do
 
             when continue $ do
                 Everything.delete
+
+    -- | Manage scopes.
+    CLI.command "scope" $ do
+
+        CLI.command "set" $ do
+            name       <- CLI.argument "name"
+            expression <- CLI.argument "expression"
+
+            runApplication $ do
+                result <- Scope.insertOrUpdate name expression
+
+                when (not (isValid result)) $ do
+                    liftIO $ print result
