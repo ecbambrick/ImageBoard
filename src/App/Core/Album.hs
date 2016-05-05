@@ -78,7 +78,7 @@ insert file title tagNames = do
         album      = Album title False now now fileSize pages tags
         results    = validate album
 
-    when (isValid results) $ do
+    when (isValid results) $! do
         id <- runDB $ do
             id <- DB.insertAlbum album
             DB.attachTags tags id

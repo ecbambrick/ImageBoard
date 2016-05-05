@@ -58,3 +58,9 @@ main = CLI.cli "Image board." $ do
 
                 when (not (isValid result)) $ do
                     liftIO $ print result
+
+        CLI.command "remove" $ do
+            name <- CLI.argument "name"
+
+            runApplication $ do
+                Scope.delete name
