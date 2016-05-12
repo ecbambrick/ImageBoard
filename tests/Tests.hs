@@ -3,7 +3,7 @@
 import qualified Data.Text    as Text
 import qualified Data.Text.IO as Text
 
-import App.Core.Types         ( Album(..), Image(..), Page(..), Tag(..) )
+import App.Core.Types         ( Album(..), Image(..), Page(..), Scope(..), Tag(..) )
 import App.Database
 import App.Expression         ( parse )
 import Control.Monad          ( when, replicateM )
@@ -32,6 +32,10 @@ main = runTestTT $ TestList
     , updateAlbumTest
     , selectAlbumsTest
     , selectAlbumsCountTest
+    , deleteScopeTest
+    , insertScopeTest
+    , selectScopeTest
+    , updateScopeTest
     , attachTagsTest
     , detachTagsTest
     , selectTagsTest
@@ -494,6 +498,68 @@ selectAlbumsCountTest = testDatabase $ do
         zero @=? 0
         two  @=? 2
         four @=? 4
+
+------------------------------------------------------------------- Scope Tests
+
+-- | Tests the deleteScope function.
+deleteScopeTest :: Test
+deleteScopeTest = testDatabase $ do
+    insertScope (Scope "n1" "e1")
+    insertScope (Scope "n2" "e2")
+    insertScope (Scope "n3" "e3")
+    deleteScope "n2"
+
+    result1 <- selectScope "n1"
+    result2 <- selectScope "n2"
+    result3 <- selectScope "n3"
+
+    lift $ do
+        Just (Entity 1 (Scope "n1" "e1")) @=? result1
+        Nothing                           @=? result2
+        Just (Entity 3 (Scope "n3" "e3")) @=? result3
+
+-- | Tests the insertScope function.
+insertScopeTest :: Test
+insertScopeTest = testDatabase $ do
+    insertScope (Scope "n1" "e1")
+    insertScope (Scope "n2" "e2")
+
+    (Just (Entity _ result1)) <- selectScope "n1"
+    (Just (Entity _ result2)) <- selectScope "n2"
+
+    lift $ do
+        Scope "n1" "e1" @=? result1
+        Scope "n2" "e2" @=? result2
+
+-- | Tests the updateScope function
+updateScopeTest :: Test
+updateScopeTest = testDatabase $ do
+    insertScope (Scope "n1" "e1")
+    insertScope (Scope "n2" "e2")
+    updateScope (Entity 1 (Scope "n3" "e3"))
+
+    result1 <- selectScope "n1"
+    result2 <- selectScope "n2"
+    result3 <- selectScope "n3"
+
+    lift $ do
+        Nothing                           @=? result1
+        Just (Entity 2 (Scope "n2" "e2")) @=? result2
+        Just (Entity 1 (Scope "n3" "e3")) @=? result3
+
+-- | Tests the selectScopeTest function.
+selectScopeTest :: Test
+selectScopeTest = testDatabase $ do
+    insertScope (Scope "n1" "e1")
+    insertScope (Scope "n2" "e2")
+    insertScope (Scope "n3" "e3")
+
+    result1 <- selectScope "n1"
+    result2 <- selectScope "n4"
+
+    lift $ do
+        Just (Entity 1 (Scope "n1" "e1")) @=? result1
+        Nothing                           @=? result2
 
 --------------------------------------------------------------------- Tag Tests
 
