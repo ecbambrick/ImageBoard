@@ -25,6 +25,7 @@ import Data.DateTime        ( getCurrentTime )
 import Data.List            ( (\\) )
 import Data.Maybe           ( isJust, fromJust )
 import Data.Monoid          ( (<>), mconcat )
+import Data.Textual         ( trim )
 import Database.Engine      ( Entity(..), ID, fromEntity )
 import System.Directory     ( copyFile, createDirectoryIfMissing, doesFileExist
                             , removeFile )
@@ -85,7 +86,7 @@ insert file title tagNames = do
 
     let isDuplicate = verify (not hashExists) (Error "hash" hash "duplicate hash")
         tags        = Tag.cleanTags tagNames
-        image       = Image title False hash ext w h now now size tags
+        image       = Image (trim title) False hash ext w h now now size tags
         results     = validate image <> isDuplicate
 
     when (isValid results) $ do

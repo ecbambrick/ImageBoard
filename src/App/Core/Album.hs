@@ -28,6 +28,7 @@ import Data.List            ( (\\), sortBy, find )
 import Data.Maybe           ( isJust, fromJust )
 import Data.Monoid          ( (<>), mconcat )
 import Data.Ord.Extended    ( comparingAlphaNum )
+import Data.Textual         ( trim )
 import Database.Engine      ( Entity(..), ID, fromEntity )
 import System.FilePath      ( takeBaseName, takeExtension )
 import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist
@@ -75,10 +76,10 @@ insert file title tagNames = do
         pages      = map (uncurry toPage) entryPairs
         fileSize   = sum $ map (fromIntegral . eUncompressedSize) entries
         tags       = Tag.cleanTags tagNames
-        album      = Album title False now now fileSize pages tags
+        album      = Album (trim title) False now now fileSize pages tags
         results    = validate album
 
-    when (isValid results) $! do
+    when (isValid results) $ do
         id <- runDB $ do
             id <- DB.insertAlbum album
             DB.attachTags tags id
