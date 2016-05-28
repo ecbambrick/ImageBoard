@@ -81,20 +81,21 @@ insert file title tagNames = do
     now         <- liftIO $ getCurrentTime
     size        <- liftIO $ fromIntegral <$> getSize fromPath
     hashExists  <- runDB  $ DB.selectHashExists hash
-    (w, h)      <- liftIO $ Graphics.getDimensions fromPath
     thumbSize   <- asks   $ configThumbnailSize
 
     let isDuplicate = verify (not hashExists) (Error "hash" hash "duplicate hash")
         tags        = Tag.cleanTags tagNames
-        image       = Image (trim title) False hash ext w h now now size tags
+        image       = Image (trim title) False hash ext 0 0 now now size tags
         results     = validate image <> isDuplicate
 
     when (isValid results) $ do
         toPath    <- Path.getImagePath image
         thumbPath <- Path.getImageThumbnailPath image
+        (w, h)    <- liftIO $ Graphics.getDimensions toPath
 
         runDB $ do
-            DB.insertImage image >>= DB.attachTags tags
+            let imageWithDimensions = image { imageWidth = w, imageHeight = h }
+            DB.insertImage imageWithDimensions >>= DB.attachTags tags
 
         liftIO $ do
             createDirectoryIfMissing True $ takeDirectory toPath
