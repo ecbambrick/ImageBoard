@@ -7,7 +7,7 @@ Image.del = (scope, id, query) => {
     if (window.confirm("Delete?")) {
         Request
             .del(Route.image(scope, id, ""))
-            .then(_ => window.location.href = Route.images(1, query))
+            .then(_ => window.location.href = Route.images(scope, 1, query))
             .catch(x => alert("Deletion failed: " + x));
     }
 

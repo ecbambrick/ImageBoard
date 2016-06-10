@@ -7,7 +7,7 @@ Album.del = (scope, id, query) => {
     if (window.confirm("Delete?")) {
         Request
             .del(Route.album(scope, id))
-            .then(_ => window.location.href = Route.albums(1, query))
+            .then(_ => window.location.href = Route.albums(scope, 1, query))
             .catch(x => alert("Deletion failed: " + x));
     }
 
