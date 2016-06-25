@@ -91,16 +91,17 @@ insert file title tagNames = do
     when (isValid results) $ do
         toPath    <- Path.getImagePath image
         thumbPath <- Path.getImageThumbnailPath image
-        (w, h)    <- liftIO $ Graphics.getDimensions toPath
-
-        runDB $ do
-            let imageWithDimensions = image { imageWidth = w, imageHeight = h }
-            DB.insertImage imageWithDimensions >>= DB.attachTags tags
 
         liftIO $ do
             createDirectoryIfMissing True $ takeDirectory toPath
             copyFile fromPath toPath
             Graphics.createThumbnail thumbSize toPath thumbPath
+
+        (w, h) <- liftIO $ Graphics.getDimensions toPath
+
+        runDB $ do
+            let imageWithDimensions = image { imageWidth = w, imageHeight = h }
+            DB.insertImage imageWithDimensions >>= DB.attachTags tags
 
     return results
 
