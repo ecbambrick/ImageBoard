@@ -48,8 +48,7 @@ executable imageboard
         Database.Query.SQLite,
         Graphics.FFmpeg,
         System.IO.Metadata,
-        Text.JavaScript,
-        Web.Spock.Extended
+        Text.JavaScript
 
     build-depends:
         base                    >= 4.8  && < 4.9,

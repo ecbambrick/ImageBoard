@@ -2,49 +2,54 @@
 
 module App.Web.Server where
 
-import qualified App.Core.Album as Album
-import qualified App.Core.Image as Image
-import qualified App.Core.Scope as Scope
-import qualified App.Path       as Path
-import qualified App.Web.Route  as Route
-import qualified App.Web.View   as View
+import qualified App.Core.Album                as Album
+import qualified App.Core.Image                as Image
+import qualified App.Core.Scope                as Scope
+import qualified App.Path                      as Path
+import qualified App.Web.Route                 as Route
+import qualified App.Web.View                  as View
+import qualified Network.HTTP.Types            as HTTP
+import qualified Network.Wai.Middleware.Static as Middleware
+import qualified Web.Spock                     as Spock
 
-import App.Config                    ( Config(..) )
-import App.Core.Types                ( Album(..), DeletionMode(..), Image(..), Scope(..) )
-import App.Expression                ( parse )
-import App.FileType                  ( FileType(..), getFileType )
-import App.Validation                ( Validation(..) )
-import Control.Applicative           ( (<$>), (<*>), pure )
-import Control.Monad.Reader          ( ReaderT, asks, liftIO, join )
-import Data.Maybe                    ( fromMaybe )
-import Data.Monoid                   ( (<>), mconcat )
-import Data.Textual                  ( display, intercalate, strip, splitOn )
-import Database.Engine               ( Entity(..), fromEntity )
-import Network.Wai.Middleware.Static ( addBase, hasPrefix, isNotAbsolute
-                                     , noDots, staticPolicy )
-import Web.Spock                     ( SpockT, delete, get, html, middleware
-                                     , text, post, redirect, renderRoute, root )
-import Web.Spock.Extended            ( getFile, optionalParam, notFound, serverError )
+import App.Config           ( Config(..) )
+import App.Core.Types       ( Album(..), DeletionMode(..), Image(..), Scope(..) )
+import App.Expression       ( parse )
+import App.FileType         ( FileType(..), getFileType )
+import App.Validation       ( Validation(..) )
+import Control.Applicative  ( (<$>), (<*>), pure )
+import Control.Monad.Reader ( ReaderT, asks, liftIO, join )
+import Control.Monad.Trans  ( MonadIO )
+import Data.HashMap.Strict  ( (!) )
+import Data.Maybe           ( fromMaybe )
+import Data.Monoid          ( (<>), mconcat )
+import Data.Text            ( Text, pack, unpack )
+import Data.Textual         ( display, intercalate, strip, splitOn )
+import Database.Engine      ( Entity(..), fromEntity )
+import Web.PathPieces       ( PathPiece )
+import Web.Spock            ( delete, get, html, post, redirect, root )
+
+---------------------------------------------------------------------- Handlers
 
 -- | The route handling for the web service.
-routes :: SpockT (ReaderT Config IO) ()
+routes :: Spock.SpockT (ReaderT Config IO) ()
 routes = do
     timeZone    <- asks configTimeZone
     storagePath <- asks configStoragePath
     pageSize    <- asks configPageSize
 
     -- Enables access to thumbnails and images in the storage path.
-    middleware $ staticPolicy $ mconcat
-        [ noDots
-        , isNotAbsolute
-        , hasPrefix Path.getDataPrefix
-        , addBase storagePath ]
+    Spock.middleware $ Middleware.staticPolicy $ mconcat
+        [ Middleware.noDots
+        , Middleware.isNotAbsolute
+        , Middleware.hasPrefix Path.getDataPrefix
+        , Middleware.addBase storagePath ]
 
     -- Enables access to other static content such as JavaScript and CSS files.
-    middleware $ staticPolicy $ mconcat
-        [ noDots
-        , isNotAbsolute
-        , hasPrefix Path.getStaticPrefix ]
+    Spock.middleware $ Middleware.staticPolicy $ mconcat
+        [ Middleware.noDots
+        , Middleware.isNotAbsolute
+        , Middleware.hasPrefix Path.getStaticPrefix ]
 
     -- Redirects to the images page.
     get root $ do
@@ -67,7 +72,7 @@ routes = do
                 redirect (Route.images scope 1 "")
 
             InvalidType _ -> do
-                serverError "invalid file type"
+                requestError "invalid file type"
 
     -- Renders the albums page with albums that match the query parameter.
     get Route.albumsRoute $ \scopeName -> do
@@ -219,3 +224,42 @@ routes = do
             (Nothing, _) -> return ()
             (_,   False) -> Image.delete MarkAsDeleted     id
             (_,    True) -> Image.delete PermanentlyDelete id
+
+----------------------------------------------------------------------- Utility
+
+-- Return a 404 status.
+notFound :: (MonadIO m) => Spock.ActionCtxT ctx m a
+notFound = do
+    Spock.setStatus HTTP.status404
+    Spock.html $ pack $ concat
+        [ "<html>"
+        , "<head><title>404 - File not found</title></head>"
+        , "<body><h1>404 - File not found</h1></body>"
+        , "</html>" ]
+
+-- Return a 400 status.
+requestError :: (MonadIO m) => Text -> Spock.ActionCtxT ctx m a
+requestError text = do
+    Spock.setStatus HTTP.status400
+    Spock.text text
+
+-- Return a 500 status.
+serverError :: (MonadIO m) => Text -> Spock.ActionCtxT ctx m a
+serverError text = do
+    Spock.setStatus HTTP.status500
+    Spock.text text
+
+-- | Get the uploaded file with the given input field name.
+getFile :: (MonadIO m) => Text -> Spock.ActionT m (String, String, String)
+getFile key = do
+    uploadedFile <- (! key) <$> Spock.files
+
+    let name        = unpack (Spock.uf_name uploadedFile)
+        contentType = unpack (Spock.uf_contentType uploadedFile)
+        location    = Spock.uf_tempLocation uploadedFile
+
+    return (name, contentType, location)
+
+-- | Returns a request param or a default value if one it could not be found.
+optionalParam :: (PathPiece p, MonadIO m) => Text -> p -> Spock.ActionT m p
+optionalParam name defaultValue = fromMaybe defaultValue <$> Spock.param name
