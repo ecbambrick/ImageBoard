@@ -3,20 +3,19 @@ let Images = {}
 
 // Initializes event handling for the images page.
 Images.initializePage = (scope, canPrev, canNext, page, query) => {
-    document.onkeyup = (e) => Images.navigate(scope, canPrev, canNext, page, query, e);
+    document.onkeydown = (e) => Images.navigate(scope, canPrev, canNext, page, query, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another
 // page based on keyboard input.
 Images.navigate = (scope, canPrev, canNext, page, query, e) => {
-    let activeType = document.activeElement.type;
-
-    if (activeType == "text" || activeType == "textarea") {
-        return;
-    }
-
     let position  = Images.getPagePosition();
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
+    let bodyIsActive = document.activeElement == document.body
+
+    if (!bodyIsActive) {
+        return;
+    }
 
     // shift + space
     if (e.shiftKey && e.keyCode === 32 && position.top && canPrev) {
@@ -35,7 +34,7 @@ Images.getPagePosition = () => {
     let pageHeight   = window.document.documentElement.scrollHeight;
 
     return {
-        top:    currentHight >= pageHeight,
-        bottom: currentHight <= window.innerHeight
+        top:    currentHight <= window.innerHeight,
+        bottom: currentHight >= pageHeight
     };
 }

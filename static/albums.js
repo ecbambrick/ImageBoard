@@ -3,20 +3,19 @@ let Albums = {}
 
 // Initializes event handling for the albums page.
 Albums.initializePage = (scope, canPrev, canNext, page, query) => {
-    document.onkeyup = (e) => Albums.navigate(scope, canPrev, canNext, page, query, e);
+    document.onkeydown = (e) => Albums.navigate(scope, canPrev, canNext, page, query, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another
 // page based on keyboard input.
 Albums.navigate = (scope, canPrev, canNext, page, query, e) => {
-    let activeType = document.activeElement.type;
-
-    if (activeType == "text" || activeType == "textarea") {
-        return;
-    }
-
     let position  = Albums.getPagePosition();
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
+    let bodyIsActive = document.activeElement == document.body
+
+    if (!bodyIsActive) {
+        return;
+    }
 
     // shift + space
     if (e.shiftKey && e.keyCode === 32 && position.top && canPrev) {

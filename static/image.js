@@ -31,24 +31,23 @@ Image.initializePage = (scope, previousId, currentId, nextId, query) => {
     editCancel.onclick   = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editShow.onclick     = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editSubmit.onclick   = ()  => { editForm.submit(); return false; }
-    document.onkeyup     = (e) => Image.navigate(scope, previousId, nextId, query, editScreen, e);
+    document.onkeydown   = (e) => Image.navigate(scope, previousId, nextId, query, editScreen, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another
 // page based on keyboard input.
 Image.navigate = (scope, previousID, nextID, query, editScreen, e) => {
-    let activeType = document.activeElement.type;
-
-    if (activeType == "text" || activeType == "textarea") {
-        return;
-    }
-
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
     let editting  = editScreen != null && editScreen.style.display !== "";
+    let bodyIsActive = document.activeElement == document.body
 
     // escape
     if (editting && !modifiers && e.keyCode === 27) {
         document.getElementById("edit-cancel").click();
+        document.activeElement.blur();
+
+    } else if (!bodyIsActive || editting) {
+        return;
 
     // shift + space
     } else if (e.shiftKey && e.keyCode === 32) {
@@ -66,8 +65,8 @@ Image.navigate = (scope, previousID, nextID, query, editScreen, e) => {
     } else if (!modifiers && e.keyCode === 69) {
         document.getElementById("edit-show").click();
 
-    // l
-    } else if (!modifiers && e.keyCode === 76) {
+    // q
+    } else if (!modifiers && e.keyCode === 81) {
         window.location.href = Route.images(scope, 1, query);
     }
 }
