@@ -34,7 +34,7 @@ Images.getPagePosition = () => {
     let pageHeight   = window.document.documentElement.scrollHeight;
 
     return {
-        top:    currentHight <= window.innerHeight,
-        bottom: currentHight >= pageHeight
+        top:    currentHight >= pageHeight,
+        bottom: currentHight <= window.innerHeight
     };
 }
