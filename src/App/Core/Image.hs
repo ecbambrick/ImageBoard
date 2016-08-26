@@ -6,17 +6,17 @@ module App.Core.Image
     ( count, delete, insert, query, querySingle, queryTriple, update ) where
 
 import qualified App.Database    as DB
-import qualified Graphics.FFmpeg as Graphics
-import qualified App.Path        as Path
 import qualified App.Core.Tag    as Tag
+import qualified App.Path        as Path
+import qualified App.Validation  as Validation
+import qualified Graphics.FFmpeg as Graphics
 
 import App.Config           ( Config(..) )
 import App.Control          ( runDB )
 import App.Core.Types       ( DeletionMode(..), Tag(..), Image(..), App )
 import App.Expression       ( Expression )
 import App.FileType         ( ImageFile, File(..) )
-import App.Validation       ( Error(..), Property(..), Validation, isPositive
-                            , isValid, verify )
+import App.Validation       ( Error(..), Validation )
 import Control.Applicative  ( (<$>), (<*>) )
 import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
@@ -83,12 +83,12 @@ insert file title tagNames = do
     hashExists  <- runDB  $ DB.selectHashExists hash
     thumbSize   <- asks   $ configThumbnailSize
 
-    let isDuplicate = verify (not hashExists) (Error "hash" hash "duplicate hash")
-        tags        = Tag.cleanTags tagNames
+    let tags        = Tag.cleanTags tagNames
         image       = Image (trim title) False hash ext 0 0 now now size tags
+        isDuplicate = Validation.verify (not hashExists) (DuplicateHash hash)
         results     = validate image <> isDuplicate
 
-    when (isValid results) $ do
+    when (Validation.isValid results) $ do
         toPath    <- Path.getImagePath image
         thumbPath <- Path.getImageThumbnailPath image
 
@@ -132,25 +132,28 @@ update (Entity id image) = do
     now      <- liftIO $ getCurrentTime
     previous <- runDB  $ DB.selectImage id
 
-    let isFound = verify (isJust previous) (Error "id" (show id) "ID not found")
-        results = validate image <> isFound
+    let isFound    = Validation.verify (isJust previous) (IDNotFound id)
+        cleanImage = image { imageTagNames = Tag.cleanTags (imageTagNames image) }
+        results    = validate cleanImage <> isFound
 
-    when (isValid results) $ runDB $ do
-        let newTags = Tag.cleanTags $ imageTagNames image
-            oldTags = imageTagNames . fromEntity . fromJust $ previous
+    when (Validation.isValid results) $
+        runDB $ do
+            let newTags = imageTagNames $ cleanImage
+                oldTags = imageTagNames $ fromEntity $ fromJust previous
 
-        DB.updateImage (Entity id image { imageModified = now })
-        DB.detachTags (oldTags \\ newTags) id
-        DB.attachTags (newTags \\ oldTags) id
-        DB.cleanTags
+            DB.updateImage (Entity id image { imageModified = now })
+            DB.detachTags (oldTags \\ newTags) id
+            DB.attachTags (newTags \\ oldTags) id
+            DB.cleanTags
 
     return results
 
 ----------------------------------------------------------------------- Utility
 
 -- | Returns valid if all fields of the given image are valid; otherwise
--- | invalid. Any validation that requires access to the database is ignored.
+-- | invalid.
 validate :: Image -> Validation
-validate Image {..} = mconcat
-    [ isPositive (Property "size" imageFileSize)
-    , mconcat    (Tag.validate . Tag <$> imageTagNames) ]
+validate Image {..} =
+    Validation.validate
+        [ Tag.validateMany $ map Tag imageTagNames
+        , Validation.verify (imageFileSize > 0) (InvalidFileSize imageFileSize) ]

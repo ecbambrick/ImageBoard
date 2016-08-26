@@ -3,13 +3,15 @@
 
 module App.Core.Scope ( defaultName, delete, insertOrUpdate, querySingle ) where
 
-import qualified App.Database as DB
-import qualified App.Path     as Path
+import qualified App.Database   as DB
+import qualified App.Path       as Path
+import qualified App.Validation as Validation
 
 import App.Control           ( runDB )
 import App.Core.Types        ( Scope(..), App )
-import App.Validation        ( Error(..), Validation, isValid, verify )
+import App.Validation        ( Error(..), Validation )
 import Control.Monad         ( void, when )
+import Data.Char             ( isAlphaNum )
 import Data.Functor.Extended ( (<$$>) )
 import Database.Engine       ( Entity(..), fromEntity )
 
@@ -30,7 +32,7 @@ insertOrUpdate name expression = runDB $ do
     let scope   = Scope name expression
         results = validate scope
 
-    when (isValid results) $ do
+    when (Validation.isValid results) $ do
         existingScope <- DB.selectScope name
 
         case existingScope of
@@ -41,15 +43,22 @@ insertOrUpdate name expression = runDB $ do
 
 -- | Returns the scope with the given name.
 querySingle :: String -> App (Maybe Scope)
-querySingle "all" = return (Just (Scope "all" ""))
-querySingle name  = fromEntity <$$> runDB (DB.selectScope name)
+querySingle name =
+    if name == defaultName
+        then return (Just (Scope defaultName ""))
+        else fromEntity <$$> runDB (DB.selectScope name)
 
 ----------------------------------------------------------------------- Utility
 
 -- | Returns valid if the given scope is valid; otherwise invalid.
 validate :: Scope -> Validation
-validate (Scope name _) =
-    let nameError    = Error "name" name "Invalid name"
-        invalidNames = [ defaultName, Path.getDataPrefix, Path.getStaticPrefix]
+validate (Scope name expr) =
+    let invalidNames  = [ defaultName
+                        , Path.getDataPrefix
+                        , Path.getStaticPrefix ]
 
-    in verify (name `notElem` invalidNames) nameError
+    in Validation.validate
+        [ Validation.verify (length name > 0) (InvalidScopeName name)
+        , Validation.verify (name `notElem` invalidNames) (InvalidScopeName name)
+        , Validation.verify (all isAlphaNum name) (InvalidScopeName name)
+        , Validation.verify (length expr > 0) (InvalidScopeExpression expr) ]

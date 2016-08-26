@@ -139,7 +139,7 @@ routes = do
 
                 case results of
                     Valid     -> redirect (Route.album scope id)
-                    Invalid e -> serverError (display e)
+                    Invalid _ -> serverError (display results)
 
     -- Delets the album with the given id.
     delete Route.albumRoute $ \scopeName id -> do
@@ -213,7 +213,7 @@ routes = do
 
                 case results of
                     Valid     -> redirect (Route.image scope id "")
-                    Invalid e -> serverError (display e)
+                    Invalid _ -> serverError (display results)
 
     -- Delets the image with the given id.
     delete Route.imageRoute $ \scopeName id -> do

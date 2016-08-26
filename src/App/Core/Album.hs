@@ -5,18 +5,19 @@
 module App.Core.Album
     ( count, delete, getPage, insert, query, querySingle, update ) where
 
-import qualified Data.ByteString as ByteString
-import qualified App.Database    as DB
-import qualified Graphics.FFmpeg as Graphics
-import qualified App.Path        as Path
 import qualified App.Core.Tag    as Tag
+import qualified App.Database    as DB
+import qualified App.Path        as Path
+import qualified App.Validation  as Validation
+import qualified Data.ByteString as ByteString
+import qualified Graphics.FFmpeg as Graphics
 
 import App.Config           ( Config(..) )
 import App.Control          ( runDB )
 import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), Tag(..), App )
 import App.Expression       ( Expression )
 import App.FileType         ( ArchiveFile, File(..) )
-import App.Validation       ( Error(..), Validation(..), isValid, verify )
+import App.Validation       ( Error(..), Validation )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
 import Control.Applicative  ( (<$>) )
 import Control.Monad        ( when )
@@ -47,15 +48,15 @@ count = runDB . DB.selectAlbumsCount
 delete :: DeletionMode -> ID -> App ()
 delete MarkAsDeleted id = runDB (DB.markPostAsDeleted id)
 delete PermanentlyDelete id = do
-    path       <- Path.getAlbumPath id
-    pathExists <- liftIO $ doesDirectoryExist path
+    path <- Path.getAlbumPath id
+
+    liftIO $ do
+        pathExists <- doesDirectoryExist path
+        when pathExists (removeDirectoryRecursive path)
 
     runDB $ do
         DB.deletePost id
         DB.cleanTags
-
-    liftIO $ do
-        when pathExists (removeDirectoryRecursive path)
 
 -- | Returns the page with the given number from the given album.
 getPage :: Album -> Int -> Maybe Page
@@ -79,7 +80,7 @@ insert file title tagNames = do
         album      = Album (trim title) False now now fileSize pages tags
         results    = validate album
 
-    when (isValid results) $ do
+    when (Validation.isValid results) $ do
         id <- runDB $ do
             id <- DB.insertAlbum album
             DB.attachTags tags id
@@ -113,29 +114,32 @@ querySingle = runDB . DB.selectAlbum
 -- | successful; otherwise, invalid.
 update :: Entity Album -> App Validation
 update (Entity id album) = do
-    now      <- liftIO $ getCurrentTime
-    previous <- runDB  $ DB.selectAlbum id
+    now <- liftIO $ getCurrentTime
 
-    let isFound = verify (isJust previous) (Error "id" (show id) "ID not found")
-        results = validate album <> isFound
+    runDB $ do
+        previous <- DB.selectAlbum id
 
-    when (isValid results) $ runDB $ do
-        let newTags = Tag.cleanTags $ albumTagNames album
-            oldTags = albumTagNames . fromEntity . fromJust $ previous
+        let isFound    = Validation.verify (isJust previous) (IDNotFound id)
+            cleanAlbum = album { albumTagNames = Tag.cleanTags (albumTagNames album) }
+            results    = validate album <> isFound
 
-        DB.updateAlbum (Entity id album { albumModified = now })
-        DB.detachTags (oldTags \\ newTags) id
-        DB.attachTags (newTags \\ oldTags) id
-        DB.cleanTags
+        when (Validation.isValid results) $ do
+            let newTags = albumTagNames $ album
+                oldTags = albumTagNames $ fromEntity $ fromJust previous
 
-    return results
+            DB.updateAlbum (Entity id album { albumModified = now })
+            DB.detachTags (oldTags \\ newTags) id
+            DB.attachTags (newTags \\ oldTags) id
+            DB.cleanTags
+
+        return results
 
 ----------------------------------------------------------------------- Utility
 
 -- | Returns valid if all fields of the given album are valid; otherwise
--- | invalid. Any validation that requires access to the database is ignored.
+-- | invalid.
 validate :: Album -> Validation
-validate Album {..} = mconcat (Tag.validate . Tag <$> albumTagNames)
+validate Album {..} = Tag.validateMany $ map Tag albumTagNames
 
 -- | Extracts the given zip file entry.
 extractFile :: ID -> (Entry, Int) -> App ()
@@ -155,4 +159,4 @@ extractFile id (entry, index) = do
 toPage :: Entry -> Int -> Page
 toPage Entry {..} index = Page title index ext
     where title = takeBaseName eRelativePath
-          ext   = tail (takeExtension eRelativePath)
+          ext   = drop 1 (takeExtension eRelativePath)
