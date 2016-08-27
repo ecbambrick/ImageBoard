@@ -16,7 +16,7 @@ import App.Config           ( Config(..) )
 import App.Core.Types       ( Album(..), DeletionMode(..), Image(..), Scope(..) )
 import App.Expression       ( parse )
 import App.FileType         ( FileType(..), getFileType )
-import App.Validation       ( Validation(..) )
+import App.Validation       ( Error(..), Validation(..) )
 import Control.Applicative  ( (<$>), (<*>), pure )
 import Control.Monad.Reader ( ReaderT, asks, liftIO, join )
 import Control.Monad.Trans  ( MonadIO )
@@ -58,21 +58,23 @@ routes = do
     -- Upload an image or album.
     post Route.uploadRoute $ \scopeName -> do
         scope           <- Scope.querySingle scopeName
-        (name, _, path) <- getFile "uploadedFile"
+        (name, m, path) <- getFile "uploadedFile"
         title           <- optionalParam "title" ""
         tags            <- splitOn "," <$> optionalParam "tags" ""
 
-        case getFileType path name of
-            ArchiveType file -> do
-                Album.insert file title tags
-                redirect (Route.albums scope 1 "")
+        let fileType = getFileType path name
 
-            ImageType file -> do
-                Image.insert file title tags
-                redirect (Route.images scope 1 "")
+        result <- case fileType of
+            ArchiveType file -> Album.insert file title tags
+            ImageType   file -> Image.insert file title tags
+            InvalidType ext  -> return (Invalid [InvalidFileType ext])
 
-            InvalidType _ -> do
-                requestError "invalid file type"
+        liftIO $ print m
+
+        case (fileType, result) of
+            (_,     Invalid _) -> requestError (display result)
+            (ArchiveType _, _) -> redirect (Route.albums scope 1 "")
+            (ImageType _,   _) -> redirect (Route.images scope 1 "")
 
     -- Renders the albums page with albums that match the query parameter.
     get Route.albumsRoute $ \scopeName -> do
