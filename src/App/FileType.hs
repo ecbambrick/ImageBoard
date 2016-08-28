@@ -1,5 +1,6 @@
 module App.FileType
-    ( FileType(..), File(..), ImageFile, ArchiveFile, getFileType ) where
+    ( FileType(..), File(..), ImageFile, ArchiveFile, getFileType
+    , validImageTypes ) where
 
 import System.FilePath ( takeExtension )
 import Data.Textual    ( toLower )

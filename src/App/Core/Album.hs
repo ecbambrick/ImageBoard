@@ -7,6 +7,7 @@ module App.Core.Album
 
 import qualified App.Core.Tag    as Tag
 import qualified App.Database    as DB
+import qualified App.FileType    as FileType
 import qualified App.Path        as Path
 import qualified App.Validation  as Validation
 import qualified Data.ByteString as ByteString
@@ -31,7 +32,7 @@ import Data.Monoid          ( (<>), mconcat )
 import Data.Ord.Extended    ( comparingAlphaNum )
 import Data.Textual         ( trim )
 import Database.Engine      ( Entity(..), ID, fromEntity )
-import System.FilePath      ( takeBaseName, takeExtension )
+import System.FilePath      ( dropExtension, takeBaseName, takeExtension )
 import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist
                             , removeDirectoryRecursive )
 import System.IO            ( IOMode(..), hClose, openFile, withFile )
@@ -74,7 +75,7 @@ insert file title tagNames = do
     let entries    = sortBy (comparingAlphaNum eRelativePath) (zEntries archive)
         anyEntries = not (null entries)
         entryPairs = zip entries [1..]
-        pages      = map (uncurry toPage) entryPairs
+        pages      = filter isImage $ map (uncurry toPage) entryPairs
         fileSize   = sum $ map (fromIntegral . eUncompressedSize) entries
         tags       = Tag.cleanTags tagNames
         album      = Album (trim title) False now now fileSize pages tags
@@ -157,6 +158,10 @@ extractFile id (entry, index) = do
 
 -- | Creates a new page from the given zip file entry and index.
 toPage :: Entry -> Int -> Page
-toPage Entry {..} index = Page title index ext
-    where title = takeBaseName eRelativePath
+toPage Entry {..} index = Page index title ext
+    where title = dropExtension eRelativePath
           ext   = drop 1 (takeExtension eRelativePath)
+
+-- | Returns whether or not the given page is for an image.
+isImage :: Page -> Bool
+isImage (Page _ _ ext) = elem ext FileType.validImageTypes

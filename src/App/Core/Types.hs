@@ -45,8 +45,8 @@ data Image = Image
 
 -- | A page contains the meta data of a single image file within an album.
 data Page = Page
-    { pageTitle     :: String
-    , pageNumber    :: Int
+    { pageNumber    :: Int
+    , pageTitle     :: String
     , pageExtension :: String
     } deriving (Eq, Show)
 

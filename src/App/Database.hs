@@ -327,7 +327,7 @@ selectPagesByAlbum postID = SQL.query $ do
     a <- from "album"
     p <- from "page" `on` ("album_id" *= a "id")
     wherever (a "post_id" .= postID)
-    retrieve [ p "id", p "title", p "number", p "extension" ]
+    retrieve [ p "id", p "number", p "title", p "extension" ]
     asc (p "number")
 
 ------------------------------------------------------------------------ Scopes

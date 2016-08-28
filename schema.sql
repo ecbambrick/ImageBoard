@@ -40,8 +40,8 @@ DROP TABLE IF EXISTS page;
 CREATE TABLE page (
     id          INTEGER     PRIMARY KEY AUTOINCREMENT,
     album_id    INTEGER     NOT NULL,
-    title       TEXT        NOT NULL,
     number      INTEGER     NOT NULL,
+    title       TEXT        NOT NULL,
     extension   TEXT        NOT NULL,
 
     FOREIGN KEY (album_id) REFERENCES album (id)
