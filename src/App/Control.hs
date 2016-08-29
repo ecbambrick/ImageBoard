@@ -40,7 +40,6 @@ runApplication application = do
     config <- loadConfig
 
     flip runReaderT config $ do
-        Path.assertDataPath
         Everything.initialize
         application
 
@@ -50,7 +49,6 @@ runServer routes = do
     config <- loadConfig
 
     runSpock (configPort config) $ spockT (flip runReaderT config) $ do
-        Path.assertDataPath
         Everything.initialize
         routes
 

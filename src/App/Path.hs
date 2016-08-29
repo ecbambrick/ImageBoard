@@ -5,7 +5,6 @@ module App.Path where
 
 import App.Config           ( Config(..) )
 import App.Core.Types       ( Album(..), Image(..), Page(..) )
-import Control.Exception    ( ErrorCall(..), throwIO )
 import Control.Monad.Reader ( MonadIO, MonadReader, asks, liftIO, unless )
 import Data.Textual         ( replace )
 import Database.Engine      ( Entity(..), ID )
@@ -13,15 +12,6 @@ import System.Directory     ( doesDirectoryExist )
 import System.FilePath      ( (</>), (<.>), isValid )
 
 ------------------------------------------------------------------- Application
-
--- | Assert that the data path is valid.
-assertDataPath :: (MonadIO m, MonadReader Config m) => m ()
-assertDataPath = do
-    storagePath     <- asks configStoragePath
-    directoryExists <- liftIO $ doesDirectoryExist storagePath
-
-    unless (directoryExists && isValid storagePath) $ do
-        liftIO $ throwIO $ ErrorCall "Invalid data path. Please verify in app.cfg"
 
 -- | Returns the URL prefix for requesting data files.
 getDataPrefix :: String
@@ -35,7 +25,7 @@ getStaticPrefix = "static"
 getDataPath :: (MonadReader Config m) => m FilePath
 getDataPath = do
     storagePath <- asks configStoragePath
-    return (storagePath </> "data")
+    return (storagePath </> getDataPrefix)
 
 ------------------------------------------------------------------------ Images
 
@@ -61,13 +51,15 @@ getImageThumbnailURL image = toURL (getRelativeImageThumbnailPath image)
 
 -- | Returns the relative file path of the thumbnail for the given image.
 getRelativeImageThumbnailPath :: Image -> FilePath
-getRelativeImageThumbnailPath image = "data/thumb" </> take 2 hash </> hash <.> "jpg"
-    where hash = imageHash image
+getRelativeImageThumbnailPath image = base </> take 2 hash </> hash <.> "jpg"
+    where base = getDataPrefix </> "thumb"
+          hash = imageHash image
 
 -- | Returns the relative file path of the given image.
 getRelativeImagePath :: Image -> FilePath
-getRelativeImagePath image = "data/image" </> take 2 hash </> hash <.> ext
-    where hash = imageHash image
+getRelativeImagePath image = base </> take 2 hash </> hash <.> ext
+    where base = getDataPrefix </> "image"
+          hash = imageHash image
           ext  = imageExtension image
 
 ------------------------------------------------------------------------ Albums
@@ -94,7 +86,8 @@ getAlbumThumbnailURL (Entity id _) = toURL (getRelativeAlbumPath id </> "thumbna
 
 -- | Returns the relative file path of the given album.
 getRelativeAlbumPath :: ID -> FilePath
-getRelativeAlbumPath id = "data/album" </> show (id `mod` 100) </> show id
+getRelativeAlbumPath id = base </> show (id `mod` 100) </> show id
+    where base = getDataPrefix </> "album"
 
 ------------------------------------------------------------------------- Pages
 

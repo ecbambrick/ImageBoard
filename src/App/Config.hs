@@ -2,9 +2,13 @@
 
 module App.Config where
 
+import qualified Data.Configurator as Configurator
+import qualified Data.DateTime     as DateTime
+
 import Control.Applicative  ( (<$>), (<*>) )
-import Data.Configurator    ( Worth(..), load, lookupDefault, require )
-import Data.DateTime        ( TimeZone, getCurrentTimeZone )
+import Data.Configurator    ( Worth(..) )
+import Data.DateTime        ( TimeZone )
+import System.FilePath      ( (</>) )
 
 -- | Application settings.
 data Config = Config
@@ -18,10 +22,13 @@ data Config = Config
 -- | Returns the application's settings loaded from the config file.
 loadConfig :: IO Config
 loadConfig = do
-    config <- load [Required "app.cfg"]
-    Config <$> lookupDefault 8000 config "port"
-           <*> require            config "database"
-           <*> require            config "storage_path"
-           <*> require            config "page_size"
-           <*> require            config "thumbnail_size"
-           <*> getCurrentTimeZone
+    config      <- Configurator.load [Required "app.cfg"]
+    storagePath <- Configurator.require config "storage_path"
+    port        <- Configurator.lookupDefault 8000 config "port"
+    pageSize    <- Configurator.lookupDefault 50   config "page_size"
+    thumbSize   <- Configurator.lookupDefault 512  config "thumbnail_size"
+    timeZone    <- DateTime.getCurrentTimeZone
+
+    let database = storagePath </> "data" </> "database.sqlite3"
+
+    return (Config port database storagePath pageSize thumbSize timeZone)
