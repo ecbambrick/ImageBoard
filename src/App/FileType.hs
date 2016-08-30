@@ -1,6 +1,6 @@
 module App.FileType
     ( FileType(..), File(..), ImageFile, ArchiveFile, getFileType
-    , validImageTypes ) where
+    , validArchiveTypes, validImageTypes, validTypes ) where
 
 import System.FilePath ( takeExtension )
 import Data.Textual    ( toLower )
@@ -34,6 +34,9 @@ validImageTypes = [ "bmp", "gif", "jpg", "jpeg", "png", "webm" ]
 
 -- | The list of valid archive file types.
 validArchiveTypes = [ "cbz", "zip" ]
+
+-- | The list of all valid file types.
+validTypes = validImageTypes ++ validArchiveTypes
 
 -- | Gets the file type from the given path.
 getFileType :: FilePath -> String -> FileType

@@ -24,10 +24,11 @@ main = CLI.cli "Image board." $ do
 
     -- Import all relevant files from the given directory.
     CLI.command "import" $ do
-        path <- CLI.argument "path"
+        path      <- CLI.argument "path"
+        moveFiles <- CLI.option ('m', "move") "Moves files to the given directory after being imported."
 
         runApplication $ do
-            Import.fromDirectory path
+            Import.fromDirectory path moveFiles
 
     -- Delete all data from the database.
     CLI.command "delete-all-data" $ do
