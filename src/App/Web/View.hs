@@ -39,7 +39,7 @@ albumView scope query timeZone (Entity id album @ Album{..}) = render $ do
                     Elem.action Elem.Pencil "edit-show"
                     Elem.action Elem.Trash  "delete"
             Elem.albumDetails album timeZone
-            Elem.tags (albumTagNames)
+            Elem.albumTags scope albumTagNames
         Elem.gallery $
             flip map albumPages $ \page @ Page {..} ->
                 ( Route.page scope id pageNumber
@@ -102,7 +102,7 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
                     Elem.action Elem.Pencil "edit-show"
                     Elem.action Elem.Trash  "delete"
             Elem.imageDetails image timeZone
-            Elem.tags (imageTagNames image)
+            Elem.imageTags scope (imageTagNames image)
         if isVideo image
             then Elem.video source
             else Elem.image source

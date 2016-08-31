@@ -137,11 +137,19 @@ sidePanel = aside_ . div_ [class_ "panel"]
 spacer :: Html ()
 spacer = div_ [class_ "spacer"] mempty
 
--- | Returns an HTML element containing the given list of tag names.
-tags :: [String] -> Html ()
-tags tagNames =
-    let toElement = span_ [class_ "tag"] . toHtml
-    in div_ [id_ "tags"] (forM_ tagNames toElement)
+-- | Returns an HTML element containing the given list of album tag names.
+albumTags :: Maybe Scope -> [String] -> Html ()
+albumTags scope tagNames =
+    div_ [id_ "tags"] $ do
+        forM_ tagNames $ \name ->
+            a_ [class_ "tag", href_ (Route.albums scope 1 name)] (toHtml name)
+
+-- | Returns an HTML element containing the given list of image tag names.
+imageTags :: Maybe Scope -> [String] -> Html ()
+imageTags scope tagNames =
+    div_ [id_ "tags"] $ do
+        forM_ tagNames $ \name ->
+            a_ [class_ "tag", href_ (Route.images scope 1 name)] (toHtml name)
 
 -- | Returns an HTML element for modifying a post property using a text box.
 textAreaField :: Text -> Text -> Text -> Html ()

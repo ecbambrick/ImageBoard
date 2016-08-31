@@ -185,7 +185,7 @@ nav {
     flex-direction: column;
 }
 
-span.tag {
+a.tag {
     display: inline-block;
     margin-bottom: 10px;
     margin-right: 10px;
@@ -194,6 +194,11 @@ span.tag {
     white-space: pre-wrap;
     word-break: break-word;
     word-wrap: break-word;
+}
+
+a.tag:hover {
+    background-color: #333;
+    color: inherit;
 }
 
 /* --------------------------------------------------------------------- Text */
