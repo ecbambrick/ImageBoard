@@ -135,7 +135,8 @@ insertImage Image {..} = do
         , "width"        << imageWidth
         , "height"       << imageHeight
         , "file_size"    << imageFileSize
-        , "extension"    << imageExtension ]
+        , "extension"    << imageExtension
+        , "is_animated"  << fromBool False ]
 
     return postID
 

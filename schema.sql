@@ -13,10 +13,11 @@ CREATE TABLE image (
     id          INTEGER     PRIMARY KEY AUTOINCREMENT,
     post_id     INTEGER     NOT NULL,
     hash        TEXT        NOT NULL,
-    width       INTEGER     NOT NULL,
-    height      INTEGER     NOT NULL,
     file_size   INTEGER     NOT NULL,
     extension   TEXT        NOT NULL,
+    width       INTEGER     NOT NULL,
+    height      INTEGER     NOT NULL,
+    is_animated INTEGER     NOT NULL,
 
     FOREIGN KEY (post_id) REFERENCES post (id)
         ON UPDATE CASCADE
