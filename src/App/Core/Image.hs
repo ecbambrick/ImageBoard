@@ -15,7 +15,6 @@ import App.Config           ( Config(..) )
 import App.Control          ( runDB )
 import App.Core.Types       ( DeletionMode(..), Tag(..), Image(..), App )
 import App.Expression       ( Expression )
-import App.FileType         ( ImageFile, File(..) )
 import App.Validation       ( Error(..), Validation )
 import Control.Applicative  ( (<$>), (<*>) )
 import Control.Monad        ( when )
@@ -69,14 +68,11 @@ delete PermanentlyDelete id = do
                 when imageExists (removeFile imagePath)
                 when thumbExists (removeFile thumbPath)
 
--- | Inserts a new image into the database/filesystem based on the given file,
--- | title and tags. Returns valid if the insertion was sucessful; otherwise
--- | invalid.
-insert :: ImageFile -> String -> [String] -> App Validation
-insert file title tagNames = do
-    let fromPath = getPath file
-        ext      = getExtension file
-
+-- | Inserts a new image into the database/filesystem based on the given file
+-- | path, extension, title and tags. Returns valid if the insertion was
+-- | sucessful; otherwise invalid.
+insert :: FilePath -> String -> String -> [String] -> App Validation
+insert fromPath ext title tagNames = do
     hash        <- liftIO $ getHash fromPath
     now         <- liftIO $ getCurrentTime
     size        <- liftIO $ fromIntegral <$> getSize fromPath

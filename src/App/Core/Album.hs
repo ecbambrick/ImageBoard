@@ -5,23 +5,22 @@
 module App.Core.Album
     ( count, delete, getPage, insert, query, querySingle, update ) where
 
-import qualified App.Core.Tag    as Tag
-import qualified App.Database    as DB
-import qualified App.FileType    as FileType
-import qualified App.Path        as Path
-import qualified App.Validation  as Validation
-import qualified Data.ByteString as ByteString
-import qualified Graphics.FFmpeg as Graphics
+import qualified App.Core.Tag       as Tag
+import qualified App.Database       as DB
+import qualified App.Path           as Path
+import qualified App.Validation     as Validation
+import qualified Data.ByteString    as ByteString
+import qualified Graphics.FFmpeg    as Graphics
+import qualified System.IO.Metadata as Metadata
 
 import App.Config           ( Config(..) )
 import App.Control          ( runDB )
 import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), Tag(..), App )
 import App.Expression       ( Expression )
-import App.FileType         ( ArchiveFile, File(..) )
 import App.Validation       ( Error(..), Validation )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
 import Control.Applicative  ( (<$>) )
-import Control.Monad        ( when )
+import Control.Monad        ( unless, when )
 import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
 import Data.ByteString.Lazy ( hGetContents, hPut )
@@ -63,19 +62,18 @@ delete PermanentlyDelete id = do
 getPage :: Album -> Int -> Maybe Page
 getPage Album {..} number = find (\x -> number == pageNumber x) albumPages
 
--- | Inserts a new album into the database/filesystem based on the given file,
--- | title and tags. Returns valid if the insertion was sucessful; otherwise
--- | invalid.
-insert :: ArchiveFile -> String -> [String] -> App Validation
-insert file title tagNames = do
-    file    <- liftIO $ openFile (getPath file) ReadMode
+-- | Inserts a new album into the database/filesystem based on the given file
+-- | path, title and tags. Returns valid if the insertion was sucessful;
+-- | otherwise, invalid.
+insert :: FilePath -> String -> [String] -> App Validation
+insert path title tagNames = do
+    file    <- liftIO $ openFile path ReadMode
     archive <- liftIO $ toArchive <$> hGetContents file
     now     <- liftIO $ getCurrentTime
 
-    let entries    = sortBy (comparingAlphaNum eRelativePath) (zEntries archive)
-        anyEntries = not (null entries)
+    let entries    = getImages archive
         entryPairs = zip entries [1..]
-        pages      = filter isImage $ map (uncurry toPage) entryPairs
+        pages      = map (uncurry toPage) entryPairs
         fileSize   = sum $ map (fromIntegral . eUncompressedSize) entries
         tags       = Tag.cleanTags tagNames
         album      = Album (trim title) False now now fileSize pages tags
@@ -87,7 +85,7 @@ insert file title tagNames = do
             DB.attachTags tags id
             return id
 
-        when anyEntries $ do
+        unless (null entries) $ do
             basePath  <- Path.getAlbumPath id
             firstPath <- Path.getPagePath id (toPage (head entries) 1)
             thumbPath <- Path.getAlbumThumbnailPath id
@@ -162,6 +160,13 @@ toPage Entry {..} index = Page index title ext
     where title = dropExtension eRelativePath
           ext   = drop 1 (takeExtension eRelativePath)
 
--- | Returns whether or not the given page is for an image.
-isImage :: Page -> Bool
-isImage (Page _ _ ext) = elem ext FileType.validImageTypes
+-- | Gets the list of image entries from the given archive.
+getImages :: Archive -> [Entry]
+getImages archive =
+    let entries = sortBy (comparingAlphaNum eRelativePath) (zEntries archive)
+    in flip filter entries $ \entry ->
+        let mimeType = Metadata.getMIMETypeFromBytes (fromEntry entry)
+        in case mimeType of
+            Just ("image",      _) -> True
+            Just ("video", "webm") -> True
+            _                      -> False

@@ -14,7 +14,7 @@ data Error = IDNotFound Int64
            | InvalidScopeExpression String
            | DuplicateHash String
            | InvalidFileSize Int
-           | InvalidFileType String
+           | UnrecognizedFile
 
 -- | The results of a validation. When invalid, it contains a list of errors.
 data Validation = Valid | Invalid [Error]
@@ -29,8 +29,7 @@ instance Show Error where
     show (InvalidScopeExpression  x) = "Invalid scope expression: " ++ x
     show (DuplicateHash           x) = "Duplicate hash: " ++ x
     show (InvalidFileSize         x) = "File size must be greater than zero: " ++ show x
-    show (InvalidFileType        []) = "File type cannot be empty"
-    show (InvalidFileType         x) = "Invalid file type: " ++ x
+    show (UnrecognizedFile         ) = "File is not a recognized format"
 
 instance Show Validation where
     show Valid        = "Valid"

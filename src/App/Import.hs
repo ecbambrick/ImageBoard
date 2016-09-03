@@ -3,18 +3,15 @@
 
 module App.Import ( fromDirectory ) where
 
-import qualified App.Core.Album   as Album
-import qualified App.Core.Image   as Image
-import qualified App.FileType     as FileType
+import qualified App.Core.Post    as Post
 import qualified System.Directory as Dir
 import qualified System.FilePath  as FilePath
 import qualified Text.Parsec      as Parsec
 
 import App.Core.Types       ( App )
-import App.FileType         ( FileType(..) )
 import App.Validation       ( Error(..), Validation(..) )
 import Control.Exception    ( ErrorCall(..), throwIO )
-import Control.Monad.Reader ( MonadIO, forM_, liftIO, unless, void, when )
+import Control.Monad.Reader ( MonadIO, filterM, forM_, liftIO, unless, void, when )
 import Data.Maybe           ( fromJust )
 import Data.Textual         ( splitOn )
 import System.FilePath      ( (</>) )
@@ -41,10 +38,9 @@ fromDirectory inPath outPath = do
             Nothing   -> "Successfully imported files will not be moved"
             Just path -> "Successfully imported files will be moved to " ++ path
 
-    files <- getRelevantDirectoryFiles inPath
+    files <- getDirectoryFiles inPath
     forM_ files $ \fileName ->
         let parseResults = parseFileName (FilePath.dropExtension fileName)
-            fileResults  = FileType.getFileType filePath fileName
             filePath     = inPath </> fileName
 
         in case parseResults of
@@ -52,28 +48,21 @@ fromDirectory inPath outPath = do
                 logError filePath "Invalid file name pattern"
 
             Right (title, tags) -> do
-                result <- case fileResults of
-                    ArchiveType file -> Album.insert file title tags
-                    ImageType   file -> Image.insert file title tags
-                    InvalidType  ext -> return (Invalid [InvalidFileType ext])
-
+                (_, result) <- Post.insert filePath title tags
                 case (result, outPath) of
+                    (Invalid _, _)     -> logError filePath (show result)
                     (Valid, Just path) -> liftIO $ Dir.renameFile filePath (path </> fileName)
-                    (Invalid _,     _) -> logError filePath (show result)
+                    _                  -> return ()
 
     liftIO $ do
         putStrLn $ replicate 80 '-'
 
 ----------------------------------------------------------------------- Utility
 
--- | Returns the list of relevant files from the given directory.
-getRelevantDirectoryFiles :: FilePath -> App [String]
-getRelevantDirectoryFiles path = liftIO $ do
-    directoryContents <- Dir.getDirectoryContents path
-
-    return $ filter (flip elem FileType.validTypes . drop 1 . FilePath.takeExtension)
-           $ filter (flip notElem [".", ".."])
-           $ directoryContents
+getDirectoryFiles :: (MonadIO m) => FilePath -> m [String]
+getDirectoryFiles path = liftIO $ do
+    contents <- Dir.getDirectoryContents path
+    filterM Dir.doesFileExist $ map (path </>) contents
 
 -- | Logs an import error message to the console.
 logError :: (MonadIO m) => FilePath -> String -> m ()

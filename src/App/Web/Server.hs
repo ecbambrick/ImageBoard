@@ -4,6 +4,7 @@ module App.Web.Server where
 
 import qualified App.Core.Album                as Album
 import qualified App.Core.Image                as Image
+import qualified App.Core.Post                 as Post
 import qualified App.Core.Scope                as Scope
 import qualified App.Path                      as Path
 import qualified App.Web.Route                 as Route
@@ -13,9 +14,9 @@ import qualified Network.Wai.Middleware.Static as Middleware
 import qualified Web.Spock                     as Spock
 
 import App.Config           ( Config(..) )
+import App.Core.Post        ( PostType(..) )
 import App.Core.Types       ( Album(..), DeletionMode(..), Image(..), Scope(..) )
 import App.Expression       ( parse )
-import App.FileType         ( FileType(..), getFileType )
 import App.Validation       ( Error(..), Validation(..) )
 import Control.Applicative  ( (<$>), (<*>), pure )
 import Control.Monad.Reader ( ReaderT, asks, liftIO, join )
@@ -61,20 +62,12 @@ routes = do
         (name, m, path) <- getFile "uploadedFile"
         title           <- optionalParam "title" ""
         tags            <- splitOn "," <$> optionalParam "tags" ""
+        result          <- Post.insert path title tags
 
-        let fileType = getFileType path name
-
-        result <- case fileType of
-            ArchiveType file -> Album.insert file title tags
-            ImageType   file -> Image.insert file title tags
-            InvalidType ext  -> return (Invalid [InvalidFileType ext])
-
-        liftIO $ print m
-
-        case (fileType, result) of
-            (_,     Invalid _) -> requestError (display result)
-            (ArchiveType _, _) -> redirect (Route.albums scope 1 "")
-            (ImageType _,   _) -> redirect (Route.images scope 1 "")
+        case result of
+            (_, Invalid e) -> requestError (display (Invalid e))
+            (AlbumPost, _) -> redirect (Route.albums scope 1 "")
+            (ImagePost, _) -> redirect (Route.images scope 1 "")
 
     -- Renders the albums page with albums that match the query parameter.
     get Route.albumsRoute $ \scopeName -> do
