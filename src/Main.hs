@@ -10,25 +10,30 @@ import qualified App.Web.Server      as Server
 import qualified System.Console.Args as CLI
 
 import App.Validation       ( isValid )
-import Control.Monad.Reader ( liftIO, when )
+import Control.Monad.Reader ( liftIO, unless, when )
 import Data.Functor         ( (<$>) )
 import Data.Textual         ( toLower )
 
 main = CLI.cli "Image board." $ do
-    let runApplication = CLI.run . Application.runApplication
-        runServer      = CLI.run . Application.runServer
+    isTesting <- CLI.option "test" "Run the command in a temporary test environment."
 
+    let runApplication = if isTesting then CLI.run . Application.testApplication
+                                      else CLI.run . Application.runApplication
+        runServer      = if isTesting then CLI.run . Application.testServer
+                                      else CLI.run . Application.runServer
     -- Run the web server.
     CLI.command "run" $ do
         runServer Server.routes
 
     -- Import all relevant files from the given directory.
     CLI.command "import" $ do
-        path      <- CLI.argument "path"
+        inPath    <- CLI.argument "path"
         moveFiles <- CLI.option ('m', "move") "Moves files to the given directory after being imported."
 
+        let outPath = if isTesting then Nothing else moveFiles
+
         runApplication $ do
-            Import.fromDirectory path moveFiles
+            Import.fromDirectory inPath outPath
 
     -- Delete all data from the database.
     CLI.command "delete-all-data" $ do
@@ -57,7 +62,7 @@ main = CLI.cli "Image board." $ do
             runApplication $ do
                 result <- Scope.insertOrUpdate name expression
 
-                when (not (isValid result)) $ do
+                unless (isValid result) $ do
                     liftIO $ print result
 
         CLI.command "remove" $ do
