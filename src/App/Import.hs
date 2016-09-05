@@ -62,7 +62,7 @@ fromDirectory inPath outPath = do
 getDirectoryFiles :: (MonadIO m) => FilePath -> m [String]
 getDirectoryFiles path = liftIO $ do
     contents <- Dir.getDirectoryContents path
-    filterM Dir.doesFileExist $ map (path </>) contents
+    filterM (Dir.doesFileExist . (path </>)) contents
 
 -- | Logs an import error message to the console.
 logError :: (MonadIO m) => FilePath -> String -> m ()
