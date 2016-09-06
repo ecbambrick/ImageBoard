@@ -9,7 +9,7 @@ Albums.initializePage = (scope, canPrev, canNext, page, query) => {
 // Returns a function that will take a keyboard event and navigate to another
 // page based on keyboard input.
 Albums.navigate = (scope, canPrev, canNext, page, query, e) => {
-    let position  = Albums.getPagePosition();
+    let position  = Utility.getPagePosition();
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
     let bodyIsActive = document.activeElement == document.body
 
@@ -25,16 +25,4 @@ Albums.navigate = (scope, canPrev, canNext, page, query, e) => {
     } else if (!modifiers && e.keyCode === 32 && position.bottom && canNext) {
         window.location.href = Route.albums(scope, page + 1, query);
     }
-}
-
-// Returns the positional properties of the visible screen in relation to the
-// page.
-Albums.getPagePosition = () => {
-    let currentHight = window.pageYOffset + window.innerHeight;
-    let pageHeight   = window.document.documentElement.scrollHeight;
-
-    return {
-        top:    currentHight >= pageHeight,
-        bottom: currentHight <= window.innerHeight
-    };
 }
