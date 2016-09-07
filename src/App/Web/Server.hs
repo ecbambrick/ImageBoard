@@ -101,15 +101,18 @@ routes = do
     -- Renders the details page for the album page with the give album ID and
     -- page number.
     get Route.pageRoute $ \scopeName id number -> do
-        scope <- Scope.querySingle scopeName
-        album <- Album.querySingle id
+        maybeScope <- Scope.querySingle scopeName
+        maybeAlbum <- Album.querySingle id
 
-        let page = flip Album.getPage number . fromEntity =<< album
+        let result = do
+                scope <- maybeScope
+                album <- maybeAlbum
+                page  <- Album.getPage (fromEntity album) number
+                return (html (View.pageView scope album page))
 
-        case (scope, page) of
-            (Nothing, _)   -> notFound
-            (_, Nothing)   -> notFound
-            (_, Just page) -> html (View.pageView scope id page)
+        case result of
+            Nothing   -> notFound
+            Just view -> view
 
     -- Updates the album with the given id with the given POST data.
     post Route.albumRoute $ \scopeName id -> do

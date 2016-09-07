@@ -142,11 +142,18 @@ imagesView scope query page total pageSize images = render $ do
 
 -- | Renders a view for the give page of the given album as text containing
 -- | HTML.
-pageView :: Maybe Scope -> ID -> Page -> Text
-pageView scope id page = render $ do
-    let title  = "page " <> display page
+pageView :: Scope -> Entity Album -> Page -> Text
+pageView Scope {..} (Entity id Album {..}) page = render $ do
+    let number = pageNumber page
+        pages  = length albumPages
+        title  = Text.pack (albumTitle ++ " (" ++ show number ++ "/" ++ show pages ++ ")")
+        prev   = if number <= 1 then pages else number - 1
+        next   = if number >= pages then 1 else number + 1
         onload = JS.functionCall "Page.initializePage" args
-        args   = [ JS.toJSON (maybe "" scopeName scope) ]
+        args   = [ JS.toJSON scopeName
+                 , JS.toJSON id
+                 , JS.toJSON prev
+                 , JS.toJSON next ]
 
     Elem.document title onload $ do
         Elem.image (Text.pack (Path.getPageURL id page))

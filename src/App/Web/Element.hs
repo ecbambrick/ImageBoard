@@ -41,6 +41,7 @@ document title initialize html =
             script_ [type_ ecma6, src_ "/static/albums.js"] empty
             script_ [type_ ecma6, src_ "/static/image.js"] empty
             script_ [type_ ecma6, src_ "/static/images.js"] empty
+            script_ [type_ ecma6, src_ "/static/page.js"] empty
             script_ [type_ ecma6] (JS.onDocumentLoad initialize)
         body_ html
 

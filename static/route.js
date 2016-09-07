@@ -29,6 +29,11 @@ Route.images = (scope, page, query) => {
     return "/" + scope + "/images" + Route.parameterize([p, q]);
 }
 
+// Returns the images route with the given page and query.
+Route.page = (scope, albumId, page) => {
+    return "/" + scope + "/album/" + albumId + "/" + page;
+}
+
 // Formats the given list of URL parameters.
 Route.parameterize = (params) => {
     let parameters = params.filter(x => x.length > 0).join("&");
