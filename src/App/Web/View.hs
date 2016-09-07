@@ -103,7 +103,7 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
                     Elem.action Elem.Trash  "delete"
             Elem.imageDetails image timeZone
             Elem.imageTags scope (imageTagNames image)
-        if isVideo image
+        if isVideo (imageExtension image)
             then Elem.video source
             else Elem.image source
         Elem.editForm (Route.image scope curr "") $ do
@@ -146,6 +146,7 @@ pageView :: Scope -> Entity Album -> Page -> Text
 pageView Scope {..} (Entity id Album {..}) page = render $ do
     let number = pageNumber page
         pages  = length albumPages
+        source = Text.pack (Path.getPageURL id page)
         title  = Text.pack (albumTitle ++ " (" ++ show number ++ "/" ++ show pages ++ ")")
         prev   = if number <= 1 then pages else number - 1
         next   = if number >= pages then 1 else number + 1
@@ -156,13 +157,16 @@ pageView Scope {..} (Entity id Album {..}) page = render $ do
                  , JS.toJSON next ]
 
     Elem.document title onload $ do
-        Elem.image (Text.pack (Path.getPageURL id page))
+        if isVideo (pageExtension page)
+            then Elem.video source
+            else Elem.image source
 
 ----------------------------------------------------------------------- Utility
 
--- | Returns whether or not the given image is a video.
-isVideo :: Image -> Bool
-isVideo Image {..} = imageExtension == "webm"
+-- | Returns whether or not the given file extension represents a video.
+isVideo :: String -> Bool
+isVideo "webm" = True
+isVideo _      = False
 
 -- | Renders the given HTML as text.
 render :: Html () -> Text
