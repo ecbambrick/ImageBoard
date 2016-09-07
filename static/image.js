@@ -38,15 +38,14 @@ Image.initializePage = (scope, previousId, currentId, nextId, query) => {
 // page based on keyboard input.
 Image.navigate = (scope, previousID, nextID, query, editScreen, e) => {
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
-    let editting  = editScreen != null && editScreen.style.display !== "";
-    let bodyIsActive = document.activeElement == document.body
+    let editing   = editScreen != null && editScreen.style.display !== "";
 
-    // escape
-    if (editting && !modifiers && e.keyCode === 27) {
+    // escape (while editing)
+    if (editing && !modifiers && e.keyCode === 27) {
         document.getElementById("edit-cancel").click();
         document.activeElement.blur();
 
-    } else if (!bodyIsActive || editting) {
+    } else if (editing || !Utility.IsFreeFocus()) {
         return;
 
     // shift + space
