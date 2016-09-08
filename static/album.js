@@ -45,6 +45,11 @@ Album.navigate = (scope, id, query, editScreen, e) => {
         document.getElementById("edit-cancel").click();
         document.activeElement.blur();
 
+    // enter (while editing)
+    } else if (editing && !modifiers && e.keyCode === 13) {
+        document.getElementById("edit-submit").click();
+        document.activeElement.blur();
+
     } else if (editing || !Utility.IsFreeFocus()) {
         return;
 
