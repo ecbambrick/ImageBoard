@@ -31,7 +31,7 @@ Album.initializePage = (scope, id, query) => {
     editCancel.onclick   = ()  => Album.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editShow.onclick     = ()  => Album.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editSubmit.onclick   = ()  => { editForm.submit(); return false; }
-    document.onkeydown   = (e) => Album.navigate(scope, id, query, editScreen, e);
+    document.onkeyup     = (e) => Album.navigate(scope, id, query, editScreen, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another
@@ -69,11 +69,17 @@ Album.navigate = (scope, id, query, editScreen, e) => {
 
 // Toggle the display of the edit form.
 Album.toggleEdit = (title, tags, editForm, editTitle, editTags) => {
-    let display = editForm.style.display === "" ? "flex" : "";
+    let enable = editForm.style.display === ""
 
-    editTitle.value        = title.innerHTML;
-    editTags.value         = tags.map(x => x.innerHTML).join(", ");
-    editForm.style.display = display;
+    if (enable) {
+        editTitle.value        = title.innerHTML;
+        editTags.value         = tags.map(x => x.innerHTML).join(", ");
+        editForm.style.display = "flex";
+        editTitle.select();
+    } else {
+        editForm.style.display = "";
+        document.activeElement.blur()
+    }
 
     return false;
 }

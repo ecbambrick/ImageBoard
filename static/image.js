@@ -31,7 +31,7 @@ Image.initializePage = (scope, previousId, currentId, nextId, query) => {
     editCancel.onclick   = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editShow.onclick     = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
     editSubmit.onclick   = ()  => { editForm.submit(); return false; }
-    document.onkeydown   = (e) => Image.navigate(scope, previousId, nextId, query, editScreen, e);
+    document.onkeyup     = (e) => Image.navigate(scope, previousId, nextId, query, editScreen, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another
@@ -77,11 +77,17 @@ Image.navigate = (scope, previousID, nextID, query, editScreen, e) => {
 
 // Toggle the display of the edit form.
 Image.toggleEdit = (title, tags, editForm, editTitle, editTags) => {
-    let display = editForm.style.display === "" ? "flex" : "";
+    let enable = editForm.style.display === ""
 
-    editTitle.value        = title.innerHTML;
-    editTags.value         = tags.map(x => x.innerHTML).join(", ");
-    editForm.style.display = display;
+    if (enable) {
+        editTitle.value        = title.innerHTML;
+        editTags.value         = tags.map(x => x.innerHTML).join(", ");
+        editForm.style.display = "flex";
+        editTitle.select();
+    } else {
+        editForm.style.display = "";
+        document.activeElement.blur()
+    }
 
     return false;
 }
