@@ -21,22 +21,35 @@ a:hover {
 }
 
 aside {
-    display: flex;
-    position: relative;
     flex: 0 0 340px;
+    position: relative;
 }
 
-aside div.panel {
-    position: fixed;
-    margin: 0 auto;
-    display: flex;
+#info-panel, #edit-panel {
+    border-right: 1px solid #3e3e3e;
     flex: 1;
     flex-direction: column;
-    width: 300px;
-    border-right: 1px solid #333;
+    height: calc(100vh - 40px);
+    margin: 0 auto;
     margin-right: 20px;
     padding-right: 20px;
-    height: calc(100vh - 40px);
+    position: fixed;
+    width: 300px;
+}
+
+#info-panel {
+    display: flex;
+}
+
+#edit-panel {
+    display: none;
+}
+
+#edit-panel > * {
+    margin: 0;
+    margin-bottom: 10px;
+    overflow: hidden;
+    padding: 0;
 }
 
 body {
@@ -60,13 +73,14 @@ div#details {
     display: flex;
     flex: 1;
     flex-direction: column;
-    justify-content: flex-start;;
-    text-align: center;
+    justify-content: flex-start;
     margin-top: 60px;
+    text-align: center;
 }
 
 div.edit-pair {
     display: flex;
+    flex-direction: column;
     margin: 20px;
     margin-top: 0;
     max-width: 100%;
@@ -80,27 +94,15 @@ div.edit-pair > textarea, input {
     padding: 10px;
 }
 
-div.edit-pair > *:first-child {
-    width: 20%;
-}
-
-div.edit-pair > *:last-child {
-    width: 80%;
-}
-
 div.edit-pair > span {
     padding: 10px 0;
 }
 
-div#edit-actions {
+div.edit-actions {
     display: flex;
-    justify-content: flex-end;
-    margin: 20px;
-    margin-top: 0;
-    max-width: 500px;
-    width: calc(100vw - 40px);
+    flex-direction: row;
+    justify-content: center;
 }
-
 
 div#image-container {
     display: flex;
@@ -136,10 +138,6 @@ div#title {
     white-space: pre-wrap;
     word-break: break-word;
     word-wrap: break-word;
-}
-
-form#edit-form {
-    width: 500px;
 }
 
 form#search {
@@ -198,7 +196,7 @@ a.tag {
 }
 
 a.tag:hover {
-    background-color: #333;
+    background-color: #3e3e3e;
     color: inherit;
 }
 
@@ -206,7 +204,7 @@ a.tag:hover {
 
 h1 {
     padding-bottom: 10px;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #3e3e3e;
     font-weight: normal;
     font-size: 16px;
     margin-bottom: 20px;
@@ -285,20 +283,19 @@ h1 {
     margin: 0;
     margin-bottom: 10px;
     overflow: hidden;
-    padding: 0;
 }
 
-#upload > button {
+button.action {
     background-color: inherit;
     border: none;
     color: inherit;
-    flex: 0;
+    flex: 1;
     font-size: inherit;
     font-family: inherit;
     padding: 5px 8px;
 }
 
-#upload > button:hover {
+button.action:hover {
     background-color: #ddd;
     color: #222;
     cursor: pointer;
@@ -311,5 +308,5 @@ h1 {
 }
 
 #upload > .browse {
-    border: 1px solid #333;
+    border: 1px solid #3e3e3e;
 }

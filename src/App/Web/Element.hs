@@ -130,9 +130,24 @@ searchBox actionURL query =
             button_ [ id_ "search-action", type_ "submit", tabindex_ "-1" ] $
                 glyph "search"
 
--- | Returns an HTML element representing a side panel.
-sidePanel :: Html a -> Html a
-sidePanel = aside_ . div_ [class_ "panel"]
+-- | Returns an HTML element representing the side menu.
+aside :: Html a -> Html a
+aside = aside_
+
+-- | Returns an HTML element representing a panel for displaying data.
+infoPanel :: Html a -> Html a
+infoPanel = div_ [id_ "info-panel"]
+
+-- | Returns an HTML element representing a panel for editing data.
+editPanel :: Text -> Html a -> Html ()
+editPanel actionURL html = do
+    form_ [id_ "edit-panel", action_ actionURL, method_ "post"] $ do
+        h1_ "Edit Post"
+        html
+        spacer
+        div_ [class_ "edit-actions"] $ do
+            button_ [ id_ "edit-submit", class_ "action", type_ "submit"] ("Submit " <> glyph "check")
+            button_ [ id_ "edit-cancel", class_ "action", type_ "cancel"] ("Cancel " <> glyph "times")
 
 -- | Returns an HTML elements representing an empty space between other
 -- | elements.
@@ -158,7 +173,7 @@ textAreaField :: Text -> Text -> Text -> Html ()
 textAreaField label name id =
     div_ [class_ "edit-pair"] $ do
         span_ (toHtml label)
-        textarea_ [id_ id, name_ name, rows_ "4"] mempty
+        textarea_ [id_ id, name_ name, rows_ "5"] mempty
 
 -- | Returns an HTML element for modifying a post property using a text area.
 textBoxField :: Text -> Text -> Text -> Html ()
@@ -167,6 +182,14 @@ textBoxField label name id =
         span_ (toHtml label)
         input_ [id_ id, name_ name, type_ "text"]
 
+-- | Returns an HTML element for uploading a file.
+fileField :: Text -> Text -> Text -> Html ()
+fileField label name id =
+    div_ [class_ "edit-pair"] $ do
+        span_ (toHtml label)
+        div_ [class_ "browse"] $ input_  [id_ id, name_ name, type_ "file"]
+
+-- | Returns an HTML element representing a file upload form.
 uploadForm :: Maybe Scope -> Html ()
 uploadForm scope = do
     h1_ "New File"
@@ -176,10 +199,9 @@ uploadForm scope = do
         , action_ (Route.upload scope)
         , method_ "post"
         , enctype_ "multipart/form-data" ] $ do
-            textBoxField "Title" "title" "upload-title"
-            textBoxField "Tags"  "tags"  "upload-tags"
-            div_ [class_ "browse"] $
-                input_  [type_ "file", name_ "uploadedFile"]
+            textBoxField  "Title" "title"        "upload-title"
+            textAreaField "Tags"  "tags"         "upload-tags"
+            fileField     "File"  "uploadedFile" "upload-file"
             button_ [type_ "submit", class_ "action"] ("Upload " <> glyph "arrow-up")
 
 -- | Returns an HTML element for displaying a video.

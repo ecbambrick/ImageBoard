@@ -31,7 +31,7 @@ albumView scope query timeZone (Entity id album @ Album{..}) = render $ do
                  , JS.toJSON query ]
 
     Elem.document title onload $ do
-        Elem.sidePanel $ do
+        Elem.aside $ Elem.infoPanel $ do
             Elem.actions $ do
                 Elem.actionGroup $ do
                     Elem.actionLink Elem.Grid (Route.albums scope 1 query)
@@ -62,7 +62,7 @@ albumsView scope query page total pageSize albums = render $ do
                         , JS.toJSON query ]
 
     Elem.document title onload $ do
-        Elem.sidePanel $ do
+        Elem.aside $ Elem.infoPanel $ do
             Elem.searchBox (Route.albums scope 1 "") query
             Elem.actions $ do
                 Elem.actionGroup $ do
@@ -91,24 +91,25 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
                  , JS.toJSON query ]
 
     Elem.document title onload $ do
-        Elem.sidePanel $ do
-            Elem.actions $ do
-                Elem.actionGroup $ do
-                    Elem.actionLink Elem.LeftArrow  (Route.image  scope prev query)
-                    Elem.actionLink Elem.Grid       (Route.images scope 1    query)
-                    Elem.actionLink Elem.RightArrow (Route.image  scope next query)
-                Elem.actionGroup $ do
-                    Elem.action Elem.Pencil "edit-show"
-                    Elem.action Elem.Trash  "delete"
-            Elem.searchBox (Route.images scope 1 "") query
-            Elem.imageDetails image timeZone
-            Elem.imageTags scope (imageTagNames image)
+        Elem.aside $ do
+            Elem.infoPanel $ do
+                Elem.actions $ do
+                    Elem.actionGroup $ do
+                        Elem.actionLink Elem.LeftArrow  (Route.image  scope prev query)
+                        Elem.actionLink Elem.Grid       (Route.images scope 1    query)
+                        Elem.actionLink Elem.RightArrow (Route.image  scope next query)
+                    Elem.actionGroup $ do
+                        Elem.action Elem.Pencil "edit-show"
+                        Elem.action Elem.Trash  "delete"
+                Elem.searchBox (Route.images scope 1 "") query
+                Elem.imageDetails image timeZone
+                Elem.imageTags scope (imageTagNames image)
+            Elem.editPanel (Route.image scope curr query) $ do
+                Elem.textBoxField  "Title" "title" "edit-title"
+                Elem.textAreaField "Tags"  "tags"  "edit-tags"
         if isVideo (imageExtension image)
             then Elem.video source
             else Elem.image source
-        Elem.editForm (Route.image scope curr "") $ do
-            Elem.textBoxField  "Title" "title" "edit-title"
-            Elem.textAreaField "Tags"  "tags"  "edit-tags"
 
 -- | Renders an index view for images as text containing HTML.
 imagesView :: Maybe Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
@@ -124,7 +125,7 @@ imagesView scope query page total pageSize images = render $ do
                         , JS.toJSON query ]
 
     Elem.document title onload $ do
-        Elem.sidePanel $ do
+        Elem.aside $ Elem.infoPanel $ do
             Elem.searchBox (Route.images scope 1 "") query
             Elem.actions $ do
                 Elem.actionGroup $ do

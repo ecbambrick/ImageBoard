@@ -20,25 +20,25 @@ Image.initializePage = (scope, previousId, currentId, nextId, query) => {
     let deleteAction = document.getElementById("delete");
     let title        = document.getElementById("title");
     let editShow     = document.getElementById("edit-show");
-    let editScreen   = document.getElementById("edit-screen");
-    let editForm     = document.getElementById("edit-form");
     let editTitle    = document.getElementById("edit-title");
     let editTags     = document.getElementById("edit-tags");
     let editCancel   = document.getElementById("edit-cancel");
     let editSubmit   = document.getElementById("edit-submit");
+    let editPanel    = document.getElementById("edit-panel");
+    let infoPanel    = document.getElementById("info-panel");
 
     deleteAction.onclick = ()  => Image.del(scope, currentId, query);
-    editCancel.onclick   = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
-    editShow.onclick     = ()  => Image.toggleEdit(title, tags, editScreen, editTitle, editTags);
-    editSubmit.onclick   = ()  => { editForm.submit(); return false; }
-    document.onkeyup     = (e) => Image.navigate(scope, previousId, nextId, query, editScreen, e);
+    editCancel.onclick   = ()  => Image.toggleEdit(title, tags, infoPanel, editPanel, editTitle, editTags);
+    editShow.onclick     = ()  => Image.toggleEdit(title, tags, infoPanel, editPanel, editTitle, editTags);
+    editSubmit.onclick   = ()  => { editPanel.submit(); return false; }
+    document.onkeyup     = (e) => Image.navigate(scope, previousId, nextId, query, editPanel, e);
 }
 
 // Returns a function that will take a keyboard event and navigate to another
 // page based on keyboard input.
-Image.navigate = (scope, previousID, nextID, query, editScreen, e) => {
+Image.navigate = (scope, previousID, nextID, query, editPanel, e) => {
     let modifiers = e.shiftKey || e.ctrlKey || e.altKey;
-    let editing   = editScreen != null && editScreen.style.display !== "";
+    let editing   = window.getComputedStyle(editPanel).display !== "none";
 
     // escape (while editing)
     if (editing && !modifiers && e.keyCode === 27) {
@@ -76,16 +76,18 @@ Image.navigate = (scope, previousID, nextID, query, editScreen, e) => {
 }
 
 // Toggle the display of the edit form.
-Image.toggleEdit = (title, tags, editForm, editTitle, editTags) => {
-    let enable = editForm.style.display === ""
+Image.toggleEdit = (title, tags, infoPanel, editPanel, editTitle, editTags) => {
+    let enable = window.getComputedStyle(editPanel).display === "none";
 
     if (enable) {
-        editTitle.value        = title.innerHTML;
-        editTags.value         = tags.map(x => x.innerHTML).join(", ");
-        editForm.style.display = "flex";
+        editTitle.value         = title.innerHTML;
+        editTags.value          = tags.map(x => x.innerHTML).join(", ");
+        editPanel.style.display = "flex";
+        infoPanel.style.display = "none";
         editTitle.select();
     } else {
-        editForm.style.display = "";
+        editPanel.style.display = "none";
+        infoPanel.style.display = "flex";
         document.activeElement.blur()
     }
 
