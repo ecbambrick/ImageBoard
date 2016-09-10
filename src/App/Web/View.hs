@@ -92,7 +92,6 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
 
     Elem.document title onload $ do
         Elem.sidePanel $ do
-            Elem.searchBox (Route.images scope 1 "") query
             Elem.actions $ do
                 Elem.actionGroup $ do
                     Elem.actionLink Elem.LeftArrow  (Route.image  scope prev query)
@@ -101,6 +100,7 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
                 Elem.actionGroup $ do
                     Elem.action Elem.Pencil "edit-show"
                     Elem.action Elem.Trash  "delete"
+            Elem.searchBox (Route.images scope 1 "") query
             Elem.imageDetails image timeZone
             Elem.imageTags scope (imageTagNames image)
         if isVideo (imageExtension image)

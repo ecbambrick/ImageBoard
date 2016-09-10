@@ -52,6 +52,7 @@ body {
 div#actions {
     display: flex;
     justify-content: space-between;
+    margin-bottom: 10px;
 }
 
 div#details {
@@ -59,8 +60,9 @@ div#details {
     display: flex;
     flex: 1;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;;
     text-align: center;
+    margin-top: 60px;
 }
 
 div.edit-pair {
@@ -72,6 +74,8 @@ div.edit-pair {
 }
 
 div.edit-pair > textarea, input {
+    color: inherit;
+    background-color: #3e3e3e;
     border: none;
     padding: 10px;
 }
@@ -143,23 +147,20 @@ form#search {
 }
 
 form#search > input {
-    background-color: inherit;
+    background-color: #3e3e3e;
     border: none;
-    border-bottom: 1px solid #ddd;
+    /*border-bottom: 1px solid #ddd;*/
     color: inherit;
     flex: 1;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
 }
 
 form#search > button {
-    background-color: inherit;
+    background-color: #3e3e3e;
     border: none;
-    border-bottom: 1px solid #ddd;
+    /*border-bottom: 1px solid #ddd;*/
     color: inherit;
     font-size: inherit;
     font-family: inherit;
-    margin-bottom: 10px;
 }
 
 form#search > button:hover {
