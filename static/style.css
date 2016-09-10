@@ -147,7 +147,6 @@ form#search {
 form#search > input {
     background-color: #3e3e3e;
     border: none;
-    /*border-bottom: 1px solid #ddd;*/
     color: inherit;
     flex: 1;
 }
@@ -155,8 +154,8 @@ form#search > input {
 form#search > button {
     background-color: #3e3e3e;
     border: none;
-    /*border-bottom: 1px solid #ddd;*/
     color: inherit;
+    flex: none;
     font-size: inherit;
     font-family: inherit;
 }
