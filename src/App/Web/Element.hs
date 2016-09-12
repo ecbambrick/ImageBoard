@@ -92,6 +92,7 @@ editPanel :: Text -> Html a -> Html ()
 editPanel url html = do
     form_ [id_ "edit-panel", action_ url, method_ "post"] $ do
         h1_ "Edit Post"
+        div_ [class_ "error"] mempty
         html
         spacer
         div_ [class_ "edit-actions"] $ do
@@ -159,15 +160,15 @@ fileField label name id =
 -- | Returns an HTML form button
 formButton :: ButtonType -> Text -> Text -> Icon -> Html ()
 formButton button id text icon =
-    let glyph icon = i_ [class_ ("fa " <> renderIcon icon)] mempty
+    let glyph = i_ [class_ ("fa " <> renderIcon icon)] mempty
 
         buttonType = case button of
             Submit -> [type_ "submit"]
             Cancel -> [type_ "cancel"]
 
         label = if Text.null text
-            then glyph icon
-            else toHtml text <> " " <> glyph icon
+            then glyph
+            else toHtml text <> " " <> glyph
 
     in button_ ([ id_ id, class_ "action"] <> buttonType) label
 

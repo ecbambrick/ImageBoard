@@ -14,9 +14,29 @@ Image.del = (scope, id, query) => {
     return false;
 }
 
+// Updates the title and tags of the image with the given id and scope.
+Image.update = (scope, id, titleElement, tagsElement, title, tags, query) => {
+    let data = {
+        title: title.value,
+        tags:  tags.value
+    }
+
+    Request
+        .post(Route.image(scope, id, ""), data)
+        .then(_ => {
+            Image.setMetaData(data.title, data.tags, scope, titleElement, tagsElement);
+            document.getElementById("edit-cancel").click();
+        })
+        .catch(response => {
+            Image.showError(response);
+        });
+
+    return false;
+}
+
 // Initializes event handling for the image page.
 Image.initializePage = (scope, previousId, currentId, nextId, query) => {
-    let tags         = [].slice.call(document.getElementsByClassName("tag"));
+    let tags         = document.getElementById("tags");
     let deleteAction = document.getElementById("delete");
     let title        = document.getElementById("title");
     let editShow     = document.getElementById("edit-show");
@@ -28,9 +48,9 @@ Image.initializePage = (scope, previousId, currentId, nextId, query) => {
     let infoPanel    = document.getElementById("info-panel");
 
     deleteAction.onclick = ()  => Image.del(scope, currentId, query);
-    editCancel.onclick   = ()  => Image.toggleEdit(title, tags, infoPanel, editPanel, editTitle, editTags);
-    editShow.onclick     = ()  => Image.toggleEdit(title, tags, infoPanel, editPanel, editTitle, editTags);
-    editSubmit.onclick   = ()  => { editPanel.submit(); return false; }
+    editCancel.onclick   = ()  => Image.toggleEdit(title, infoPanel, editPanel, editTitle, editTags);
+    editShow.onclick     = ()  => Image.toggleEdit(title, infoPanel, editPanel, editTitle, editTags);
+    editSubmit.onclick   = ()  => Image.update(scope, currentId, title, tags, editTitle, editTags, query)
     document.onkeyup     = (e) => Image.navigate(scope, previousId, nextId, query, editPanel, e);
 }
 
@@ -76,10 +96,12 @@ Image.navigate = (scope, previousID, nextID, query, editPanel, e) => {
 }
 
 // Toggle the display of the edit form.
-Image.toggleEdit = (title, tags, infoPanel, editPanel, editTitle, editTags) => {
+Image.toggleEdit = (title, infoPanel, editPanel, editTitle, editTags) => {
+    let tags   = [].slice.call(document.getElementsByClassName("tag"));
     let enable = window.getComputedStyle(editPanel).display === "none";
 
     if (enable) {
+        Image.clearError();
         editTitle.value         = title.innerHTML;
         editTags.value          = tags.map(x => x.innerHTML).join(", ");
         editPanel.style.display = "flex";
@@ -92,4 +114,39 @@ Image.toggleEdit = (title, tags, infoPanel, editPanel, editTitle, editTags) => {
     }
 
     return false;
+}
+
+// Updates the meta data information on the page.
+Image.setMetaData = (title, tags, scope, titleElement, tagsElement) => {
+    titleElement.innerHTML = title;
+    tagsElement.innerHTML  = "";
+
+    for (let tag of tags.split(",").map(x => x.trim())) {
+        let element = document.createElement("a");
+        element.className = "tag";
+        element.href = Route.images(scope, 1, tag);
+        element.innerHTML = tag;
+        tagsElement.appendChild(element);
+    }
+}
+
+// Shows the given message as an error on the page.
+Image.showError = (message) => {
+    let errors           = document.getElementsByClassName("error");
+    let formattedMessage = message.replace(/\n/g, "<br/>");
+
+    for (let error of errors) {
+        error.style.display = "block";
+        error.innerHTML     = formattedMessage
+    }
+}
+
+// Clears all error messages from the page.
+Image.clearError = () => {
+    let errors = document.getElementsByClassName("error");
+
+    for (let error of errors) {
+        error.style.display = "none";
+    }
+
 }

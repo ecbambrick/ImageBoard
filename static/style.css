@@ -49,7 +49,6 @@ aside {
     margin: 0;
     margin-bottom: 10px;
     overflow: hidden;
-    padding: 0;
 }
 
 body {
@@ -76,6 +75,12 @@ div#details {
     justify-content: flex-start;
     margin-top: 60px;
     text-align: center;
+}
+
+div.error {
+    padding: 20px;
+    background-color: #B34C3A;
+    color: #fff;
 }
 
 div.edit-pair {
