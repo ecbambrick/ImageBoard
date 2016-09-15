@@ -13,6 +13,11 @@ Utility.getPagePosition = () => {
     };
 }
 
+// Goes to the given URL.
+Utility.goTo = (url) => {
+    window.location.href = url;
+}
+
 // Returns whether or not any element that can recieve keyboard input is
 // currently focused.
 Utility.IsFreeFocus = () => {
