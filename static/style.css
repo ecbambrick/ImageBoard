@@ -78,9 +78,10 @@ div#details {
 }
 
 div.error {
-    padding: 20px;
-    background-color: #B34C3A;
+    background-color: #E34C53;
     color: #fff;
+    font-weight: bold;
+    padding: 20px;
 }
 
 div.edit-pair {

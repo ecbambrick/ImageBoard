@@ -3,6 +3,7 @@
 
 module App.Web.View ( albumView, albumsView, imageView, imagesView, pageView ) where
 
+import qualified App.Core.Scope   as Scope
 import qualified App.Path         as Path
 import qualified App.Web.Route    as Route
 import qualified App.Web.Element  as Elem
@@ -83,12 +84,12 @@ imageView :: Maybe Scope -> String -> TimeZone -> Entity Image -> Entity Image -
 imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next _) = render $ do
     let title  = "Image " <> display curr
         source = Text.pack (Path.getImageURL image)
-        onload = JS.functionCall "Image.initializePage" args
-        args   = [ JS.toJSON (maybe "" scopeName scope)
+        onload = JS.functionCall "ImageViewModel.register" args
+        args   = [ JS.toJSON (maybe Scope.defaultName scopeName scope)
+                 , JS.toJSON query
                  , JS.toJSON prev
                  , JS.toJSON curr
-                 , JS.toJSON next
-                 , JS.toJSON query ]
+                 , JS.toJSON next ]
 
     Elem.document title onload $ do
         Elem.aside $ do

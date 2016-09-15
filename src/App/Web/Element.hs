@@ -40,11 +40,12 @@ document title initialize html =
             link_   [rel_ "stylesheet", href_ "/static/style.css"]
             link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
             script_ [type_ ecma6, src_ "/static/utility.js"] Text.empty
+            script_ [type_ ecma6, src_ "/static/action.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/request.js"] Text.empty
-            script_ [type_ ecma6, src_ "/static/route.js"  ] Text.empty
+            script_ [type_ ecma6, src_ "/static/route.js"] Text.empty
+            script_ [type_ ecma6, src_ "/static/viewmodel/image.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/album.js"  ] Text.empty
             script_ [type_ ecma6, src_ "/static/albums.js" ] Text.empty
-            script_ [type_ ecma6, src_ "/static/image.js"  ] Text.empty
             script_ [type_ ecma6, src_ "/static/images.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/page.js"   ] Text.empty
             script_ [type_ ecma6] (JS.onDocumentLoad initialize)
@@ -164,7 +165,7 @@ formButton button id text icon =
 
         buttonType = case button of
             Submit -> [type_ "submit"]
-            Cancel -> [type_ "cancel"]
+            Cancel -> [type_ "reset"]
 
         label = if Text.null text
             then glyph
