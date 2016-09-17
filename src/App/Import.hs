@@ -21,9 +21,10 @@ import Text.Parsec          ( ParseError, (<|>), anyChar, between, char, choice
 
 -- | Import each valid file in the given directory into the database. If an
 -- | optional output directory is provided, each imported file will be moved
--- | to that directory.
-fromDirectory :: FilePath -> Maybe FilePath -> App ()
-fromDirectory inPath outPath = do
+-- | to that directory. The given list of tags will be added to each imported
+-- | file.
+fromDirectory :: FilePath -> Maybe FilePath -> [String] -> App ()
+fromDirectory inPath outPath extraTags = do
     liftIO $ do
         isInPathValid  <- Dir.doesDirectoryExist inPath
         isOutPathValid <- maybe (return True) Dir.doesDirectoryExist outPath
@@ -48,7 +49,7 @@ fromDirectory inPath outPath = do
                 logError filePath "Invalid file name pattern"
 
             Right (title, tags) -> do
-                (_, result) <- Post.insert filePath title tags
+                (_, result) <- Post.insert filePath title (tags ++ extraTags)
                 case (result, outPath) of
                     (Invalid _, _)     -> logError filePath (show result)
                     (Valid, Just path) -> liftIO $ Dir.renameFile filePath (path </> fileName)

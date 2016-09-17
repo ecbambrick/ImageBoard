@@ -12,7 +12,7 @@ import qualified System.Console.Args as CLI
 import App.Validation       ( isValid )
 import Control.Monad.Reader ( liftIO, unless, when )
 import Data.Functor         ( (<$>) )
-import Data.Textual         ( toLower )
+import Data.Textual         ( splitOn, toLower )
 
 main = CLI.cli "Image board." $ do
     isTesting <- CLI.option "test" "Run the command in a temporary test environment."
@@ -29,11 +29,13 @@ main = CLI.cli "Image board." $ do
     CLI.command "import" $ do
         inPath    <- CLI.argument "path"
         moveFiles <- CLI.option ('m', "move") "Moves files to the given directory after being imported."
+        tagString <- CLI.option ('t', "tags") "Include tags for each imported file."
 
         let outPath = if isTesting then Nothing else moveFiles
+            tags    = maybe [] (splitOn ",") tagString
 
         runApplication $ do
-            Import.fromDirectory inPath outPath
+            Import.fromDirectory inPath outPath tags
 
     -- Delete all data from the database.
     CLI.command "delete-all-data" $ do
