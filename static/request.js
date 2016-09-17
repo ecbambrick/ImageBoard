@@ -34,22 +34,9 @@ Request.send = (method, url, data) => {
             reject("invalid data");
         } else {
             request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            request.send(Request.serialize(data));
+            request.send(Utility.parameterize(data, true));
         }
     });
 
     return promise;
-}
-
-// Serializes the given data as a URL encoded string of form arguments.
-Request.serialize = (data) => {
-    let args = [];
-
-    for (let key in data) {
-        if (data.hasOwnProperty(key)) {
-            args.push(encodeURIComponent(key) + "=" + encodeURIComponent(data[key]));
-        }
-    }
-
-    return args.join("&");
 }

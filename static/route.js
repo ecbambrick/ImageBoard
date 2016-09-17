@@ -7,40 +7,35 @@ Route.album = (scope, id) => {
 }
 
 // Returns the albums route with the given page and query.
-Route.albums = (scope, page, query) => {
-    let p = page <= 1 ? "" : "page=" + page
-    let q = query.length === 0 ? "" : "q=" + escape(query);
+Route.albums = (scope, page = 1, query = "") => {
+    let params = {
+        page: page <= 1          ? null : page,
+        q:    query.length === 0 ? null : query
+    };
 
-    return "/" + scope + "/albums" + Route.parameterize([p, q]);
+    return "/" + scope + "/albums" + Utility.parameterize(params);
 }
 
 // Returns the image route with the given ID and query.
-Route.image = (scope, id, query) => {
-    let q = query.length === 0 ? "" : "?q=" + escape(query);
+Route.image = (scope, id, query = "", params = {}) => {
+    if (query.length > 0) {
+        params.q = query;
+    }
 
-    return "/" + scope + "/image/" + id + q;
+    return "/" + scope + "/image/" + id + Utility.parameterize(params);
 }
 
 // Returns the images route with the given page and query.
-Route.images = (scope, page, query) => {
-    let p = page <= 1 ? "" : "page=" + page
-    let q = query.length === 0 ? "" : "q=" + escape(query);
+Route.images = (scope, page = 1, query = "") => {
+    let params = {
+        page: page <= 1          ? null : page,
+        q:    query.length === 0 ? null : query
+    };
 
-    return "/" + scope + "/images" + Route.parameterize([p, q]);
+    return "/" + scope + "/images" + Utility.parameterize(params);
 }
 
 // Returns the images route with the given page and query.
 Route.page = (scope, albumId, page) => {
     return "/" + scope + "/album/" + albumId + "/" + page;
-}
-
-// Formats the given list of URL parameters.
-Route.parameterize = (params) => {
-    let parameters = params.filter(x => x.length > 0).join("&");
-
-    if (parameters.length > 0) {
-        parameters = "?" + parameters;
-    }
-
-    return parameters;
 }
