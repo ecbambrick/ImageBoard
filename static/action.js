@@ -37,14 +37,17 @@ const Action = {
 
         // Handle object event.
         if (options.trigger !== undefined) {
-            const object    = options.trigger[0];
-            const eventName = options.trigger[1];
+            while (options.trigger.length >= 2) {
+                const object    = options.trigger[0];
+                const eventName = options.trigger[1];
+                options.trigger.splice(0, 2);
 
-            object.addEventListener(eventName, (e) => {
-                if (enabled()) {
-                    action();
-                }
-            });
+                object.addEventListener(eventName, (e) => {
+                    if (enabled()) {
+                        action();
+                    }
+                });
+            }
         }
     },
 
