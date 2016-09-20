@@ -101,13 +101,14 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
                         Elem.actionLink Elem.RightArrow (Route.image  scope next query)
                     Elem.actionGroup $ do
                         Elem.action Elem.Pencil "edit-show"
-                        Elem.action Elem.Trash  "delete"
+                        Elem.action Elem.Trash  "delete-show"
                 Elem.searchBox (Route.images scope 1 "") query
                 Elem.imageDetails image timeZone
                 Elem.imageTags scope (imageTagNames image)
             Elem.editPanel (Route.image scope curr query) $ do
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
+            Elem.deletePanel (Route.image scope curr query)
         if isVideo (imageExtension image)
             then Elem.video source
             else Elem.image source

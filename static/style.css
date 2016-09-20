@@ -25,7 +25,7 @@ aside {
     position: relative;
 }
 
-#info-panel, #edit-panel {
+#info-panel, #edit-panel, #delete-panel {
     border-right: 1px solid #3e3e3e;
     flex: 1;
     flex-direction: column;
@@ -42,6 +42,10 @@ aside {
 }
 
 #edit-panel {
+    display: none;
+}
+
+#delete-panel {
     display: none;
 }
 
@@ -314,4 +318,9 @@ button.action:hover {
 
 #upload > .browse {
     border: 1px solid #3e3e3e;
+}
+
+.checkbox-label {
+    text-align: center;
+    padding-bottom: 20px;
 }

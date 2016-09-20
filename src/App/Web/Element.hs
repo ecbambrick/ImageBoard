@@ -100,6 +100,18 @@ editPanel url html = do
             formButton Submit "edit-submit" "Submit" Check
             formButton Cancel "edit-cancel" "Cancel" Cross
 
+-- | Returns an HTML element representing a panel for deleting a post.
+deletePanel :: Text -> Html ()
+deletePanel url =
+    div_ [id_ "delete-panel"] $ do
+        h1_ "Detel Post"
+        label_ [class_ "checkbox-label"] $ do
+            input_ [id_ "delete-permanent", type_ "checkbox"]
+            "Delete Permanently"
+        div_ [class_ "edit-actions"] $ do
+            formButton Submit "delete-submit" "Delete" Check
+            formButton Cancel "delete-cancel" "Cancel" Cross
+
 ------------------------------------------------------------------------- Forms
 
 -- | Returns an HTML form for editing a post.

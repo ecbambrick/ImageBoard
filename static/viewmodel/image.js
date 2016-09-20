@@ -9,18 +9,22 @@ class ImageViewModel {
             get activeElement() {
                 return document.activeElement
             },
-            errors:       document.getElementsByClassName("error"),
-            search:       document.getElementById("search-text"),
-            infoPanel:    document.getElementById("info-panel"),
-            infoTitle:    document.getElementById("title"),
-            infoTags:     document.getElementById("tags"),
-            editPanel:    document.getElementById("edit-panel"),
-            editButton:   document.getElementById("edit-show"),
-            editCancel:   document.getElementById("edit-cancel"),
-            editSubmit:   document.getElementById("edit-submit"),
-            editTitle:    document.getElementById("edit-title"),
-            editTags:     document.getElementById("edit-tags"),
-            deleteButton: document.getElementById("delete"),
+            errors:          document.getElementsByClassName("error"),
+            search:          document.getElementById("search-text"),
+            infoPanel:       document.getElementById("info-panel"),
+            infoTitle:       document.getElementById("title"),
+            infoTags:        document.getElementById("tags"),
+            editPanel:       document.getElementById("edit-panel"),
+            editButton:      document.getElementById("edit-show"),
+            editCancel:      document.getElementById("edit-cancel"),
+            editSubmit:      document.getElementById("edit-submit"),
+            editTitle:       document.getElementById("edit-title"),
+            editTags:        document.getElementById("edit-tags"),
+            deletePanel:     document.getElementById("delete-panel"),
+            deleteButton:    document.getElementById("delete-show"),
+            deleteSubmit:    document.getElementById("delete-submit"),
+            deleteCancel:    document.getElementById("delete-cancel"),
+            deletePermanent: document.getElementById("delete-permanent"),
         });
 
         // Remove default form handlers.
@@ -64,13 +68,29 @@ class ImageViewModel {
             action:   () =>  model.isEditing = true
         })
 
-        // Hide the edit panel.
+        // Display the delete panel.
+        Action.register({
+            shortcut: { key: "delete" },
+            trigger:  [ model.ui.deleteButton, "click" ],
+            enabled:  () => !model.isEditing && !model.isDeleting,
+            action:   () => {
+                model.isDeleting = true;
+            }
+        });
+
+        // Hide the edit/delete panel.
         Action.register({
             shortcut: { key: "escape" },
-            trigger:  [ model.ui.editCancel, "click" ],
-            enabled:  () => model.isEditing,
+            trigger:  [ model.ui.editCancel,   "click"
+                      , model.ui.deleteCancel, "click" ],
+            enabled:  () => model.isEditing || model.isDeleting,
             action:   () => {
-                model.isEditing = false;
+                if (model.isEditing) {
+                    model.isEditing = false;
+                } else if (model.isDeleting) {
+                    model.isDeleting = false;
+                }
+
                 return false;
             }
         });
@@ -101,23 +121,21 @@ class ImageViewModel {
             }
         });
 
+        // Submit any changes in the delete panel.
         Action.register({
-            shortcut: { key: "delete" },
-            trigger:  [ model.ui.deleteButton, "click" ],
-            enabled:  () => !model.isEditing,
+            trigger:  [ model.ui.deleteSubmit, "click" ],
+            enabled:  () => model.isDeleting,
             action:   () => {
-                const answer = confirm("Are you sure you want to delete?");
+                const permanent = model.deletePermanent;
 
-                if (answer) {
-                    Request
-                        .del(Route.image(scope, currentId, ""))
-                        .then(_ => Utility.goTo(Route.images(scope, 1, query)))
-                        .catch(response => model.error = response);
-                }
+                Request
+                    .del(Route.image(scope, currentId, query, { permanent: permanent }))
+                    .then(_ => Utility.goTo(Route.images(scope, 1, query)))
+                    .catch(response => model.error = response);
 
                 return false;
             }
-        })
+        });
 
         // Unfocus the active element.
         Action.register({
@@ -159,10 +177,18 @@ class ImageViewModel {
 
     // The editable list of tags.
     get tags() {
-        return this.ui.editTags.value.split(/,\s+/);
+        return this.ui.editTags.value.split(/,\s+/).sort();
     }
     set tags(x) {
         this.ui.editTags.value = x.join(", ");
+    }
+
+    // Whether or not to delete the post permanently.
+    get deletePermanent() {
+        return this.ui.deletePermanent.checked;
+    }
+    set isDeleting(x) {
+        this.ui.deletePermanent.checked = x;
     }
 
     // The displayed list of tags.
@@ -181,6 +207,23 @@ class ImageViewModel {
             element.innerHTML = tag;
 
             this.ui.infoTags.appendChild(element);
+        }
+    }
+
+    // Whether or not the document is currently showing the delete panel.
+    get isDeleting() {
+        return window.getComputedStyle(this.ui.deletePanel).display !== "none";
+    }
+    set isDeleting(x) {
+        if (x) {
+            this.error = null;
+            this.ui.deletePanel.style.display = "flex";
+            this.ui.infoPanel.style.display   = "none";
+            this.ui.deletePermanent.checked   = false;
+        } else {
+            this.ui.deletePanel.style.display = "none";
+            this.ui.infoPanel.style.display   = "flex";
+            this.ui.activeElement.blur();
         }
     }
 
