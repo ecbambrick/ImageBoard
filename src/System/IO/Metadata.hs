@@ -47,6 +47,7 @@ getMIMETypeFromBytes bytes =
         , parseBytes 6  4 "JFIF"     ("image", "jpeg")      bytes
         , parseBytes 6  4 "Exif"     ("image", "jpeg")      bytes
         , parseBytes 0  4 "\137PNG"  ("image", "png" )      bytes
+        , parseBytes 24 4 "webm"     ("video", "webm")      bytes
         , parseBytes 31 4 "webm"     ("video", "webm")      bytes
         , parseBytes 0  4 "PK\5\6"   ("application", "zip") bytes
         , parseBytes 0  4 "PK\3\4"   ("application", "zip") bytes
