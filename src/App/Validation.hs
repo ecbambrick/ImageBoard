@@ -32,8 +32,9 @@ instance Show Error where
     show (UnrecognizedFile         ) = "File is not a recognized format"
 
 instance Show Validation where
-    show Valid        = "Valid"
-    show (Invalid es) = "Errors:" ++ concatMap (\x -> "\n* " ++ show x) es
+    show Valid         = "Valid"
+    show (Invalid [e]) = "Error: " ++ show e
+    show (Invalid es)  = "Errors:" ++ concatMap (\x -> "\n* " ++ show x) es
 
 instance Monoid Validation where
     mempty                          = Valid
