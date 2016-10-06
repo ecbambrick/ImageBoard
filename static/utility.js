@@ -18,17 +18,6 @@ Utility.goTo = (url) => {
     window.location.href = url;
 }
 
-// Returns whether or not any element that can recieve keyboard input is
-// currently focused.
-Utility.IsFreeFocus = () => {
-    let active = document.activeElement;
-
-    return active.type    != "text"
-        && active.type    != "textarea"
-        && active.tagName != "VIDEO"
-        && active.tagName != "BUTTON";
-}
-
 // Serializes the given data as a URL encoded string of form arguments.
 Utility.parameterize = (data, excludeQuestionMark) => {
     let args = [];
