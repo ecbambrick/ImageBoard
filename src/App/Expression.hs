@@ -1,4 +1,4 @@
-﻿module App.Expression ( Token(..), Expression, parse ) where
+module App.Expression ( Token(..), Expression, parse ) where
 
 import qualified Text.Parsec as Parsec
 
