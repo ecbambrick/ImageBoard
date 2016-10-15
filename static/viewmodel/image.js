@@ -64,7 +64,7 @@ class ImageViewModel {
         Action.register({
             shortcut: { key: "e" },
             trigger:  [ model.ui.editButton, "click" ],
-            enabled:  () => !model.isEditing,
+            enabled:  () => !model.isEditing && !model.isDeleting,
             action:   () =>  model.isEditing = true
         })
 
