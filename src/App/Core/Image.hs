@@ -113,13 +113,13 @@ querySingle = runDB . DB.selectImage
 
 -- | Returns the image with the given ID along with the two adjacent images
 -- | based on the given filter.
-queryTriple :: Expression -> ID -> App (Triple (Maybe (Entity Image)))
+queryTriple :: Expression -> ID -> App (Maybe (Triple (Entity Image)))
 queryTriple expression id = runDB $ do
     main <- DB.selectImage id
     next <- DB.selectNextImage id expression
     prev <- DB.selectPreviousImage id expression
 
-    return (prev, main, next)
+    return $ (,,) <$> prev <*> main <*> next
 
 -- | Updates the given image in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.

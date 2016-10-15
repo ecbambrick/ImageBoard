@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
-module App.Core.Scope ( defaultName, delete, insertOrUpdate, querySingle ) where
+module App.Core.Scope ( getDefault, delete, insertOrUpdate, querySingle ) where
 
 import qualified App.Database   as DB
 import qualified App.Path       as Path
@@ -17,9 +17,8 @@ import Database.Engine       ( Entity(..), fromEntity )
 
 -------------------------------------------------------------------------- CRUD
 
--- | The scope name for displaying all results.
-defaultName :: String
-defaultName = "all"
+getDefault :: Scope
+getDefault = Scope defaultName ""
 
 -- | Deletes the scope with the given name.
 delete :: String -> App ()
@@ -49,6 +48,10 @@ querySingle name =
         else fromEntity <$$> runDB (DB.selectScope name)
 
 ----------------------------------------------------------------------- Utility
+
+-- | The scope name for displaying all results.
+defaultName :: String
+defaultName = "all"
 
 -- | Returns valid if the given scope is valid; otherwise invalid.
 validate :: Scope -> Validation

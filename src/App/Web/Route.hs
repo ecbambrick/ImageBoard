@@ -45,54 +45,46 @@ uploadRoute = Spock.var <//> "upload"
 ------------------------------------------------------------- Routing Functions
 
 -- | Returns the route to an album with the given ID, query, and scope.
-album :: Maybe Scope -> ID -> Text
-album scope id = Spock.renderRoute albumRoute (getScopeName scope) id
+album :: Scope -> ID -> Text
+album scope id = Spock.renderRoute albumRoute (scopeName scope) id
 
 -- | Returns the route to the list of albums on the given page with the given
 -- | query and scope.
-albums :: Maybe Scope -> Int -> String -> Text
+albums :: Scope -> Int -> String -> Text
 albums scope page query =
-    let scopeName = getScopeName scope
-        route     = Spock.renderRoute albumsRoute scopeName
+    let route     = Spock.renderRoute albumsRoute (scopeName scope)
         params    = [("page", if page <= 1 then "" else show page), ("q", query)]
 
     in withParameters route params
 
 -- | Returns the route to the image with the given ID filtered by the given
 -- | query and scope.
-image :: Maybe Scope -> ID -> String -> Text
+image :: Scope -> ID -> String -> Text
 image scope id query =
-    let scopeName = getScopeName scope
-        route     = Spock.renderRoute imageRoute scopeName id
+    let route     = Spock.renderRoute imageRoute (scopeName scope) id
         params    = [("q", query)]
 
     in withParameters route params
 
 -- | Returns the route to the list of images on the given page with the given
 -- | query and scope.
-images :: Maybe Scope -> Int -> String -> Text
+images :: Scope -> Int -> String -> Text
 images scope page query =
-    let scopeName = getScopeName scope
-        route     = Spock.renderRoute imagesRoute scopeName
+    let route     = Spock.renderRoute imagesRoute (scopeName scope)
         params    = [("page", if page <= 1 then "" else show page), ("q", query)]
 
     in route `withParameters` params
 
 -- | Returns the route to the given page number from the album with the given
 -- | ID and scope.
-page :: Maybe Scope -> ID -> Int -> Text
-page scope = Spock.renderRoute pageRoute (getScopeName scope)
+page :: Scope -> ID -> Int -> Text
+page scope = Spock.renderRoute pageRoute (scopeName scope)
 
 -- | Returns the route to upload a new post.
-upload :: Maybe Scope -> Text
-upload scope = Spock.renderRoute uploadRoute (getScopeName scope)
+upload :: Scope -> Text
+upload scope = Spock.renderRoute uploadRoute (scopeName scope)
 
 ----------------------------------------------------------------------- Utility
-
--- | Gets the scope name of the given scope or the default name if the given
--- | scope is nothing.
-getScopeName :: Maybe Scope -> String
-getScopeName = maybe Scope.defaultName scopeName
 
 -- | Adds the given list of parameter key-value pairs to the given URL.
 withParameters :: Text -> [(String, String)] -> Text

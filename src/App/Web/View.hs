@@ -1,33 +1,37 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module App.Web.View ( albumView, albumsView, imageView, imagesView, pageView ) where
+module App.Web.View
+    ( albumView, albumsView, imageView, imagesView, pageView ) where
 
+import qualified App.Core.Album   as Album
 import qualified App.Core.Scope   as Scope
 import qualified App.Path         as Path
 import qualified App.Web.Route    as Route
 import qualified App.Web.Element  as Elem
 import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText
+import qualified System.FilePath  as FilePath
 import qualified Text.JavaScript  as JS
 
-import App.Core.Types  ( Album(..), Image(..), Page(..), Scope(..) )
-import Control.Monad   ( when )
-import Data.Monoid     ( (<>) )
-import Data.Text       ( Text )
-import Data.Textual    ( display, intercalate )
-import Data.DateTime   ( TimeZone )
-import Database.Engine ( ID, Entity(..) )
-import Lucid.Base      ( Html(..), renderText )
+import App.Core.Types      ( Album(..), Image(..), Page(..), Scope(..) )
+import Control.Applicative ( (<|>) )
+import Control.Monad       ( when )
+import Data.Monoid         ( (<>) )
+import Data.Text           ( Text )
+import Data.Textual        ( display, intercalate )
+import Data.DateTime       ( TimeZone )
+import Database.Engine     ( ID, Entity(..) )
+import Lucid.Base          ( Html(..), renderText )
 
 ------------------------------------------------------------------------- Views
 
 -- | Renders a view for the given album as text containing HTML.
-albumView :: (Maybe Scope) -> String -> TimeZone -> Entity Album -> Text
+albumView :: Scope -> String -> TimeZone -> Entity Album -> Text
 albumView scope query timeZone (Entity id album @ Album{..}) = render $ do
     let title  = "Album " <> display id
         onload = JS.functionCall "Album.initializePage" args
-        args   = [ JS.toJSON (maybe "" scopeName scope)
+        args   = [ JS.toJSON (scopeName scope)
                  , JS.toJSON id
                  , JS.toJSON query ]
 
@@ -50,13 +54,13 @@ albumView scope query timeZone (Entity id album @ Album{..}) = render $ do
             Elem.textAreaField "Tags"  "tags"  "edit-tags"
 
 -- | Renders an index view for albums as text containing HTML.
-albumsView :: Maybe Scope -> String -> Int -> Int -> Int -> [Entity Album] -> Text
+albumsView :: Scope -> String -> Int -> Int -> Int -> [Entity Album] -> Text
 albumsView scope query page total pageSize albums = render $ do
     let prevAvailable = page > 1
         nextAvailable = page * pageSize < total
         title         = "Albums (" <> display total <> ")"
         onload        = JS.functionCall "Albums.initializePage" args
-        args          = [ JS.toJSON (maybe "" scopeName scope)
+        args          = [ JS.toJSON (scopeName scope)
                         , JS.toJSON prevAvailable
                         , JS.toJSON nextAvailable
                         , JS.toJSON page
@@ -80,12 +84,12 @@ albumsView scope query page total pageSize albums = render $ do
                 , Path.getAlbumThumbnailURL (Entity id album))
 
 -- | Renders a view for the given image as text containing HTML.
-imageView :: Maybe Scope -> String -> TimeZone -> Entity Image -> Entity Image -> Entity Image -> Text
+imageView :: Scope -> String -> TimeZone -> Entity Image -> Entity Image -> Entity Image -> Text
 imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next _) = render $ do
     let title  = "Image " <> display curr
-        source = Text.pack (Path.getImageURL image)
+        source = Path.getImageURL image
         onload = JS.functionCall "ImageViewModel.register" args
-        args   = [ JS.toJSON (maybe Scope.defaultName scopeName scope)
+        args   = [ JS.toJSON (scopeName scope)
                  , JS.toJSON query
                  , JS.toJSON prev
                  , JS.toJSON curr
@@ -109,18 +113,18 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
             Elem.deletePanel (Route.image scope curr query)
-        if isVideo (imageExtension image)
-            then Elem.video source
-            else Elem.image source
+        if isVideo source
+            then Elem.video (Text.pack source)
+            else Elem.image (Text.pack source)
 
 -- | Renders an index view for images as text containing HTML.
-imagesView :: Maybe Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
+imagesView :: Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
 imagesView scope query page total pageSize images = render $ do
     let prevAvailable = page > 1
         nextAvailable = page * pageSize < total
         title         = "Images (" <> display total <> ")"
         onload        = JS.functionCall "Images.initializePage" args
-        args          = [ JS.toJSON (maybe "" scopeName scope)
+        args          = [ JS.toJSON (scopeName scope)
                         , JS.toJSON prevAvailable
                         , JS.toJSON nextAvailable
                         , JS.toJSON page
@@ -145,31 +149,32 @@ imagesView scope query page total pageSize images = render $ do
 
 -- | Renders a view for the give page of the given album as text containing
 -- | HTML.
-pageView :: Scope -> Entity Album -> Page -> Text
-pageView Scope {..} (Entity id Album {..}) page = render $ do
-    let number = pageNumber page
-        pages  = length albumPages
-        source = Text.pack (Path.getPageURL id page)
-        title  = Text.pack (albumTitle ++ " (" ++ show number ++ "/" ++ show pages ++ ")")
-        prev   = if number <= 1 then pages else number - 1
+pageView :: Scope -> Entity Album -> Int -> Text
+pageView scope (Entity id album) number = render $ do
+    let pages  = length (albumPages album)
+        page   = Album.getPage album number <|> Album.getPage album 1
+        prev   = if number <= 1 || number > pages then pages else number - 1
         next   = if number >= pages then 1 else number + 1
+        title  = Text.pack (albumTitle album ++ " (" ++ show number ++ "/" ++ show pages ++ ")")
         onload = JS.functionCall "Page.initializePage" args
-        args   = [ JS.toJSON scopeName
+        args   = [ JS.toJSON (scopeName scope)
                  , JS.toJSON id
                  , JS.toJSON prev
                  , JS.toJSON next ]
 
     Elem.document title onload $ do
-        if isVideo (pageExtension page)
-            then Elem.video source
-            else Elem.image source
+        case page of
+            Nothing   -> mempty
+            Just page ->
+                let source = Path.getPageURL id page
+                in if isVideo source
+                    then Elem.video (Text.pack source)
+                    else Elem.image (Text.pack source)
 
 ----------------------------------------------------------------------- Utility
 
--- | Returns whether or not the given file extension represents a video.
 isVideo :: String -> Bool
-isVideo "webm" = True
-isVideo _      = False
+isVideo url = FilePath.takeExtension url == ".webm"
 
 -- | Renders the given HTML as text.
 render :: Html () -> Text

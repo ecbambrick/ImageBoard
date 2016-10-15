@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module App.Web.Server where
+module App.Web.Server ( routes ) where
 
 import qualified App.Core.Album                as Album
 import qualified App.Core.Image                as Image
@@ -9,35 +9,35 @@ import qualified App.Core.Scope                as Scope
 import qualified App.Path                      as Path
 import qualified App.Web.Route                 as Route
 import qualified App.Web.View                  as View
+import qualified Data.Text                     as Text
 import qualified Network.HTTP.Types            as HTTP
 import qualified Network.Wai.Middleware.Static as Middleware
 import qualified Web.Spock                     as Spock
 
-import App.Config           ( Config(..) )
-import App.Core.Post        ( PostType(..) )
-import App.Core.Types       ( Album(..), DeletionMode(..), Image(..), Scope(..) )
-import App.Expression       ( parse )
-import App.Validation       ( Error(..), Validation(..) )
-import Control.Applicative  ( (<$>), (<*>), pure )
-import Control.Monad.Reader ( ReaderT, asks, liftIO, join )
-import Control.Monad.Trans  ( MonadIO )
-import Data.HashMap.Strict  ( (!) )
-import Data.Maybe           ( fromMaybe )
-import Data.Monoid          ( (<>), mconcat )
-import Data.Text            ( Text, pack, unpack )
-import Data.Textual         ( display, intercalate, strip, splitOn )
-import Database.Engine      ( Entity(..), fromEntity )
-import Web.PathPieces       ( PathPiece )
-import Web.Spock            ( delete, get, html, post, redirect, root )
+import App.Config                ( Config(..) )
+import App.Core.Post             ( PostType(..) )
+import App.Core.Types            ( Album(..), DeletionMode(..), Image(..), Scope(..) )
+import App.Expression            ( parse )
+import App.Validation            ( Error(..), Validation(..) )
+import Control.Applicative       ( (<$>), (<*>), (<|>), pure )
+import Control.Monad.Reader      ( ReaderT, asks, liftIO, join )
+import Control.Monad.Trans       ( MonadIO, lift )
+import Control.Monad.Trans.Maybe ( MaybeT(..), runMaybeT )
+import Data.HashMap.Strict       ( (!) )
+import Data.Maybe                ( fromMaybe )
+import Data.Monoid               ( (<>), mconcat )
+import Data.Text                 ( Text )
+import Data.Textual              ( display, intercalate, strip, splitOn )
+import Database.Engine           ( Entity(..), fromEntity )
+import Web.PathPieces            ( PathPiece )
+import Web.Spock                 ( delete, get, hookAny, html, post, redirect, root )
 
 ---------------------------------------------------------------------- Handlers
 
 -- | The route handling for the web service.
 routes :: Spock.SpockT (ReaderT Config IO) ()
 routes = do
-    timeZone    <- asks configTimeZone
     storagePath <- asks configStoragePath
-    pageSize    <- asks configPageSize
 
     -- Enables access to thumbnails and images in the storage path.
     Spock.middleware $ Middleware.staticPolicy $ mconcat
@@ -54,92 +54,99 @@ routes = do
 
     -- Redirects to the images page.
     get root $ do
-        redirect (Route.images Nothing 1 "")
+        redirect (Route.images Scope.getDefault 1 "")
 
     -- Upload an image or album.
     post Route.uploadRoute $ \scopeName -> do
-        scope           <- Scope.querySingle scopeName
-        (name, m, path) <- getFile "uploadedFile"
-        title           <- optionalParam "title" ""
-        tags            <- splitOn "," <$> optionalParam "tags" ""
-        result          <- Post.insert path title tags
+        scope        <- fromMaybe Scope.getDefault <$> Scope.querySingle scopeName
+        (_, _, path) <- getFile "uploadedFile"
+        title        <- optionalParam "title" ""
+        tags         <- splitOn "," <$> optionalParam "tags" ""
+        result       <- Post.insert path title tags
 
         case result of
-            (_, Invalid e) -> requestError (display (Invalid e))
-            (AlbumPost, _) -> redirect (Route.albums scope 1 "")
-            (ImagePost, _) -> redirect (Route.images scope 1 "")
+            InvalidPost e -> requestError (display e)
+            AlbumPost     -> redirect (Route.albums scope 1 "")
+            ImagePost     -> redirect (Route.images scope 1 "")
 
-    -- Renders the albums page with albums that match the query parameter.
+    albumRoutes
+    imageRoutes
+
+-- Album route handlers.
+albumRoutes :: Spock.SpockCtxT () (ReaderT Config IO) ()
+albumRoutes = do
+    pageSize <- asks configPageSize
+    timeZone <- asks configTimeZone
+
+    -- Renders the albums page with albums that match the query parameter
+    -- within the given scope.
     get Route.albumsRoute $ \scopeName -> do
-        scope <- Scope.querySingle scopeName
-        query <- optionalParam "q" ""
-        page  <- optionalParam "page" 1
+        result <- runMaybeT $ do
+            scope <- MaybeT $ Scope.querySingle scopeName
+            page  <- lift   $ optionalParam "page" 1
+            query <- lift   $ strip <$> optionalParam "q" ""
 
-        case scope of
-            Nothing -> do
-                notFound
+            let fullQuery = parse (query ++ ", " ++ scopeExpression scope)
 
-            Just (Scope _ scopeQuery) -> do
-                let fullQuery = parse query ++ parse scopeQuery
+            count  <- lift $ Album.count fullQuery
+            albums <- lift $ Album.query fullQuery page
 
-                count  <- Album.count fullQuery
-                albums <- Album.query fullQuery page
-
-                html (View.albumsView scope query page count pageSize albums)
-
-    -- Renders the album details page for the album with the given ID.
-    get Route.albumRoute $ \scopeName id -> do
-        scope <- Scope.querySingle scopeName
-        query <- strip <$> optionalParam "q" ""
-        album <- Album.querySingle id
-
-        case (scope, album) of
-            (Nothing, _)    -> notFound
-            (_, Nothing)    -> notFound
-            (_, Just album) -> html (View.albumView scope query timeZone album)
-
-    -- Renders the details page for the album page with the give album ID and
-    -- page number.
-    get Route.pageRoute $ \scopeName id number -> do
-        maybeScope <- Scope.querySingle scopeName
-        maybeAlbum <- Album.querySingle id
-
-        let result = do
-                scope <- maybeScope
-                album <- maybeAlbum
-                page  <- Album.getPage (fromEntity album) number
-                return (html (View.pageView scope album page))
+            return (View.albumsView scope query page count pageSize albums)
 
         case result of
             Nothing   -> notFound
-            Just view -> view
+            Just view -> html view
 
-    -- Updates the album with the given id with the given POST data.
+    -- Renders the album details page for the album with the given ID within
+    -- the given scope.
+    get Route.albumRoute $ \scopeName id -> do
+        result <- runMaybeT $ do
+            scope <- MaybeT $ Scope.querySingle scopeName
+            album <- MaybeT $ Album.querySingle id
+            query <- lift   $ strip <$> optionalParam "q" ""
+
+            return (View.albumView scope query timeZone album)
+
+        case result of
+            Nothing   -> notFound
+            Just view -> html view
+
+    -- Renders the details page for the album page with the give album ID and
+    -- page number within the given scope.
+    get Route.pageRoute $ \scopeName id number -> do
+        result <- runMaybeT $ do
+            scope <- MaybeT $ Scope.querySingle scopeName
+            album <- MaybeT $ Album.querySingle id
+
+            return (View.pageView scope album number)
+
+        case result of
+            Nothing   -> notFound
+            Just view -> html view
+
+    -- Updates the album with the given id within the given scope using POST
+    -- parameters.
     post Route.albumRoute $ \scopeName id -> do
-        scope  <- Scope.querySingle scopeName
-        entity <- Album.querySingle id
+        result <- runMaybeT $ do
+            scope            <- MaybeT $ Scope.querySingle scopeName
+            (Entity _ album) <- MaybeT $ Album.querySingle id
 
-        case (scope, entity) of
-            (Nothing, _) -> do
-                notFound
+            let originalTitle = albumTitle album
+                originalTags  = intercalate "," (albumTagNames album)
 
-            (_, Nothing) -> do
-                notFound
+            title  <- lift $ optionalParam "title" originalTitle
+            tags   <- lift $ splitOn "," <$> optionalParam "tags" originalTags
+            result <- lift $ Album.update (Entity id album { albumTitle    = title
+                                                           , albumTagNames = tags })
 
-            (_, Just (Entity _ album)) -> do
-                let originalTitle = albumTitle album
-                    originalTags  = intercalate "," (albumTagNames album)
+            return (Route.album scope id, result)
 
-                title   <- optionalParam "title" originalTitle
-                tags    <- splitOn "," <$> optionalParam "tags" originalTags
-                results <- Album.update (Entity id album { albumTitle    = title
-                                                         , albumTagNames = tags })
+        case result of
+            Nothing           -> notFound
+            Just (url, Valid) -> redirect url
+            Just (_,       e) -> serverError (display e)
 
-                case results of
-                    Valid     -> redirect (Route.album scope id)
-                    Invalid _ -> serverError (display results)
-
-    -- Delets the album with the given id.
+    -- Deletes the album with the given id within the given scope.
     delete Route.albumRoute $ \scopeName id -> do
         scope     <- Scope.querySingle scopeName
         permanent <- optionalParam "permanent" False
@@ -149,71 +156,71 @@ routes = do
             (_,   False) -> Album.delete MarkAsDeleted     id
             (_,    True) -> Album.delete PermanentlyDelete id
 
-    -- Renders the images page with images that match the query parameter.
+-- Image route handlers.
+imageRoutes :: Spock.SpockCtxT () (ReaderT Config IO) ()
+imageRoutes = do
+    pageSize <- asks configPageSize
+    timeZone <- asks configTimeZone
+
+    -- Renders the images page with images that match the query parameter
+    -- within the given scope.
     get Route.imagesRoute $ \scopeName -> do
-        scope  <- Scope.querySingle scopeName
-        query  <- strip <$> optionalParam "q" ""
-        page   <- optionalParam "page" 1
+        result <- runMaybeT $ do
+            scope     <- MaybeT $ Scope.querySingle scopeName
+            page      <- lift   $ optionalParam "page" 1
+            query     <- lift   $ strip <$> optionalParam "q" ""
 
-        case scope of
-            Nothing -> do
-                notFound
+            let fullQuery = parse (query ++ ", " ++ scopeExpression scope)
 
-            Just (Scope _ scopeQuery) -> do
-                let fullQuery = parse query ++ parse scopeQuery
+            count  <- lift $ Image.count fullQuery
+            images <- lift $ Image.query fullQuery page
 
-                count  <- Image.count fullQuery
-                images <- Image.query fullQuery page
+            return (View.imagesView scope query page count pageSize images)
 
-                html (View.imagesView scope query page count pageSize images)
+        case result of
+            Nothing   -> notFound
+            Just view -> html view
 
-    -- Renders the image details page for the image with the given ID.
+    -- Renders the image details page for the image with the given ID within
+    -- the given scope.
     get Route.imageRoute $ \scopeName id -> do
-        scope <- Scope.querySingle scopeName
-        query <- strip <$> optionalParam "q" ""
+        result <- runMaybeT $ do
+            scope <- MaybeT $ Scope.querySingle scopeName
+            query <- lift   $ strip <$> optionalParam "q" ""
 
-        case scope of
-            Nothing -> do
-                notFound
+            let fullQuery = parse (scopeExpression scope ++ ", " ++ query)
 
-            Just (Scope _ scopeQuery) -> do
-                let fullQuery = parse query ++ parse scopeQuery
+            (prev, curr, next) <- MaybeT $ Image.queryTriple fullQuery id
+            return (View.imageView scope query timeZone prev curr next)
 
-                (prev, image, next) <- Image.queryTriple fullQuery id
+        case result of
+            Nothing   -> notFound
+            Just view -> html view
 
-                let view = View.imageView scope query timeZone <$> prev <*> image <*> next
-
-                case (scope, view) of
-                    (Nothing, _)   -> notFound
-                    (_, Nothing)   -> notFound
-                    (_, Just view) -> html view
-
-    -- Updates the image with the given id with the given POST data.
+    -- Updates the image with the given id within the given scope using POST
+    -- parameters.
     post Route.imageRoute $ \scopeName id -> do
-        scope  <- Scope.querySingle scopeName
-        entity <- Image.querySingle id
+        result <- runMaybeT $ do
+            scope            <- MaybeT $ Scope.querySingle scopeName
+            (Entity _ image) <- MaybeT $ Image.querySingle id
 
-        case (scope, entity) of
-            (_, Nothing) -> do
-                notFound
+            let originalTitle = imageTitle image
+                originalTags  = intercalate "," (imageTagNames image)
 
-            (Nothing, _) -> do
-                notFound
+            query  <- lift $ strip <$> optionalParam "q" ""
+            title  <- lift $ optionalParam "title" originalTitle
+            tags   <- lift $ splitOn "," <$> optionalParam "tags" originalTags
+            result <- lift $ Image.update (Entity id image { imageTitle    = title
+                                                           , imageTagNames = tags })
 
-            (_, Just (Entity _ image)) -> do
-                let originalTitle = imageTitle image
-                    originalTags  = intercalate "," (imageTagNames image)
+            return (Route.image scope id query, result)
 
-                title   <- optionalParam "title" originalTitle
-                tags    <- splitOn "," <$> optionalParam "tags" originalTags
-                results <- Image.update (Entity id image { imageTitle    = title
-                                                         , imageTagNames = tags })
+        case result of
+            Nothing           -> notFound
+            Just (url, Valid) -> redirect url
+            Just (_,       e) -> serverError (display e)
 
-                case results of
-                    Valid     -> redirect (Route.image scope id "")
-                    Invalid _ -> serverError (display results)
-
-    -- Delets the image with the given id.
+    -- Deletes the image with the given id within the given scope.
     delete Route.imageRoute $ \scopeName id -> do
         scope     <- Scope.querySingle scopeName
         permanent <- optionalParam "permanent" False
@@ -229,7 +236,7 @@ routes = do
 notFound :: (MonadIO m) => Spock.ActionCtxT ctx m a
 notFound = do
     Spock.setStatus HTTP.status404
-    Spock.html $ pack $ concat
+    Spock.html $ Text.unlines
         [ "<html>"
         , "<head><title>404 - File not found</title></head>"
         , "<body><h1>404 - File not found</h1></body>"
@@ -252,8 +259,8 @@ getFile :: (MonadIO m) => Text -> Spock.ActionT m (String, String, String)
 getFile key = do
     uploadedFile <- (! key) <$> Spock.files
 
-    let name        = unpack (Spock.uf_name uploadedFile)
-        contentType = unpack (Spock.uf_contentType uploadedFile)
+    let name        = Text.unpack (Spock.uf_name uploadedFile)
+        contentType = Text.unpack (Spock.uf_contentType uploadedFile)
         location    = Spock.uf_tempLocation uploadedFile
 
     return (name, contentType, location)

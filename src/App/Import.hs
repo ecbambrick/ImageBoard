@@ -9,6 +9,7 @@ import qualified System.FilePath  as FilePath
 import qualified Text.Parsec      as Parsec
 
 import App.Core.Types       ( App )
+import App.Core.Post        ( PostType(..) )
 import App.Validation       ( Error(..), Validation(..) )
 import Control.Exception    ( ErrorCall(..), throwIO )
 import Control.Monad.Reader ( MonadIO, filterM, forM_, liftIO, unless, void, when )
@@ -49,10 +50,10 @@ fromDirectory inPath outPath extraTags = do
                 logError filePath "Invalid file name pattern"
 
             Right (title, tags) -> do
-                (_, result) <- Post.insert filePath title (tags ++ extraTags)
+                result <- Post.insert filePath title (tags ++ extraTags)
                 case (result, outPath) of
-                    (Invalid _, _)     -> logError filePath (show result)
-                    (Valid, Just path) -> liftIO $ Dir.renameFile filePath (path </> fileName)
+                    (InvalidPost e, _) -> logError filePath (show e)
+                    (_,     Just path) -> liftIO $ Dir.renameFile filePath (path </> fileName)
                     _                  -> return ()
 
     liftIO $ do
