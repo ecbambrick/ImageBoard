@@ -51,7 +51,6 @@ aside {
 
 #edit-panel > * {
     margin: 0;
-    margin-bottom: 10px;
     overflow: hidden;
 }
 
@@ -102,6 +101,7 @@ div.edit-pair > textarea, input {
     background-color: #3e3e3e;
     border: none;
     padding: 10px;
+    width: 100%;
 }
 
 div.edit-pair > span {
@@ -112,6 +112,7 @@ div.edit-actions {
     display: flex;
     flex-direction: row;
     justify-content: center;
+    padding-top: 20px;
 }
 
 div#image-container {
@@ -290,7 +291,6 @@ h1 {
 
 #upload > * {
     margin: 0;
-    margin-bottom: 10px;
     overflow: hidden;
 }
 
@@ -316,11 +316,20 @@ button.action:hover {
     position: relative;
 }
 
-#upload > .browse {
-    border: 1px solid #3e3e3e;
+#upload > button {
+    margin-top: 10px;
 }
 
 .checkbox-label {
-    text-align: center;
-    padding-bottom: 20px;
+    justify-content: center;
+    display: flex;
+}
+
+.checkbox-label > input {
+    flex: 0;
+}
+
+.checkbox-label > span {
+    margin-top: 3px;
+    margin-left: 10px;
 }

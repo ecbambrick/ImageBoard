@@ -95,7 +95,6 @@ editPanel url html = do
         h1_ "Edit Post"
         div_ [class_ "error"] mempty
         html
-        spacer
         div_ [class_ "edit-actions"] $ do
             formButton Submit "edit-submit" "Submit" Check
             formButton Cancel "edit-cancel" "Cancel" Cross
@@ -104,10 +103,10 @@ editPanel url html = do
 deletePanel :: Text -> Html ()
 deletePanel url =
     div_ [id_ "delete-panel"] $ do
-        h1_ "Detel Post"
+        h1_ "Delete Post"
         label_ [class_ "checkbox-label"] $ do
             input_ [id_ "delete-permanent", type_ "checkbox"]
-            "Delete Permanently"
+            span_ "Delete Permanently"
         div_ [class_ "edit-actions"] $ do
             formButton Submit "delete-submit" "Delete" Check
             formButton Cancel "delete-cancel" "Cancel" Cross
