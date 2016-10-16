@@ -21,6 +21,10 @@ getDataPrefix = "data"
 getStaticPrefix :: String
 getStaticPrefix = "static"
 
+-- | Returns the URL prefix for API methods.
+getApiPrefix :: String
+getApiPrefix = "api"
+
 -- | Returns the path of the template with the given name.
 getDataPath :: (MonadReader Config m) => m FilePath
 getDataPath = do

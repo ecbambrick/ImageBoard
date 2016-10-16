@@ -1,10 +1,16 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module App.Core.Types where
 
+import qualified Data.Aeson as JSON
+import qualified Data.Text  as Text
+
 import App.Config           ( Config )
 import Data.DateTime        ( DateTime )
+import Data.Aeson           ( ToJSON(..), (.=) )
 import Control.Monad.Trans  ( MonadIO )
 import Control.Monad.Reader ( MonadReader )
 
@@ -60,3 +66,18 @@ data Scope = Scope
 data Tag = Tag
     { tagName :: String
     } deriving (Eq, Show)
+
+---------------------------------------------------------------- JSON instances
+
+instance ToJSON Image where
+    toJSON Image {..} = JSON.object
+        [ "title"       .= Text.pack imageTitle
+        , "isFavourite" .= imageIsFavourite
+        , "hash"        .= Text.pack imageHash
+        , "extension"   .= Text.pack imageExtension
+        , "width"       .= imageWidth
+        , "height"      .= imageHeight
+        , "created"     .= imageCreated
+        , "modified"    .= imageModified
+        , "fileSize"    .= imageFileSize
+        , "tags"        .= map Text.pack imageTagNames ]

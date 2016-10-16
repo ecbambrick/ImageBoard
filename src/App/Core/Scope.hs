@@ -58,7 +58,8 @@ validate :: Scope -> Validation
 validate (Scope name expr) =
     let invalidNames  = [ defaultName
                         , Path.getDataPrefix
-                        , Path.getStaticPrefix ]
+                        , Path.getStaticPrefix
+                        , Path.getApiPrefix ]
 
     in Validation.validate
         [ Validation.verify (length name > 0) (InvalidScopeName name)

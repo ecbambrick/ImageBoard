@@ -1,14 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds         #-}
 
-module App.Web.Route ( album, albums, image, images, page, upload, root ) where
+module App.Web.Route where
 
+import qualified App.Path  as Path
 import qualified Web.Spock as Spock
 
 import Database.Engine ( ID )
 import Web.Spock       ( (<//>), Path )
 
 ------------------------------------------------------------------------ Routes
+
+apiImage :: Spock.Path '[ID]
+apiImage = Spock.static Path.getApiPrefix <//> "image" <//> Spock.var
 
 -- | The route to an album with the given ID.
 album :: Spock.Path '[String, ID]
