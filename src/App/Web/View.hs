@@ -7,8 +7,8 @@ module App.Web.View
 import qualified App.Core.Album   as Album
 import qualified App.Core.Scope   as Scope
 import qualified App.Path         as Path
-import qualified App.Web.Route    as Route
 import qualified App.Web.Element  as Elem
+import qualified App.Web.URL      as URL
 import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText
 import qualified System.FilePath  as FilePath
@@ -39,7 +39,7 @@ albumView scope query timeZone (Entity id album @ Album{..}) = render $ do
         Elem.aside $ Elem.infoPanel $ do
             Elem.actions $ do
                 Elem.actionGroup $ do
-                    Elem.actionLink Elem.Grid (Route.albums scope 1 query)
+                    Elem.actionLink Elem.Grid (URL.albums scope 1 query)
                 Elem.actionGroup $ do
                     Elem.action Elem.Pencil "edit-show"
                     Elem.action Elem.Trash  "delete"
@@ -47,9 +47,9 @@ albumView scope query timeZone (Entity id album @ Album{..}) = render $ do
             Elem.albumTags scope albumTagNames
         Elem.gallery $
             flip map albumPages $ \page @ Page {..} ->
-                ( Route.page scope id pageNumber
+                ( URL.page scope id pageNumber
                 , Path.getPageThumbnailURL id page)
-        Elem.editForm (Route.album scope id) $ do
+        Elem.editForm (URL.album scope id) $ do
             Elem.textBoxField  "Title" "title" "edit-title"
             Elem.textAreaField "Tags"  "tags"  "edit-tags"
 
@@ -68,19 +68,19 @@ albumsView scope query page total pageSize albums = render $ do
 
     Elem.document title onload $ do
         Elem.aside $ Elem.infoPanel $ do
-            Elem.searchBox (Route.albums scope 1 "") query
+            Elem.searchBox (URL.albums scope 1 "") query
             Elem.actions $ do
                 Elem.actionGroup $ do
                     when prevAvailable $
-                        Elem.actionLink Elem.LeftArrow (Route.albums scope (page - 1) query)
+                        Elem.actionLink Elem.LeftArrow (URL.albums scope (page - 1) query)
                 Elem.actionGroup $ do
                     when nextAvailable $
-                        Elem.actionLink Elem.RightArrow (Route.albums scope (page + 1) query)
+                        Elem.actionLink Elem.RightArrow (URL.albums scope (page + 1) query)
             Elem.spacer
             Elem.uploadForm scope
         Elem.gallery $
             flip map albums $ \(Entity id album) ->
-                ( Route.album scope id
+                ( URL.album scope id
                 , Path.getAlbumThumbnailURL (Entity id album))
 
 -- | Renders a view for the given image as text containing HTML.
@@ -100,19 +100,19 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
             Elem.infoPanel $ do
                 Elem.actions $ do
                     Elem.actionGroup $ do
-                        Elem.actionLink Elem.LeftArrow  (Route.image  scope prev query)
-                        Elem.actionLink Elem.Grid       (Route.images scope 1    query)
-                        Elem.actionLink Elem.RightArrow (Route.image  scope next query)
+                        Elem.actionLink Elem.LeftArrow  (URL.image  scope prev query)
+                        Elem.actionLink Elem.Grid       (URL.images scope 1    query)
+                        Elem.actionLink Elem.RightArrow (URL.image  scope next query)
                     Elem.actionGroup $ do
                         Elem.action Elem.Pencil "edit-show"
                         Elem.action Elem.Trash  "delete-show"
-                Elem.searchBox (Route.images scope 1 "") query
+                Elem.searchBox (URL.images scope 1 "") query
                 Elem.imageDetails image timeZone
                 Elem.imageTags scope (imageTagNames image)
-            Elem.editPanel (Route.image scope curr query) $ do
+            Elem.editPanel (URL.image scope curr query) $ do
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
-            Elem.deletePanel (Route.image scope curr query)
+            Elem.deletePanel (URL.image scope curr query)
         if isVideo source
             then Elem.video (Text.pack source)
             else Elem.image (Text.pack source)
@@ -132,19 +132,19 @@ imagesView scope query page total pageSize images = render $ do
 
     Elem.document title onload $ do
         Elem.aside $ Elem.infoPanel $ do
-            Elem.searchBox (Route.images scope 1 "") query
+            Elem.searchBox (URL.images scope 1 "") query
             Elem.actions $ do
                 Elem.actionGroup $ do
                     when prevAvailable $
-                        Elem.actionLink Elem.LeftArrow (Route.images scope (page - 1) query)
+                        Elem.actionLink Elem.LeftArrow (URL.images scope (page - 1) query)
                 Elem.actionGroup $ do
                     when nextAvailable $
-                        Elem.actionLink Elem.RightArrow (Route.images scope (page + 1) query)
+                        Elem.actionLink Elem.RightArrow (URL.images scope (page + 1) query)
             Elem.spacer
             Elem.uploadForm scope
         Elem.gallery $
             flip map images $ \(Entity id image) ->
-                ( Route.image scope id query
+                ( URL.image scope id query
                 , Path.getImageThumbnailURL image)
 
 -- | Renders a view for the give page of the given album as text containing

@@ -37,6 +37,7 @@ executable imageboard
         App.Web.Element,
         App.Web.Route,
         App.Web.Server,
+        App.Web.URL,
         App.Web.View,
         Data.Functor.Extended,
         Data.Ord.Extended,

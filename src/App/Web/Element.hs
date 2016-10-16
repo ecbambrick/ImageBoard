@@ -3,7 +3,7 @@
 
 module App.Web.Element where
 
-import qualified App.Web.Route   as Route
+import qualified App.Web.URL     as URL
 import qualified Data.Text       as Text
 import qualified Numeric         as Numeric
 import qualified Text.JavaScript as JS
@@ -140,7 +140,7 @@ uploadForm scope = do
     form_
         [ id_ "upload"
         , name_ "upload"
-        , action_ (Route.upload scope)
+        , action_ (URL.upload scope)
         , method_ "post"
         , enctype_ "multipart/form-data" ] $ do
             textBoxField  "Title" "title"        "upload-title"
@@ -220,14 +220,14 @@ albumTags :: Scope -> [String] -> Html ()
 albumTags scope tagNames =
     div_ [id_ "tags"] $ do
         forM_ tagNames $ \name ->
-            a_ [class_ "tag", href_ (Route.albums scope 1 name)] (toHtml name)
+            a_ [class_ "tag", href_ (URL.albums scope 1 name)] (toHtml name)
 
 -- | Returns an HTML element containing the given list of image tag names.
 imageTags :: Scope -> [String] -> Html ()
 imageTags scope tagNames =
     div_ [id_ "tags"] $ do
         forM_ tagNames $ \name ->
-            a_ [class_ "tag", href_ (Route.images scope 1 name)] (toHtml name)
+            a_ [class_ "tag", href_ (URL.images scope 1 name)] (toHtml name)
 
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery :: [(Text, String)] -> Html ()

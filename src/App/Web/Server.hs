@@ -8,6 +8,7 @@ import qualified App.Core.Post                 as Post
 import qualified App.Core.Scope                as Scope
 import qualified App.Path                      as Path
 import qualified App.Web.Route                 as Route
+import qualified App.Web.URL                   as URL
 import qualified App.Web.View                  as View
 import qualified Data.Text                     as Text
 import qualified Network.HTTP.Types            as HTTP
@@ -53,11 +54,11 @@ routes = do
         , Middleware.hasPrefix Path.getStaticPrefix ]
 
     -- Redirects to the images page.
-    get root $ do
-        redirect (Route.images Scope.getDefault 1 "")
+    get Route.root $ do
+        redirect (URL.images Scope.getDefault 1 "")
 
     -- Upload an image or album.
-    post Route.uploadRoute $ \scopeName -> do
+    post Route.upload $ \scopeName -> do
         scope        <- fromMaybe Scope.getDefault <$> Scope.querySingle scopeName
         (_, _, path) <- getFile "uploadedFile"
         title        <- optionalParam "title" ""
@@ -66,21 +67,21 @@ routes = do
 
         case result of
             InvalidPost e -> requestError (display e)
-            AlbumPost     -> redirect (Route.albums scope 1 "")
-            ImagePost     -> redirect (Route.images scope 1 "")
+            AlbumPost     -> redirect (URL.albums scope 1 "")
+            ImagePost     -> redirect (URL.images scope 1 "")
 
     albumRoutes
     imageRoutes
 
 -- Album route handlers.
-albumRoutes :: Spock.SpockCtxT () (ReaderT Config IO) ()
+albumRoutes :: Spock.SpockT (ReaderT Config IO) ()
 albumRoutes = do
     pageSize <- asks configPageSize
     timeZone <- asks configTimeZone
 
     -- Renders the albums page with albums that match the query parameter
     -- within the given scope.
-    get Route.albumsRoute $ \scopeName -> do
+    get Route.albums $ \scopeName -> do
         result <- runMaybeT $ do
             scope <- MaybeT $ Scope.querySingle scopeName
             page  <- lift   $ optionalParam "page" 1
@@ -99,7 +100,7 @@ albumRoutes = do
 
     -- Renders the album details page for the album with the given ID within
     -- the given scope.
-    get Route.albumRoute $ \scopeName id -> do
+    get Route.album $ \scopeName id -> do
         result <- runMaybeT $ do
             scope <- MaybeT $ Scope.querySingle scopeName
             album <- MaybeT $ Album.querySingle id
@@ -113,7 +114,7 @@ albumRoutes = do
 
     -- Renders the details page for the album page with the give album ID and
     -- page number within the given scope.
-    get Route.pageRoute $ \scopeName id number -> do
+    get Route.page $ \scopeName id number -> do
         result <- runMaybeT $ do
             scope <- MaybeT $ Scope.querySingle scopeName
             album <- MaybeT $ Album.querySingle id
@@ -126,7 +127,7 @@ albumRoutes = do
 
     -- Updates the album with the given id within the given scope using POST
     -- parameters.
-    post Route.albumRoute $ \scopeName id -> do
+    post Route.album $ \scopeName id -> do
         result <- runMaybeT $ do
             scope            <- MaybeT $ Scope.querySingle scopeName
             (Entity _ album) <- MaybeT $ Album.querySingle id
@@ -139,7 +140,7 @@ albumRoutes = do
             result <- lift $ Album.update (Entity id album { albumTitle    = title
                                                            , albumTagNames = tags })
 
-            return (Route.album scope id, result)
+            return (URL.album scope id, result)
 
         case result of
             Nothing           -> notFound
@@ -147,7 +148,7 @@ albumRoutes = do
             Just (_,       e) -> serverError (display e)
 
     -- Deletes the album with the given id within the given scope.
-    delete Route.albumRoute $ \scopeName id -> do
+    delete Route.album $ \scopeName id -> do
         scope     <- Scope.querySingle scopeName
         permanent <- optionalParam "permanent" False
 
@@ -157,14 +158,14 @@ albumRoutes = do
             (_,    True) -> Album.delete PermanentlyDelete id
 
 -- Image route handlers.
-imageRoutes :: Spock.SpockCtxT () (ReaderT Config IO) ()
+imageRoutes :: Spock.SpockT (ReaderT Config IO) ()
 imageRoutes = do
     pageSize <- asks configPageSize
     timeZone <- asks configTimeZone
 
     -- Renders the images page with images that match the query parameter
     -- within the given scope.
-    get Route.imagesRoute $ \scopeName -> do
+    get Route.images $ \scopeName -> do
         result <- runMaybeT $ do
             scope     <- MaybeT $ Scope.querySingle scopeName
             page      <- lift   $ optionalParam "page" 1
@@ -183,7 +184,7 @@ imageRoutes = do
 
     -- Renders the image details page for the image with the given ID within
     -- the given scope.
-    get Route.imageRoute $ \scopeName id -> do
+    get Route.image $ \scopeName id -> do
         result <- runMaybeT $ do
             scope <- MaybeT $ Scope.querySingle scopeName
             query <- lift   $ strip <$> optionalParam "q" ""
@@ -199,7 +200,7 @@ imageRoutes = do
 
     -- Updates the image with the given id within the given scope using POST
     -- parameters.
-    post Route.imageRoute $ \scopeName id -> do
+    post Route.image $ \scopeName id -> do
         result <- runMaybeT $ do
             scope            <- MaybeT $ Scope.querySingle scopeName
             (Entity _ image) <- MaybeT $ Image.querySingle id
@@ -213,7 +214,7 @@ imageRoutes = do
             result <- lift $ Image.update (Entity id image { imageTitle    = title
                                                            , imageTagNames = tags })
 
-            return (Route.image scope id query, result)
+            return (URL.image scope id query, result)
 
         case result of
             Nothing           -> notFound
@@ -221,7 +222,7 @@ imageRoutes = do
             Just (_,       e) -> serverError (display e)
 
     -- Deletes the image with the given id within the given scope.
-    delete Route.imageRoute $ \scopeName id -> do
+    delete Route.image $ \scopeName id -> do
         scope     <- Scope.querySingle scopeName
         permanent <- optionalParam "permanent" False
 
@@ -233,7 +234,7 @@ imageRoutes = do
 ----------------------------------------------------------------------- Utility
 
 -- Return a 404 status.
-notFound :: (MonadIO m) => Spock.ActionCtxT ctx m a
+notFound :: (MonadIO m) => Spock.ActionT m a
 notFound = do
     Spock.setStatus HTTP.status404
     Spock.html $ Text.unlines
@@ -243,13 +244,13 @@ notFound = do
         , "</html>" ]
 
 -- Return a 400 status.
-requestError :: (MonadIO m) => Text -> Spock.ActionCtxT ctx m a
+requestError :: (MonadIO m) => Text -> Spock.ActionT m a
 requestError text = do
     Spock.setStatus HTTP.status400
     Spock.text text
 
 -- Return a 500 status.
-serverError :: (MonadIO m) => Text -> Spock.ActionCtxT ctx m a
+serverError :: (MonadIO m) => Text -> Spock.ActionT m a
 serverError text = do
     Spock.setStatus HTTP.status500
     Spock.text text
