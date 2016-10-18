@@ -6,8 +6,8 @@ let Album = {}
 Album.del = (scope, id, query) => {
     if (window.confirm("Delete?")) {
         Request
-            .del(Route.album(scope, id))
-            .then(_ => window.location.href = Route.albums(scope, 1, query))
+            .del(Url.album(scope, id))
+            .then(_ => window.location.href = Url.albums(scope, 1, query))
             .catch(x => alert("Deletion failed: " + x));
     }
 
@@ -63,7 +63,7 @@ Album.navigate = (scope, id, query, editScreen, e) => {
 
     // q
     } else if (!modifiers && e.keyCode === 81) {
-        window.location.href = Route.albums(1, query);
+        window.location.href = Url.albums(scope, 1, query);
     }
 }
 

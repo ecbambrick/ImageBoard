@@ -50,21 +50,21 @@ class ImageViewModel {
         Action.register({
             shortcut: { key: "space" },
             enabled:  () => !model.isEditing,
-            action:   () => Utility.goTo(Route.image(scope, nextId, query))
+            action:   () => Utility.goTo(Url.image(scope, nextId, query))
         });
 
         // Go to the previous page.
         Action.register({
             shortcut: { shift: true, key: "space" },
             enabled:  () => !model.isEditing,
-            action:   () => Utility.goTo(Route.image(scope, previousId, query))
+            action:   () => Utility.goTo(Url.image(scope, previousId, query))
         });
 
         // Return to the index.
         Action.register({
             shortcut: { key: "q" },
             enabled:  () => !model.isEditing,
-            action:   () => Utility.goTo(Route.images(scope, 1, query))
+            action:   () => Utility.goTo(Url.images(scope, 1, query))
         });
 
         // Select the search text box.
@@ -121,7 +121,7 @@ class ImageViewModel {
                 };
 
                 Request
-                    .post(Route.image(scope, currentId, ""), data)
+                    .post(Url.image(scope, currentId, ""), data)
                     .then(_ => {
                         model.displayTitle = model.title;
                         model.displayTags  = model.tags;
@@ -143,8 +143,8 @@ class ImageViewModel {
                 const permanent = model.deletePermanent;
 
                 Request
-                    .del(Route.image(scope, currentId, query, { permanent: permanent }))
-                    .then(_ => Utility.goTo(Route.images(scope, 1, query)))
+                    .del(Url.image(scope, currentId, query), { permanent })
+                    .then(_ => Utility.goTo(Url.images(scope, 1, query)))
                     .catch(e => model.error = e);
 
                 return false;
@@ -198,10 +198,10 @@ class ImageViewModel {
                 images[1].style.display = "block";
             } else {
                 Request
-                    .get(Route.apiImage(this.nextId))
+                    .get(Url.imageDetails(this.nextId))
                     .then(x => {
                         const data = JSON.parse(x);
-                        const src = Route.imageFile(data);
+                        const src = Url.imageFile(data);
                         let container = document.createElement("div");
 
                         if (data.extension === "webm") {
@@ -271,7 +271,7 @@ class ImageViewModel {
             let element = document.createElement("a");
 
             element.className = "tag";
-            element.href = Route.images(this.scope, 1, tag);
+            element.href = Url.images(this.scope, 1, tag);
             element.innerHTML = tag;
 
             this.ui.infoTags.appendChild(element);

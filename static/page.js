@@ -18,14 +18,14 @@ Page.navigate = (scope, albumId, prev, next, e) => {
 
     // shift + space
     if (e.shiftKey && e.keyCode === 32) {
-        window.location.href = Route.page(scope, albumId, prev);
+        window.location.href = Url.page(scope, albumId, prev);
 
     // space
     } else if (!modifiers && e.keyCode === 32) {
-        window.location.href = Route.page(scope, albumId, next);
+        window.location.href = Url.page(scope, albumId, next);
 
     // q
     } else if (!modifiers && e.keyCode === 81) {
-        window.location.href = Route.album(scope, albumId);
+        window.location.href = Url.album(scope, albumId);
     }
 }

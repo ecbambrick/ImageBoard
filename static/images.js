@@ -19,10 +19,10 @@ Images.navigate = (scope, canPrev, canNext, page, query, e) => {
 
     // shift + space
     if (e.shiftKey && e.keyCode === 32 && position.top && canPrev) {
-        window.location.href = Route.images(scope, page - 1, query);
+        window.location.href = Url.images(scope, page - 1, query);
 
     // space
     } else if (!modifiers && e.keyCode === 32 && position.bottom && canNext) {
-        window.location.href = Route.images(scope, page + 1, query);
+        window.location.href = Url.images(scope, page + 1, query);
     }
 }

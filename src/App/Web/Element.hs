@@ -44,7 +44,7 @@ document title initialize html =
             script_ [type_ ecma6, src_ "/static/session.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/action.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/request.js"] Text.empty
-            script_ [type_ ecma6, src_ "/static/route.js"] Text.empty
+            script_ [type_ ecma6, src_ "/static/url.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/image.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/album.js"  ] Text.empty
             script_ [type_ ecma6, src_ "/static/albums.js" ] Text.empty

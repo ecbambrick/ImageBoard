@@ -1,8 +1,8 @@
 // Functions related to sending HTTP requests.
 let Request = {};
 
-// Send a DELETE request to the given URL.
-Request.del = (url) => Request.send("DELETE", url);
+// Send a DELETE request to the given URL with the given data.
+Request.del = (url, data) => Request.send("DELETE", url, data);
 
 // Send a POST request to the given URL with the given data.
 Request.post = (url, data) => Request.send("POST", url, data);
