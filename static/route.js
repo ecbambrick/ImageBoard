@@ -1,6 +1,16 @@
 // Functions related to building routes.
 Route = {}
 
+// Returns the route for getting information for the image with the given ID.
+Route.apiImage = (id) => {
+    return "/api/image/" + id
+}
+
+// Returns the route to the image file for the given image info.
+Route.imageFile = ({ hash, extension }) => {
+    return "/data/image/" + hash.slice(0, 2) + "/" + hash + "." + extension;
+}
+
 // Returns the album route with the given ID.
 Route.album = (scope, id) => {
     return "/" + scope + "/album/" + id;

@@ -115,10 +115,6 @@ div.edit-actions {
     padding-top: 20px;
 }
 
-div#image-container {
-    display: flex;
-}
-
 div#meta  {
     font-size: 14px;
     line-height: 28px;
@@ -176,17 +172,27 @@ form#search > button:hover {
     color: #222;
     cursor: pointer;
 }
-img#image, video#video {
-    max-height: calc(100vh - 40px);
-    width: 100%;
-}
 
-main {
+#display {
     align-items: center;
     display: flex;
     flex: 1;
     height: calc(100vh - 40px);
     justify-content: center;
+}
+
+#display > div {
+    display: flex;
+    margin-left: 10px;
+}
+
+#display > div:first-child {
+    margin: 0;
+}
+
+#display > div > img, #display > div > video {
+    max-height: calc(100vh - 40px);
+    width: 100%;
 }
 
 nav {

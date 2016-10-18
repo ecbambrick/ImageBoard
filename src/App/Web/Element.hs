@@ -6,6 +6,7 @@ module App.Web.Element where
 import qualified App.Web.URL     as URL
 import qualified Data.Text       as Text
 import qualified Numeric         as Numeric
+import qualified System.FilePath as FilePath
 import qualified Text.JavaScript as JS
 
 import App.Core.Types ( Album(..), Image(..), Scope(..) )
@@ -40,6 +41,7 @@ document title initialize html =
             link_   [rel_ "stylesheet", href_ "/static/style.css"]
             link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
             script_ [type_ ecma6, src_ "/static/utility.js"] Text.empty
+            script_ [type_ ecma6, src_ "/static/session.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/action.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/request.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/route.js"] Text.empty
@@ -90,7 +92,7 @@ infoPanel = div_ [id_ "info-panel"]
 
 -- | Returns an HTML element representing a panel for editing data.
 editPanel :: Text -> Html a -> Html ()
-editPanel url html = do
+editPanel url html =
     form_ [id_ "edit-panel", action_ url, method_ "post"] $ do
         h1_ "Edit Post"
         div_ [class_ "error"] mempty
@@ -104,6 +106,7 @@ deletePanel :: Text -> Html ()
 deletePanel url =
     div_ [id_ "delete-panel"] $ do
         h1_ "Delete Post"
+        div_ [class_ "error"] mempty
         label_ [class_ "checkbox-label"] $ do
             input_ [id_ "delete-permanent", type_ "checkbox"]
             span_ "Delete Permanently"
@@ -229,6 +232,18 @@ imageTags scope tagNames =
         forM_ tagNames $ \name ->
             a_ [class_ "tag", href_ (URL.images scope 1 name)] (toHtml name)
 
+-- | Returns an HTML element for displaying a full size image(s).
+display :: String -> Html ()
+display url =
+    let src   = Text.pack url
+        image = img_   [class_ "image", src_ src]
+        video = video_ [class_ "video", src_ src, autoplay_ "", loop_ "", controls_ ""]
+
+    in main_ [id_ "display"] $
+        div_ $ if FilePath.takeExtension url == ".webm"
+            then video mempty
+            else image
+
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery :: [(Text, String)] -> Html ()
 gallery items =
@@ -236,16 +251,6 @@ gallery items =
         forM_ items $ \(url, thumbnail) ->
             let style = "background-image: url('" <> thumbnail <> "');"
             in div_ (a_ [href_ url, style_ (Text.pack style)] mempty)
-
--- | Returns an HTML element for displaying an image.
-image :: Text -> Html ()
-image url = main_ $ div_ [id_ "image-container"] $ img_ [id_ "image", src_ url]
-
--- | Returns an HTML element for displaying a video.
-video :: Text -> Html ()
-video url =
-    main_ $ div_ [id_ "image-container"] $
-        video_ [id_ "video", src_ url, autoplay_ "", loop_ "", controls_ ""] mempty
 
 ----------------------------------------------------------------------- Utility
 

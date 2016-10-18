@@ -77,6 +77,8 @@ const Action = {
         .set("escape",  27)
         .set("space",   32)
         .set("delete",  46)
+        .set("1",       49)
+        .set("2",       50)
         .set("e",       69)
         .set("p",       80)
         .set("q",       81)

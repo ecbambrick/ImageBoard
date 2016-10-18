@@ -5,11 +5,12 @@ class ImageViewModel {
 
     // Registers the view model with the UI and binds events.
     static register(scope, query, previousId, currentId, nextId) {
-        let model = new ImageViewModel(scope, {
+        let model = new ImageViewModel(scope, nextId, {
             get activeElement() {
                 return document.activeElement
             },
             errors:          document.getElementsByClassName("error"),
+            display:         document.getElementById("display"),
             search:          document.getElementById("search-text"),
             infoPanel:       document.getElementById("info-panel"),
             infoTitle:       document.getElementById("title"),
@@ -31,6 +32,19 @@ class ImageViewModel {
         model.ui.editSubmit.type = "button";
         model.ui.editCancel.type = "button";
         model.ui.editPanel.onkeypress = (e) => e.keyCode != 13;
+
+        // Set the default number of images to show based on session storage.
+        model.numberOfImages = Session.numberOfImages;
+
+        Action.register({
+            shortcut: { key: "1" },
+            action:   () => model.numberOfImages = 1
+        })
+
+        Action.register({
+            shortcut: { key: "2" },
+            action:   () => model.numberOfImages = 2
+        })
 
         // Go to the next page.
         Action.register({
@@ -113,8 +127,8 @@ class ImageViewModel {
                         model.displayTags  = model.tags;
                         model.isEditing    = false;
                     })
-                    .catch(response => {
-                        model.error = response;
+                    .catch(e => {
+                        model.error = e;
                     });
 
                 return false;
@@ -131,7 +145,7 @@ class ImageViewModel {
                 Request
                     .del(Route.image(scope, currentId, query, { permanent: permanent }))
                     .then(_ => Utility.goTo(Route.images(scope, 1, query)))
-                    .catch(response => model.error = response);
+                    .catch(e => model.error = e);
 
                 return false;
             }
@@ -145,10 +159,12 @@ class ImageViewModel {
         })
     }
 
-    // Initialize the view model with the given scope and DOM nodes.
-    constructor(scope, ui) {
+    // Initialize the view model with the given scope, image ID, and DOM nodes.
+    constructor(scope, nextId, ui) {
         this.scope = scope;
+        this.nextId = nextId;
         this.ui = ui;
+        this._numberOfImages = 1;
     }
 
     // An error message that is displayed when not null.
@@ -156,6 +172,58 @@ class ImageViewModel {
         for(let error of this.ui.errors) {
             error.innerHTML     = !x ? ""     : x.replace(/\n/g, "<br/>");
             error.style.display = !x ? "none" : "block";
+        }
+    }
+
+    // The number of images to display.
+    get numberOfImages() {
+        return this._numberOfImages;
+    }
+    set numberOfImages(x) {
+        if (x < 1 || x > 2 || x == this._numberOfImages) {
+            return;
+        }
+
+        this._numberOfImages   = x;
+        Session.numberOfImages = x;
+        let images             = [].slice.call(this.ui.display.childNodes);
+
+        if (x == 1) {
+            for (let image of images.slice(1, images.length)) {
+                image.style.display = "none";
+            }
+
+        } else if (x == 2) {
+            if (images.length >= 2) {
+                images[1].style.display = "block";
+            } else {
+                Request
+                    .get(Route.apiImage(this.nextId))
+                    .then(x => {
+                        const data = JSON.parse(x);
+                        const src = Route.imageFile(data);
+                        let container = document.createElement("div");
+
+                        if (data.extension === "webm") {
+                            let video = document.createElement("video");
+                            video.src      = src;
+                            video.autoplay = true;
+                            video.loop     = true;
+                            video.controls = true;
+
+                            container.appendChild(video);
+                        } else {
+                            let image = document.createElement("img");
+                            image.id  = "image";
+                            image.src = src;
+
+                            container.appendChild(image);
+                        }
+
+                        this.ui.display.appendChild(container)
+                    })
+                    .catch(e => console.log(e));
+            }
         }
     }
 

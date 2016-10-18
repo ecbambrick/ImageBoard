@@ -4,8 +4,11 @@ let Request = {};
 // Send a DELETE request to the given URL.
 Request.del = (url) => Request.send("DELETE", url);
 
-// Send a POST request to the given URL.
+// Send a POST request to the given URL with the given data.
 Request.post = (url, data) => Request.send("POST", url, data);
+
+// Send a GET request to the given URL with the given data.
+Request.get = (url, data) => Request.send("GET", url, data);
 
 // Send an HTTP request of the given method to the given URL with the given data.
 Request.send = (method, url, data) => {

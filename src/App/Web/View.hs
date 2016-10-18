@@ -11,7 +11,6 @@ import qualified App.Web.Element  as Elem
 import qualified App.Web.URL      as URL
 import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText
-import qualified System.FilePath  as FilePath
 import qualified Text.JavaScript  as JS
 
 import App.Core.Types      ( Album(..), Image(..), Page(..), Scope(..) )
@@ -113,9 +112,7 @@ imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next 
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
             Elem.deletePanel (URL.image scope curr query)
-        if isVideo source
-            then Elem.video (Text.pack source)
-            else Elem.image (Text.pack source)
+        Elem.display source
 
 -- | Renders an index view for images as text containing HTML.
 imagesView :: Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
@@ -165,16 +162,9 @@ pageView scope (Entity id album) number = render $ do
     Elem.document title onload $ do
         case page of
             Nothing   -> mempty
-            Just page ->
-                let source = Path.getPageURL id page
-                in if isVideo source
-                    then Elem.video (Text.pack source)
-                    else Elem.image (Text.pack source)
+            Just page -> Elem.display (Path.getPageURL id page)
 
 ----------------------------------------------------------------------- Utility
-
-isVideo :: String -> Bool
-isVideo url = FilePath.takeExtension url == ".webm"
 
 -- | Renders the given HTML as text.
 render :: Html () -> Text
