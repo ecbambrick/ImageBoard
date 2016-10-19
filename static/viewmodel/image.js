@@ -9,23 +9,23 @@ class ImageViewModel {
             get activeElement() {
                 return document.activeElement
             },
-            errors:          document.getElementsByClassName("error"),
-            display:         document.getElementById("display"),
-            search:          document.getElementById("search-text"),
-            infoPanel:       document.getElementById("info-panel"),
-            infoTitle:       document.getElementById("title"),
-            infoTags:        document.getElementById("tags"),
-            editPanel:       document.getElementById("edit-panel"),
-            editButton:      document.getElementById("edit-show"),
-            editCancel:      document.getElementById("edit-cancel"),
-            editSubmit:      document.getElementById("edit-submit"),
-            editTitle:       document.getElementById("edit-title"),
-            editTags:        document.getElementById("edit-tags"),
-            deletePanel:     document.getElementById("delete-panel"),
-            deleteButton:    document.getElementById("delete-show"),
-            deleteSubmit:    document.getElementById("delete-submit"),
-            deleteCancel:    document.getElementById("delete-cancel"),
-            deletePermanent: document.getElementById("delete-permanent"),
+            errors:            document.getElementsByClassName("error"),
+            display:           document.getElementById("display"),
+            search:            document.getElementById("search-text"),
+            infoPanel:         document.getElementById("info-panel"),
+            infoTitle:         document.getElementById("title"),
+            infoTags:          document.getElementById("tags"),
+            editPanel:         document.getElementById("edit-panel"),
+            editButton:        document.getElementById("edit-show"),
+            editCancel:        document.getElementById("edit-cancel"),
+            editSubmit:        document.getElementById("edit-submit"),
+            editTitle:         document.getElementById("edit-title"),
+            editTags:          document.getElementById("edit-tags"),
+            deletePanel:       document.getElementById("delete-panel"),
+            deleteButton:      document.getElementById("delete-show"),
+            deleteSubmit:      document.getElementById("delete-submit"),
+            deleteCancel:      document.getElementById("delete-cancel"),
+            deletePermanently: document.getElementById("delete-permanent"),
         });
 
         // Remove default form handlers.
@@ -36,11 +36,13 @@ class ImageViewModel {
         // Set the default number of images to show based on session storage.
         model.numberOfImages = Session.numberOfImages;
 
+        // Show one image.
         Action.register({
             shortcut: { key: "1" },
             action:   () => model.numberOfImages = 1
         })
 
+        // Show two images.
         Action.register({
             shortcut: { key: "2" },
             action:   () => model.numberOfImages = 2
@@ -79,7 +81,10 @@ class ImageViewModel {
             shortcut: { key: "e" },
             trigger:  [ model.ui.editButton, "click" ],
             enabled:  () => !model.isEditing && !model.isDeleting,
-            action:   () =>  model.isEditing = true
+            action:   () => {
+                model.isEditing = true;
+                return false;
+            }
         })
 
         // Display the delete panel.
@@ -89,6 +94,7 @@ class ImageViewModel {
             enabled:  () => !model.isEditing && !model.isDeleting,
             action:   () => {
                 model.isDeleting = true;
+                return false;
             }
         });
 
@@ -161,10 +167,45 @@ class ImageViewModel {
 
     // Initialize the view model with the given scope, image ID, and DOM nodes.
     constructor(scope, nextId, ui) {
-        this.scope = scope;
-        this.nextId = nextId;
-        this.ui = ui;
+        this.scope           = scope;
+        this.nextId          = nextId;
+        this.ui              = ui;
         this._numberOfImages = 1;
+    }
+
+    // Whether or not to delete the post permanently.
+    get deletePermanently() {
+        return this.ui.deletePermanently.checked;
+    }
+    set deletePermanently(x) {
+        this.ui.deletePermanently.checked = x;
+    }
+
+    // The displayed list of tags.
+    get displayTags() {
+        let tags = [].slice.call(this.ui.infoTags.children);
+        return tags.map(x => x.innerHTML);
+    }
+    set displayTags(x) {
+        this.ui.infoTags.innerHTML = "";
+
+        for (let tag of x) {
+            let element = document.createElement("a");
+
+            element.className = "tag";
+            element.href = Url.images(this.scope, 1, tag);
+            element.innerHTML = tag;
+
+            this.ui.infoTags.appendChild(element);
+        }
+    }
+
+    // The displayed title.
+    get displayTitle() {
+        return this.ui.infoTitle.innerHTML;
+    }
+    set displayTitle(x) {
+        this.ui.infoTitle.innerHTML = x;
     }
 
     // An error message that is displayed when not null.
@@ -172,6 +213,42 @@ class ImageViewModel {
         for(let error of this.ui.errors) {
             error.innerHTML     = !x ? ""     : x.replace(/\n/g, "<br/>");
             error.style.display = !x ? "none" : "block";
+        }
+    }
+
+    // Whether or not the document is currently showing the delete panel.
+    get isDeleting() {
+        return window.getComputedStyle(this.ui.deletePanel).display !== "none";
+    }
+    set isDeleting(x) {
+        if (x) {
+            this.error = null;
+            this.ui.deletePanel.style.display = "flex";
+            this.ui.infoPanel.style.display   = "none";
+            this.ui.deletePermanently.checked = false;
+        } else {
+            this.ui.deletePanel.style.display = "none";
+            this.ui.infoPanel.style.display   = "flex";
+            this.ui.activeElement.blur();
+        }
+    }
+
+    // Whether or not the document is currently showing the edit panel.
+    get isEditing() {
+        return window.getComputedStyle(this.ui.editPanel).display !== "none";
+    }
+    set isEditing(x) {
+        if (x) {
+            this.error = null;
+            this.title = this.displayTitle;
+            this.tags  = this.displayTags;
+            this.ui.editPanel.style.display = "flex";
+            this.ui.infoPanel.style.display = "none";
+            this.ui.editTitle.select();
+        } else {
+            this.ui.editPanel.style.display = "none";
+            this.ui.infoPanel.style.display = "flex";
+            this.ui.activeElement.blur();
         }
     }
 
@@ -227,22 +304,6 @@ class ImageViewModel {
         }
     }
 
-    // The editable title.
-    get title() {
-        return this.ui.editTitle.value;
-    }
-    set title(x) {
-        this.ui.editTitle.value = x;
-    }
-
-    // The displayed title.
-    get displayTitle() {
-        return this.ui.infoTitle.innerHTML;
-    }
-    set displayTitle(x) {
-        this.ui.infoTitle.innerHTML = x;
-    }
-
     // The editable list of tags.
     get tags() {
         return this.ui.editTags.value.split(/,\s+/).sort();
@@ -251,66 +312,11 @@ class ImageViewModel {
         this.ui.editTags.value = x.join(", ");
     }
 
-    // Whether or not to delete the post permanently.
-    get deletePermanent() {
-        return this.ui.deletePermanent.checked;
+    // The editable title.
+    get title() {
+        return this.ui.editTitle.value;
     }
-    set isDeleting(x) {
-        this.ui.deletePermanent.checked = x;
-    }
-
-    // The displayed list of tags.
-    get displayTags() {
-        let tags = [].slice.call(this.ui.infoTags.children);
-        return tags.map(x => x.innerHTML);
-    }
-    set displayTags(x) {
-        this.ui.infoTags.innerHTML = "";
-
-        for (let tag of x) {
-            let element = document.createElement("a");
-
-            element.className = "tag";
-            element.href = Url.images(this.scope, 1, tag);
-            element.innerHTML = tag;
-
-            this.ui.infoTags.appendChild(element);
-        }
-    }
-
-    // Whether or not the document is currently showing the delete panel.
-    get isDeleting() {
-        return window.getComputedStyle(this.ui.deletePanel).display !== "none";
-    }
-    set isDeleting(x) {
-        if (x) {
-            this.error = null;
-            this.ui.deletePanel.style.display = "flex";
-            this.ui.infoPanel.style.display   = "none";
-            this.ui.deletePermanent.checked   = false;
-        } else {
-            this.ui.deletePanel.style.display = "none";
-            this.ui.infoPanel.style.display   = "flex";
-            this.ui.activeElement.blur();
-        }
-    }
-
-    // Whether or not the document is currently showing the edit panel.
-    get isEditing() {
-        return window.getComputedStyle(this.ui.editPanel).display !== "none";
-    }
-    set isEditing(x) {
-        if (x) {
-            this.error = null;
-            this.title = this.displayTitle;
-            this.tags  = this.displayTags;
-            this.ui.editPanel.style.display = "flex";
-            this.ui.infoPanel.style.display = "none";
-            this.ui.editTitle.select();
-        } else {
-            this.ui.editPanel.style.display = "none";
-            this.ui.infoPanel.style.display = "flex";
-            this.ui.activeElement.blur();
-        }
+    set title(x) {
+        this.ui.editTitle.value = x;
     }
 }
