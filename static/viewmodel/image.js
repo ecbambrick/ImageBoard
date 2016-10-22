@@ -31,6 +31,9 @@ class ImageViewModel {
         // Remove default form handlers.
         model.ui.editSubmit.type = "button";
         model.ui.editCancel.type = "button";
+
+        // Ignore pressing "enter" in the edit panel
+        // (allows custom event to fire instead).
         model.ui.editPanel.onkeypress = (e) => e.keyCode != 13;
 
         // Set the default number of images to show based on session storage.
@@ -80,22 +83,18 @@ class ImageViewModel {
         Action.register({
             shortcut: { key: "e" },
             trigger:  [ model.ui.editButton, "click" ],
-            enabled:  () => !model.isEditing && !model.isDeleting,
-            action:   () => {
-                model.isEditing = true;
-                return false;
-            }
+            enabled:  () => !model.isEditing
+                         && !model.isDeleting,
+            action:   () => model.isEditing = true
         })
 
         // Display the delete panel.
         Action.register({
             shortcut: { key: "delete" },
             trigger:  [ model.ui.deleteButton, "click" ],
-            enabled:  () => !model.isEditing && !model.isDeleting,
-            action:   () => {
-                model.isDeleting = true;
-                return false;
-            }
+            enabled:  () => !model.isEditing
+                         && !model.isDeleting,
+            action:   () => model.isDeleting = true
         });
 
         // Hide the edit/delete panel.
@@ -110,8 +109,6 @@ class ImageViewModel {
                 } else if (model.isDeleting) {
                     model.isDeleting = false;
                 }
-
-                return false;
             }
         });
 
@@ -121,7 +118,7 @@ class ImageViewModel {
             trigger:  [ model.ui.editSubmit, "click" ],
             enabled:  () => model.isEditing,
             action:   () => {
-                let data = {
+                const data = {
                     title: model.title,
                     tags:  model.tags.join(",")
                 };
@@ -136,8 +133,6 @@ class ImageViewModel {
                     .catch(e => {
                         model.error = e;
                     });
-
-                return false;
             }
         });
 
@@ -152,8 +147,6 @@ class ImageViewModel {
                     .del(Url.image(scope, currentImage.id, query), { permanent })
                     .then(_ => Utility.goTo(Url.images(scope, 1, query)))
                     .catch(e => model.error = e);
-
-                return false;
             }
         });
 
@@ -183,7 +176,7 @@ class ImageViewModel {
 
     // The displayed list of tags.
     get displayTags() {
-        let tags = [].slice.call(this.ui.infoTags.children);
+        const tags = [].slice.call(this.ui.infoTags.children);
         return tags.map(x => x.innerHTML);
     }
     set displayTags(x) {

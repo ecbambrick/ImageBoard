@@ -17,35 +17,36 @@ const Action = {
     //     enabled: bool function()
     //     action:  void function()
     // }
-    register: (options) => {
-        const action  = options.action;
-        const enabled = options.enabled !== undefined ? options.enabled
-                                                      : () => true
+    register: ({ action, shortcut, trigger, enabled = () => true }) => {
+
         // Handle keyboard shortcut.
-        if (options.shortcut !== undefined) {
-            const shortcut  = options.shortcut;
-            const eventType = shortcut.event !== undefined ? shortcut.event
-                                                           : "keyup";
+        if (shortcut) {
+            const eventType = shortcut.event ? shortcut.event
+                                             : "keyup";
+
             window.addEventListener(eventType, (e) => {
-                if (enabled()
-                && (shortcut.allowInInput || Action.isFreeFocus())
-                && Action._checkShortcut(e, shortcut)) {
+                const inputFocused  = shortcut.allowInInput || Action.isFreeFocus();
+                const shortcutValid = Action._checkShortcut(e, shortcut);
+
+                if (enabled() && inputFocused && shortcutValid) {
                     action();
                 }
             });
         }
 
         // Handle object event.
-        if (options.trigger !== undefined) {
-            while (options.trigger.length >= 2) {
-                const object    = options.trigger[0];
-                const eventName = options.trigger[1];
-                options.trigger.splice(0, 2);
+        if (trigger) {
+            while (trigger.length >= 2) {
+                const object    = trigger[0];
+                const eventName = trigger[1];
+                trigger.splice(0, 2);
 
                 object.addEventListener(eventName, (e) => {
                     if (enabled()) {
                         action();
                     }
+
+                    e.preventDefault();
                 });
             }
         }
@@ -68,19 +69,15 @@ const Action = {
         return !(shortcut.shift ^ e.shiftKey)
             && !(shortcut.ctrl  ^ e.ctrlKey)
             && !(shortcut.alt   ^ e.altKey)
-            && Action._keyMapping.get(shortcut.key) === e.keyCode;
+            && Action._keyMapping(shortcut.key) === e.keyCode;
     },
 
     // The mapping from a key name (i.e. "escape") to a key code (i.e. 27).
-    _keyMapping: new Map()
-        .set("enter",   13)
-        .set("escape",  27)
-        .set("space",   32)
-        .set("delete",  46)
-        .set("1",       49)
-        .set("2",       50)
-        .set("e",       69)
-        .set("p",       80)
-        .set("q",       81)
-        .set("s",       83)
+    _keyMapping: (key) => {
+        if      (key == "enter")  return 13;
+        else if (key == "escape") return 27;
+        else if (key == "space")  return 32;
+        else if (key == "delete") return 46;
+        else                      return key.toUpperCase().charCodeAt(0);
+    }
 }
