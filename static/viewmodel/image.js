@@ -39,17 +39,17 @@ class ImageViewModel {
         // Set the default number of images to show based on session storage.
         model.numberOfImages = Session.numberOfImages;
 
-        // Show one image.
+        // Toggle showing one or two images.
         Action.register({
-            shortcut: { key: "1" },
-            action:   () => model.numberOfImages = 1
-        })
-
-        // Show two images.
-        Action.register({
-            shortcut: { key: "2" },
-            action:   () => model.numberOfImages = 2
-        })
+            shortcut: { key: "d" },
+            action:   () => {
+                if (model.numberOfImages == 1) {
+                    model.numberOfImages = 2;
+                } else {
+                    model.numberOfImages = 1;
+                }
+            }
+        });
 
         // Go to the next page.
         Action.register({
@@ -258,35 +258,33 @@ class ImageViewModel {
         Session.numberOfImages = x;
         let images             = [].slice.call(this.ui.display.childNodes);
 
+        // Display only the first image.
         if (x == 1) {
-            for (let image of images.slice(1, images.length)) {
-                image.style.display = "none";
-            }
+            if (images.length > 1) {
+                images[1].style.display = "none";
 
-        } else if (x == 2) {
-            if (images.length >= 2) {
-                images[1].style.display = "block";
-            } else {
-                const src = Url.imageFile(this.nextImage);
-                let container = document.createElement("div");
+                let innerImage = images[1].childNodes[0];
 
-                if (this.nextImage.extension === "webm") {
-                    let video = document.createElement("video");
-                    video.src      = src;
-                    video.autoplay = true;
-                    video.loop     = true;
-                    video.controls = true;
-
-                    container.appendChild(video);
-                } else {
-                    let image = document.createElement("img");
-                    image.id  = "image";
-                    image.src = src;
-
-                    container.appendChild(image);
+                if (innerImage.tagName == "VIDEO") {
+                    innerImage.pause();
+                    innerImage.currentTime = 0;
                 }
+            }
+        }
 
-                this.ui.display.appendChild(container)
+        // Display both images.
+        else if (x == 2) {
+            if (images.length > 1) {
+                images[1].style.display = "block";
+
+                let innerImage = images[1].childNodes[0];
+
+                if (innerImage.tagName == "VIDEO") {
+                    innerImage.pause();
+                    innerImage.currentTime = 0;
+                }
+            } else {
+                this.addImage(Url.imageFile(this.nextImage));
             }
         }
     }
@@ -305,5 +303,28 @@ class ImageViewModel {
     }
     set title(x) {
         this.ui.editTitle.value = x;
+    }
+
+    // Adds an image with the given soruce to the display.
+    addImage(src) {
+        let container = document.createElement("div");
+
+        if (this.nextImage.extension === "webm") {
+            let video = document.createElement("video");
+            video.src      = src;
+            video.autoplay = true;
+            video.loop     = true;
+            video.controls = true;
+
+            container.appendChild(video);
+        } else {
+            let image = document.createElement("img");
+            image.id  = "image";
+            image.src = src;
+
+            container.appendChild(image);
+        }
+
+        this.ui.display.appendChild(container)
     }
 }
