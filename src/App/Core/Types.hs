@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes        #-}
 
 module App.Core.Types where
@@ -11,6 +12,7 @@ import qualified Data.Text  as Text
 import App.Config           ( Config )
 import Data.DateTime        ( DateTime )
 import Data.Aeson           ( ToJSON(..), (.=) )
+import Database.Engine      ( Entity(..) )
 import Control.Monad.Trans  ( MonadIO )
 import Control.Monad.Reader ( MonadReader )
 
@@ -69,9 +71,10 @@ data Tag = Tag
 
 ---------------------------------------------------------------- JSON instances
 
-instance ToJSON Image where
-    toJSON Image {..} = JSON.object
-        [ "title"       .= Text.pack imageTitle
+instance ToJSON (Entity Image) where
+    toJSON (Entity entityID Image {..}) = JSON.object
+        [ "id"          .= entityID
+        , "title"       .= Text.pack imageTitle
         , "isFavourite" .= imageIsFavourite
         , "hash"        .= Text.pack imageHash
         , "extension"   .= Text.pack imageExtension

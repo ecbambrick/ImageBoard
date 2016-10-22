@@ -27,11 +27,6 @@ const Url = {
         return "/" + scope + "/image/" + id + Utility.parameterize(params);
     },
 
-    // Returns the URL for retrieving JSON data for the image with the given ID.
-    imageDetails: (id) => {
-        return "/api/image/" + id;
-    },
-
     // Returns the URL for the image file with the given image info.
     imageFile: ({ hash, extension }) => {
         return "/data/image/" + hash.slice(0, 2) + "/" + hash + "." + extension;

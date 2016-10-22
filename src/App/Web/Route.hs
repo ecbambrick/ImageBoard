@@ -11,9 +11,6 @@ import Web.Spock       ( (<//>), Path )
 
 ------------------------------------------------------------------------ Routes
 
-apiImage :: Spock.Path '[ID]
-apiImage = Spock.static Path.getApiPrefix <//> "image" <//> Spock.var
-
 -- | The route to an album with the given ID.
 album :: Spock.Path '[String, ID]
 album = Spock.var <//> "album" <//> Spock.var

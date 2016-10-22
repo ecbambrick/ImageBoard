@@ -4,8 +4,8 @@
 class ImageViewModel {
 
     // Registers the view model with the UI and binds events.
-    static register(scope, query, previousId, currentId, nextId) {
-        let model = new ImageViewModel(scope, nextId, {
+    static register(scope, query, previousImage, currentImage, nextImage) {
+        let model = new ImageViewModel(scope, currentImage, nextImage, {
             get activeElement() {
                 return document.activeElement
             },
@@ -52,14 +52,14 @@ class ImageViewModel {
         Action.register({
             shortcut: { key: "space" },
             enabled:  () => !model.isEditing,
-            action:   () => Utility.goTo(Url.image(scope, nextId, query))
+            action:   () => Utility.goTo(Url.image(scope, nextImage.id, query))
         });
 
         // Go to the previous page.
         Action.register({
             shortcut: { shift: true, key: "space" },
             enabled:  () => !model.isEditing,
-            action:   () => Utility.goTo(Url.image(scope, previousId, query))
+            action:   () => Utility.goTo(Url.image(scope, previousImage.id, query))
         });
 
         // Return to the index.
@@ -127,7 +127,7 @@ class ImageViewModel {
                 };
 
                 Request
-                    .post(Url.image(scope, currentId, ""), data)
+                    .post(Url.image(scope, currentImage.id, ""), data)
                     .then(_ => {
                         model.displayTitle = model.title;
                         model.displayTags  = model.tags;
@@ -149,7 +149,7 @@ class ImageViewModel {
                 const permanent = model.deletePermanent;
 
                 Request
-                    .del(Url.image(scope, currentId, query), { permanent })
+                    .del(Url.image(scope, currentImage.id, query), { permanent })
                     .then(_ => Utility.goTo(Url.images(scope, 1, query)))
                     .catch(e => model.error = e);
 
@@ -165,10 +165,10 @@ class ImageViewModel {
         })
     }
 
-    // Initialize the view model with the given scope, image ID, and DOM nodes.
-    constructor(scope, nextId, ui) {
+    // Initialize the view model with the given scope, images, and DOM nodes.
+    constructor(scope, currentImage, nextImage, ui) {
         this.scope           = scope;
-        this.nextId          = nextId;
+        this.nextImage       = nextImage;
         this.ui              = ui;
         this._numberOfImages = 1;
     }
@@ -274,32 +274,26 @@ class ImageViewModel {
             if (images.length >= 2) {
                 images[1].style.display = "block";
             } else {
-                Request
-                    .get(Url.imageDetails(this.nextId))
-                    .then(x => {
-                        const data = JSON.parse(x);
-                        const src = Url.imageFile(data);
-                        let container = document.createElement("div");
+                const src = Url.imageFile(this.nextImage);
+                let container = document.createElement("div");
 
-                        if (data.extension === "webm") {
-                            let video = document.createElement("video");
-                            video.src      = src;
-                            video.autoplay = true;
-                            video.loop     = true;
-                            video.controls = true;
+                if (this.nextImage.extension === "webm") {
+                    let video = document.createElement("video");
+                    video.src      = src;
+                    video.autoplay = true;
+                    video.loop     = true;
+                    video.controls = true;
 
-                            container.appendChild(video);
-                        } else {
-                            let image = document.createElement("img");
-                            image.id  = "image";
-                            image.src = src;
+                    container.appendChild(video);
+                } else {
+                    let image = document.createElement("img");
+                    image.id  = "image";
+                    image.src = src;
 
-                            container.appendChild(image);
-                        }
+                    container.appendChild(image);
+                }
 
-                        this.ui.display.appendChild(container)
-                    })
-                    .catch(e => console.log(e));
+                this.ui.display.appendChild(container)
             }
         }
     }

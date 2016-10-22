@@ -10,7 +10,6 @@ import qualified App.Path                      as Path
 import qualified App.Web.Route                 as Route
 import qualified App.Web.URL                   as URL
 import qualified App.Web.View                  as View
-import qualified Data.Aeson                    as JSON
 import qualified Data.Text                     as Text
 import qualified Network.HTTP.Types            as HTTP
 import qualified Network.Wai.Middleware.Static as Middleware
@@ -71,23 +70,8 @@ routes = do
             AlbumPost     -> redirect (URL.albums scope 1 "")
             ImagePost     -> redirect (URL.images scope 1 "")
 
-    apiRoutes
     albumRoutes
     imageRoutes
-
--- API route handlers.
-apiRoutes :: Spock.SpockT (ReaderT Config IO) ()
-apiRoutes = do
-
-    -- Gets details for the image with the given ID as JSON.
-    get Route.apiImage $ \id -> do
-        image <- Image.querySingle id
-        case image of
-            Nothing -> do
-                notFound
-            Just (Entity _ image) -> do
-                Spock.setHeader "Content-Type" "application/json"
-                Spock.lazyBytes (JSON.encode image)
 
 -- Album route handlers.
 albumRoutes :: Spock.SpockT (ReaderT Config IO) ()

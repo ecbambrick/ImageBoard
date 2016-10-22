@@ -84,15 +84,19 @@ albumsView scope query page total pageSize albums = render $ do
 
 -- | Renders a view for the given image as text containing HTML.
 imageView :: Scope -> String -> TimeZone -> Entity Image -> Entity Image -> Entity Image -> Text
-imageView scope query timeZone (Entity prev _) (Entity curr image) (Entity next _) = render $ do
-    let title  = "Image " <> display curr
+imageView scope query timeZone previousImage currentImage nextImage = render $ do
+    let prev   = entityID previousImage
+        curr   = entityID currentImage
+        next   = entityID nextImage
+        image  = entityData currentImage
+        title  = "Image " <> display curr
         source = Path.getImageURL image
         onload = JS.functionCall "ImageViewModel.register" args
         args   = [ JS.toJSON (scopeName scope)
                  , JS.toJSON query
-                 , JS.toJSON prev
-                 , JS.toJSON curr
-                 , JS.toJSON next ]
+                 , JS.toJSON previousImage
+                 , JS.toJSON currentImage
+                 , JS.toJSON nextImage ]
 
     Elem.document title onload $ do
         Elem.aside $ do
