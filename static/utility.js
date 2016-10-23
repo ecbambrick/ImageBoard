@@ -43,3 +43,8 @@ Utility.parameterize = (data, excludeQuestionMark) => {
         return "?" + args.join("&");
     }
 }
+
+// Returns a sorted copy of the given array with duplicate elements removed.
+Utility.sortAndRemoveDuplicates = (xs) => {
+    return xs.sort().filter((y, i, ys) => !i || y != ys[i - 1]);
+}
