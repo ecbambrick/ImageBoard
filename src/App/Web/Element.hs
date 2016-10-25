@@ -27,6 +27,9 @@ data Icon = LeftArrow | RightArrow | UpArrow | Grid | Pencil | Trash | Check
 -- | The action a form button performs.
 data ButtonType = Submit | Cancel
 
+-- The type of image an element relates to.
+data ImageType = MainImage | SecondaryImage
+
 ---------------------------------------------------------------------- Document
 
 -- | Returns an HTML document with the given title, initialization function and
@@ -203,12 +206,22 @@ albumDetails Album {..} timeZone =
             toHtml ("uploaded " ++ defaultFormatDate timeZone albumCreated)
 
 -- | Returns an HTML element for displaying image meta data.
-imageDetails :: Image -> TimeZone -> Html ()
-imageDetails Image {..} timeZone =
-    div_ [id_ "details"] $ do
-        div_ [id_ "title"] $ do
+imageDetails :: Image -> TimeZone -> ImageType -> Html ()
+imageDetails Image {..} timeZone imageType =
+    let classes   = case imageType of
+                        MainImage      -> "details"
+                        SecondaryImage -> "details hidden"
+        titleID   = case imageType of
+                        MainImage      -> "mainTitle"
+                        SecondaryImage -> "secondaryTitle"
+        detailsID = case imageType of
+                        MainImage      -> "mainDetails"
+                        SecondaryImage -> "secondaryDetails"
+
+    in div_ [id_ detailsID, class_ classes] $ do
+        div_ [id_ titleID, class_ "title"] $ do
             toHtml imageTitle
-        div_ [id_ "meta"] $ do
+        div_ [class_ "meta"] $ do
             toHtml $ intercalate " | "
                 [ show imageWidth ++ "x" ++ show imageHeight
                 , formatSize imageFileSize

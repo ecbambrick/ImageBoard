@@ -13,7 +13,8 @@ class ImageViewModel {
             display:           document.getElementById("display"),
             search:            document.getElementById("search-text"),
             infoPanel:         document.getElementById("info-panel"),
-            infoTitle:         document.getElementById("title"),
+            infoTitle:         document.getElementById("mainTitle"),
+            infoSecondDetails: document.getElementById("secondaryDetails"),
             infoTags:          document.getElementById("tags"),
             editPanel:         document.getElementById("edit-panel"),
             editButton:        document.getElementById("edit-show"),
@@ -257,6 +258,8 @@ class ImageViewModel {
 
         // Display only the first image.
         if (x == 1) {
+            this.ui.infoSecondDetails.classList.add("hidden");
+
             if (images.length > 1) {
                 images[1].style.display = "none";
 
@@ -271,6 +274,8 @@ class ImageViewModel {
 
         // Display both images.
         else if (x == 2) {
+            this.ui.infoSecondDetails.classList.remove("hidden");
+
             if (images.length > 1) {
                 images[1].style.display = "block";
 

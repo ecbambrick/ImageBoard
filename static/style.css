@@ -70,13 +70,12 @@ div#actions {
     margin-bottom: 10px;
 }
 
-div#details {
+div.details {
     align-items: center;
     display: flex;
-    flex: 1;
     flex-direction: column;
     justify-content: flex-start;
-    margin-top: 60px;
+    margin-top: 40px;
     text-align: center;
 }
 
@@ -115,7 +114,7 @@ div.edit-actions {
     padding-top: 20px;
 }
 
-div#meta  {
+div.meta  {
     font-size: 14px;
     line-height: 28px;
     padding-top: 20px;
@@ -139,7 +138,7 @@ div#tags {
     text-align: center;
 }
 
-div#title {
+div.title {
     font-size: 28px;
     max-width: calc(100% - 20px);
     white-space: pre-wrap;
@@ -338,4 +337,8 @@ button.action:hover {
 .checkbox-label > span {
     margin-top: 3px;
     margin-left: 10px;
+}
+
+.hidden {
+    display: none !important;
 }

@@ -89,6 +89,7 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
         curr   = entityID currentImage
         next   = entityID nextImage
         image  = entityData currentImage
+        image2 = entityData nextImage
         title  = "Image " <> display curr
         source = Path.getImageURL image
         onload = JS.functionCall "ImageViewModel.register" args
@@ -110,7 +111,9 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
                         Elem.action Elem.Pencil "edit-show"
                         Elem.action Elem.Trash  "delete-show"
                 Elem.searchBox (URL.images scope 1 "") query
-                Elem.imageDetails image timeZone
+                Elem.imageDetails image  timeZone Elem.MainImage
+                Elem.imageDetails image2 timeZone Elem.SecondaryImage
+                Elem.spacer
                 Elem.imageTags scope (imageTagNames image)
             Elem.editPanel (URL.image scope curr query) $ do
                 Elem.textBoxField  "Title" "title" "edit-title"
