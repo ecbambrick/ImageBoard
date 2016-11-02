@@ -43,6 +43,9 @@ document title initialize html =
             meta_   [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
             link_   [rel_ "stylesheet", href_ "/static/style.css"]
             link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
+            script_ [type_ ecma6, src_ "https://paldepind.github.io/flyd/flyd.js"] Text.empty
+            script_ [type_ ecma6, src_ "https://cdn.jsdelivr.net/kefir/3.1.0/kefir.js"] Text.empty
+            script_ [type_ ecma6, src_ "/static/extensions.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/utility.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/session.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/action.js"] Text.empty
