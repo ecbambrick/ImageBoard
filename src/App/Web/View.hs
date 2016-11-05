@@ -85,19 +85,20 @@ albumsView scope query page total pageSize albums = render $ do
 -- | Renders a view for the given image as text containing HTML.
 imageView :: Scope -> String -> TimeZone -> Entity Image -> Entity Image -> Entity Image -> Text
 imageView scope query timeZone previousImage currentImage nextImage = render $ do
-    let prev   = entityID previousImage
-        curr   = entityID currentImage
-        next   = entityID nextImage
-        image  = entityData currentImage
-        image2 = entityData nextImage
-        title  = "Image " <> display curr
-        source = Path.getImageURL image
-        onload = JS.functionCall "ImageViewModel.register" args
-        args   = [ JS.toJSON (scopeName scope)
-                 , JS.toJSON query
-                 , JS.toJSON previousImage
-                 , JS.toJSON currentImage
-                 , JS.toJSON nextImage ]
+    let prev    = entityID previousImage
+        curr    = entityID currentImage
+        next    = entityID nextImage
+        image1  = entityData currentImage
+        image2  = entityData nextImage
+        title   = "Image " <> display curr
+        source1 = Path.getImageURL image1
+        source2 = Path.getImageURL image2
+        onload  = JS.functionCall "ImageViewModel.register" args
+        args    = [ JS.toJSON (scopeName scope)
+                  , JS.toJSON query
+                  , JS.toJSON previousImage
+                  , JS.toJSON currentImage
+                  , JS.toJSON nextImage ]
 
     Elem.document title onload $ do
         Elem.aside $ do
@@ -111,15 +112,15 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
                         Elem.action Elem.Pencil "edit-show"
                         Elem.action Elem.Trash  "delete-show"
                 Elem.searchBox (URL.images scope 1 "") query
-                Elem.imageDetails image  timeZone Elem.MainImage
+                Elem.imageDetails image1 timeZone Elem.MainImage
                 Elem.imageDetails image2 timeZone Elem.SecondaryImage
                 Elem.spacer
-                Elem.imageTags scope (imageTagNames image)
+                Elem.imageTags scope (imageTagNames image1)
             Elem.editPanel (URL.image scope curr query) $ do
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
             Elem.deletePanel (URL.image scope curr query)
-        Elem.display source
+        Elem.display source1 source2
 
 -- | Renders an index view for images as text containing HTML.
 imagesView :: Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
@@ -169,7 +170,7 @@ pageView scope (Entity id album) number = render $ do
     Elem.document title onload $ do
         case page of
             Nothing   -> mempty
-            Just page -> Elem.display (Path.getPageURL id page)
+            Just page -> Elem.display (Path.getPageURL id page) ""
 
 ----------------------------------------------------------------------- Utility
 

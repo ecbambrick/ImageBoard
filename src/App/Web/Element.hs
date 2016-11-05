@@ -99,7 +99,7 @@ infoPanel = div_ [id_ "info-panel"]
 -- | Returns an HTML element representing a panel for editing data.
 editPanel :: Text -> Html a -> Html ()
 editPanel url html =
-    form_ [id_ "edit-panel", action_ url, method_ "post"] $ do
+    form_ [id_ "edit-panel", class_ "hidden", action_ url, method_ "post"] $ do
         h1_ "Edit Post"
         div_ [class_ "error"] mempty
         html
@@ -110,7 +110,7 @@ editPanel url html =
 -- | Returns an HTML element representing a panel for deleting a post.
 deletePanel :: Text -> Html ()
 deletePanel url =
-    div_ [id_ "delete-panel"] $ do
+    div_ [id_ "delete-panel", class_ "hidden"] $ do
         h1_ "Delete Post"
         div_ [class_ "error"] mempty
         label_ [class_ "checkbox-label"] $ do
@@ -249,16 +249,21 @@ imageTags scope tagNames =
             a_ [class_ "tag", href_ (URL.images scope 1 name)] (toHtml name)
 
 -- | Returns an HTML element for displaying a full size image(s).
-display :: String -> Html ()
-display url =
-    let src   = Text.pack url
-        image = img_   [class_ "image", src_ src]
-        video = video_ [class_ "video", src_ src, autoplay_ "", loop_ "", controls_ ""]
+display :: String -> String -> Html ()
+display url1 url2 =
+    let image src = img_   [ class_ "image", src_ (Text.pack src) ]
+        video src = video_ [ class_ "video", src_ (Text.pack src)
+                           , autoplay_ "", loop_ "", controls_ ""] mempty :: Html ()
 
-    in main_ [id_ "display"] $
-        div_ $ if FilePath.takeExtension url == ".webm"
-            then video mempty
-            else image
+    in main_ [id_ "display"] $ do
+        div_ $
+            if FilePath.takeExtension url1 == ".webm"
+                then video url1
+                else image url1
+        div_ [class_ "hidden"] $
+            if FilePath.takeExtension url2 == ".webm"
+                then video url2
+                else image url2
 
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery :: [(Text, String)] -> Html ()

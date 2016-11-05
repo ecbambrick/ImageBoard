@@ -48,3 +48,24 @@ Utility.parameterize = (data, excludeQuestionMark) => {
 Utility.sortAndRemoveDuplicates = (xs) => {
     return xs.sort().filter((y, i, ys) => !i || y != ys[i - 1]);
 }
+
+Utility.toggleVisible = (element, visible) => {
+    if (visible) {
+        element.classList.remove("hidden");
+    } else {
+        element.classList.add("hidden");
+    }
+}
+
+Utility.togglePlaying = (element, play) => {
+    if (element.tagName != "VIDEO") {
+        return;
+    }
+
+    if (play) {
+        element.play();
+    } else {
+        element.pause();
+        element.currentTime = 0;
+    }
+}
