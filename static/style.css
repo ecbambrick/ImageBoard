@@ -331,3 +331,17 @@ button.action:hover {
 .hidden {
     display: none !important;
 }
+
+hr {
+    border: none;
+    border-top: 1px solid #3e3e3e;
+    margin: 10px 0;
+}
+
+#side-bar {
+    display: flex;
+    flex-direction: column;
+    margin-right: 20px;
+    border-right: 1px solid #3e3e3e;
+    padding-right: 20px;
+}

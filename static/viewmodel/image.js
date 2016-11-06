@@ -12,8 +12,11 @@ const ImageViewModel = {
             errors:             document.getElementsByClassName("error"),
             display:            document.getElementById("display"),
             doubleViewButton:   document.getElementById("toggle-double"),
+            doubleViewCompact:  document.getElementById("toggle-double-compact"),
             nextImageContainer: document.getElementById("next-image-container"),
             nextImage:          document.getElementById("next-image"),
+            sideBar:            document.getElementById("side-bar"),
+            aside:              document.getElementsByTagName("aside")[0],
             infoSearch:         document.getElementById("search-text"),
             infoPanel:          document.getElementById("info-panel"),
             infoTitle:          document.getElementById("current-title"),
@@ -77,6 +80,10 @@ const ImageViewModel = {
         // Display streams.
         // -------------------------------------------------------------
 
+        const isCompact =
+            Kefir.fromKey("h")
+                 .scan((x, _) => !x, false);
+
         const currentPanel =
             Kefir.merge([
                 Kefir.fromClick(dom.editButton)   .map(_ => "edit"),
@@ -89,6 +96,7 @@ const ImageViewModel = {
                 editSubmitted                     .map(_ => "info"),
             ])
             .skipDuplicates()
+            .filterBy(isCompact.map(x => !x))
             .toProperty(() => "info");
 
         const isShowingInfo =
@@ -104,6 +112,7 @@ const ImageViewModel = {
             Kefir.merge([
                 Kefir.fromKey("d"),
                 Kefir.fromClick(dom.doubleViewButton),
+                Kefir.fromClick(dom.doubleViewCompact),
             ])
             .scan((x, y) => !x, Session.doubleView)
             .combine(isShowingInfo, (x, y) => x && y)
@@ -214,6 +223,17 @@ const ImageViewModel = {
                 dom.editTitle.select();
             } else {
                 dom.blur();
+            }
+        });
+
+        // Toggle compact-mode.
+        isCompact.onValue(x => {
+            if (x) {
+                dom.aside.classList.add("hidden");
+                dom.sideBar.classList.remove("hidden");
+            } else {
+                dom.aside.classList.remove("hidden");
+                dom.sideBar.classList.add("hidden");
             }
         });
 

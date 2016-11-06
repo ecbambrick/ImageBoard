@@ -21,8 +21,8 @@ import Lucid.Html5
 ------------------------------------------------------------------------- Types
 
 -- | A UI icon.
-data Icon = LeftArrow | RightArrow | UpArrow | Grid | Pencil | Trash | Check
-          | Cross | Search | Stop | Pause
+data Icon = LeftArrow | RightArrow | UpArrow | DownArrow | Grid | Pencil
+          | Trash | Check | Cross | Search | Stop | Pause
 
 -- | The action a form button performs.
 data ButtonType = Submit | Cancel
@@ -87,10 +87,18 @@ actionLink icon link =
 aside :: Html a -> Html a
 aside = aside_
 
--- | Returns an HTML elements representing an empty space between other
+-- | Returns an HTML element representing an empty space between other
 -- | elements.
 spacer :: Html ()
 spacer = div_ [class_ "spacer"] mempty
+
+-- | Returns an HTML element representing a horizontal separator.
+separator :: Html ()
+separator = hr_ mempty
+
+-- | Returns an HTML element representing a side bar.
+sideBar :: Html a -> Html a
+sideBar = div_ [id_ "side-bar", class_ "hidden"]
 
 -- | Returns an HTML element representing a panel for displaying data.
 infoPanel :: Html a -> Html a
@@ -288,6 +296,7 @@ renderIcon icon = case icon of
     LeftArrow  -> "fa-arrow-left"
     RightArrow -> "fa-arrow-right"
     UpArrow    -> "fa-arrow-up"
+    DownArrow  -> "fa-arrow-down"
     Grid       -> "fa-th-large"
     Pencil     -> "fa-pencil"
     Trash      -> "fa-trash"

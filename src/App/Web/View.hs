@@ -101,6 +101,12 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
                   , JS.toJSON nextImage ]
 
     Elem.document title onload $ do
+        Elem.sideBar $ do
+            Elem.actionLink Elem.UpArrow   (URL.image  scope prev query)
+            Elem.actionLink Elem.Grid      (URL.images scope 1    query)
+            Elem.actionLink Elem.DownArrow (URL.image  scope next query)
+            Elem.separator
+            Elem.action Elem.Pause "toggle-double-compact"
         Elem.aside $ do
             Elem.infoPanel $ do
                 Elem.actions $ do
