@@ -11,10 +11,13 @@ const ImageViewModel = {
             blur:               () => document.activeElement.blur(),
             errors:             document.getElementsByClassName("error"),
             display:            document.getElementById("display"),
+            doubleViewButton:   document.getElementById("toggle-double"),
+            nextImageContainer: document.getElementById("next-image-container"),
+            nextImage:          document.getElementById("next-image"),
             infoSearch:         document.getElementById("search-text"),
             infoPanel:          document.getElementById("info-panel"),
-            infoTitle:          document.getElementById("mainTitle"),
-            nextInfoDetails:    document.getElementById("secondaryDetails"),
+            infoTitle:          document.getElementById("current-title"),
+            infoNextDetails:    document.getElementById("next-details"),
             infoTags:           document.getElementById("tags"),
             editPanel:          document.getElementById("edit-panel"),
             editButton:         document.getElementById("edit-show"),
@@ -27,8 +30,6 @@ const ImageViewModel = {
             deleteCancel:       document.getElementById("delete-cancel"),
             deleteSubmit:       document.getElementById("delete-submit"),
             deletePermanently:  document.getElementById("delete-permanent"),
-            nextImageContainer: document.getElementById("display").childNodes[1],
-            nextImage:          document.getElementById("display").childNodes[1].childNodes[0],
         };
 
         // URL shortcuts.
@@ -100,11 +101,22 @@ const ImageViewModel = {
             currentPanel.map(x => x === "delete");
 
         const isDoubleView =
-            Kefir.fromKey("d")
-                 .scan((x, y) => !x, Session.doubleView)
-                 .combine(isShowingInfo, (x, y) => x && y)
-                 .map(x => currentImage.hash != nextImage.hash && x)
-                 .toProperty();
+            Kefir.merge([
+                Kefir.fromKey("d"),
+                Kefir.fromClick(dom.doubleViewButton),
+            ])
+            .scan((x, y) => !x, Session.doubleView)
+            .combine(isShowingInfo, (x, y) => x && y)
+            .map(x => currentImage.hash != nextImage.hash && x)
+            .toProperty();
+
+        const doubleViewIcon =
+            isDoubleView.map(x => {
+                return {
+                    old: x ? "fa-pause" : "fa-stop",
+                    new: x ? "fa-stop"  : "fa-pause"
+                };
+            });
 
         // -------------------------------------------------------------
         // Error streams.
@@ -207,11 +219,17 @@ const ImageViewModel = {
 
         // Toggle visibility of the second image.
         isDoubleView.onValue(x => {
-            Utility.toggleVisible(dom.nextInfoDetails,    x);
+            Utility.toggleVisible(dom.infoNextDetails,    x);
             Utility.toggleVisible(dom.nextImageContainer, x);
             Utility.togglePlaying(dom.nextImage,          x);
             Session.doubleView = x;
         });
+
+        // Toggle double-view icon.
+        doubleViewIcon.onValue(x => {
+            dom.doubleViewButton.classList.remove(x.old);
+            dom.doubleViewButton.classList.add(x.new);
+        })
 
         // Simple DOM bindings.
         visibleTags       .onValue(x => dom.infoTags.innerHTML  = x);

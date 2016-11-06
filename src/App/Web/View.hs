@@ -109,8 +109,9 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
                         Elem.actionLink Elem.Grid       (URL.images scope 1    query)
                         Elem.actionLink Elem.RightArrow (URL.image  scope next query)
                     Elem.actionGroup $ do
-                        Elem.action Elem.Pencil "edit-show"
                         Elem.action Elem.Trash  "delete-show"
+                        Elem.action Elem.Pencil "edit-show"
+                        Elem.action Elem.Pause  "toggle-double"
                 Elem.searchBox (URL.images scope 1 "") query
                 Elem.imageDetails image1 timeZone Elem.MainImage
                 Elem.imageDetails image2 timeZone Elem.SecondaryImage

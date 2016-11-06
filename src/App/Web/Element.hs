@@ -22,7 +22,7 @@ import Lucid.Html5
 
 -- | A UI icon.
 data Icon = LeftArrow | RightArrow | UpArrow | Grid | Pencil | Trash | Check
-          | Cross | Search
+          | Cross | Search | Stop | Pause
 
 -- | The action a form button performs.
 data ButtonType = Submit | Cancel
@@ -215,11 +215,11 @@ imageDetails Image {..} timeZone imageType =
                         MainImage      -> "details"
                         SecondaryImage -> "details hidden"
         titleID   = case imageType of
-                        MainImage      -> "mainTitle"
-                        SecondaryImage -> "secondaryTitle"
+                        MainImage      -> "current-title"
+                        SecondaryImage -> "next-title"
         detailsID = case imageType of
-                        MainImage      -> "mainDetails"
-                        SecondaryImage -> "secondaryDetails"
+                        MainImage      -> "current-details"
+                        SecondaryImage -> "next-details"
 
     in div_ [id_ detailsID, class_ classes] $ do
         div_ [id_ titleID, class_ "title"] $ do
@@ -251,19 +251,19 @@ imageTags scope tagNames =
 -- | Returns an HTML element for displaying a full size image(s).
 display :: String -> String -> Html ()
 display url1 url2 =
-    let image src = img_   [ class_ "image", src_ (Text.pack src) ]
-        video src = video_ [ class_ "video", src_ (Text.pack src)
-                           , autoplay_ "", loop_ "", controls_ ""] mempty :: Html ()
+    let image src id = img_   [ id_ id, class_ "image", src_ (Text.pack src) ]
+        video src id = video_ [ id_ id, class_ "video", src_ (Text.pack src)
+                              , autoplay_ "", loop_ "", controls_ ""] mempty :: Html ()
 
     in main_ [id_ "display"] $ do
-        div_ $
+        div_ [id_ "current-image-container"] $
             if FilePath.takeExtension url1 == ".webm"
-                then video url1
-                else image url1
-        div_ [class_ "hidden"] $
+                then video url1 "current-image"
+                else image url1 "current-image"
+        div_ [id_ "next-image-container", class_ "hidden"] $
             if FilePath.takeExtension url2 == ".webm"
-                then video url2
-                else image url2
+                then video url2 "next-image"
+                else image url2 "next-image"
 
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery :: [(Text, String)] -> Html ()
@@ -294,3 +294,5 @@ renderIcon icon = case icon of
     Check      -> "fa-check"
     Cross      -> "fa-times"
     Search     -> "fa-search"
+    Stop       -> "fa-stop"
+    Pause      -> "fa-pause"
