@@ -82,7 +82,7 @@ const ImageViewModel = {
 
         const isCompact =
             Kefir.fromKey("h")
-                 .scan((x, _) => !x, false);
+                 .scan((x, _) => !x, Session.compactMode);
 
         const currentPanel =
             Kefir.merge([
@@ -228,6 +228,8 @@ const ImageViewModel = {
 
         // Toggle compact-mode.
         isCompact.onValue(x => {
+            Session.compactMode = x;
+
             if (x) {
                 dom.aside.classList.add("hidden");
                 dom.sideBar.classList.remove("hidden");
@@ -249,6 +251,8 @@ const ImageViewModel = {
         doubleViewIcon.onValue(x => {
             dom.doubleViewButton.classList.remove(x.old);
             dom.doubleViewButton.classList.add(x.new);
+            dom.doubleViewCompact.classList.remove(x.old);
+            dom.doubleViewCompact.classList.add(x.new);
         })
 
         // Simple DOM bindings.
