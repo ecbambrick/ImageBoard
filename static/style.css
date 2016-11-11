@@ -190,8 +190,6 @@ nav {
 
 a.tag {
     display: inline-block;
-    margin-bottom: 10px;
-    margin-right: 10px;
     max-width: calc(100% - 20px);
     padding: 10px;
     white-space: pre-wrap;
