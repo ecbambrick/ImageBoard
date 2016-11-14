@@ -84,3 +84,20 @@ instance ToJSON (Entity Image) where
         , "modified"    .= imageModified
         , "fileSize"    .= imageFileSize
         , "tags"        .= map Text.pack imageTagNames ]
+
+instance ToJSON (Entity Album) where
+    toJSON (Entity entityID Album {..}) = JSON.object
+        [ "id"          .= entityID
+        , "title"       .= Text.pack albumTitle
+        , "isFavourite" .= albumIsFavourite
+        , "created"     .= albumCreated
+        , "modified"    .= albumModified
+        , "fileSize"    .= albumFileSize
+        , "tags"        .= map Text.pack albumTagNames
+        , "pages"       .= map toJSON albumPages ]
+
+instance ToJSON Page where
+    toJSON Page {..} = JSON.object
+        [ "number"      .= pageNumber
+        , "title"       .= pageTitle
+        , "extension"   .= pageExtension ]
