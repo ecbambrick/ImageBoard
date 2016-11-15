@@ -319,8 +319,8 @@ updateImageTest = testDatabase $ do
 -- | Tests the deleteAlbum function.
 deleteAlbumTest :: Test
 deleteAlbumTest = testDatabase $ do
-    let pages1 = [Page "p1" 1 "e1"]
-        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+    let pages1 = [Page 1 "p1" "e1"]
+        pages2 = [Page 2 "p2" "e2", Page 3 "p3" "e3"]
 
     id1 <- insertAlbum (Album "t1" False (time 1) (time 2) 8 pages1 [])
     id2 <- insertAlbum (Album "t2" True  (time 3) (time 4) 5 pages2 [])
@@ -346,13 +346,13 @@ deleteAlbumTest = testDatabase $ do
         isJust album1 @=? True
         isJust album2 @=? False
         isJust album3 @=? True
-        page          @=? Entity 1 (Page "p1" 1 "e1")
+        page          @=? Entity 1 (Page 1 "p1" "e1")
 
 -- | Tests the insertAlbum function.
 insertAlbumTest :: Test
 insertAlbumTest = testDatabase $ do
-    let pages1 = [Page "p1" 1 "e1"]
-        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+    let pages1 = [Page 1 "p1" "e1"]
+        pages2 = [Page 2 "p2" "e2", Page 3 "p3" "e3"]
         album1 = Album "t1" False (time 1) (time 2) 8 pages1 []
         album2 = Album "t2" True  (time 3) (time 4) 5 pages2 []
 
@@ -371,8 +371,8 @@ insertAlbumTest = testDatabase $ do
 -- | Tests the selectAlbum function.
 selectAlbumTest :: Test
 selectAlbumTest = testDatabase $ do
-    let pages1 = [Page "p1" 1 "e1"]
-        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+    let pages1 = [Page 1 "p1" "e1"]
+        pages2 = [Page 2 "p2" "e2", Page 3 "p3" "e3"]
         album1 = Album "t1" False (time 1) (time 2) 8 pages1 []
         album2 = Album "t2" True  (time 3) (time 4) 5 pages2 []
         album3 = Album "t3" True  (time 6) (time 7) 9 []     []
@@ -398,8 +398,8 @@ selectAlbumTest = testDatabase $ do
 -- | Tests the updateAlbum function
 updateAlbumTest :: Test
 updateAlbumTest = testDatabase $ do
-    let pages1 = [Page "p1" 1 "e1"]
-        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+    let pages1 = [Page 1 "p1" "e1"]
+        pages2 = [Page 2 "p2" "e2", Page 3 "p3" "e3"]
         album1 = Album "t1" False (time 1) (time 2) 8 pages1 []
         album2 = Album "t2" True  (time 3) (time 4) 5 pages2 []
         album3 = album1
@@ -424,8 +424,8 @@ selectAlbumsTest :: Test
 selectAlbumsTest = testDatabase $ do
     noResults <- selectImages [] 0 50
 
-    let pages1 = [Page "p1" 1 "e1"]
-        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+    let pages1 = [Page 1 "p1" "e1"]
+        pages2 = [Page 2 "p2" "e2", Page 3 "p3" "e3"]
 
     id1 <- insertAlbum (Album "t1" False (time 10) (time 20) 30 pages1 [])
     id2 <- insertAlbum (Album "t2" True  (time 11) (time 21) 31 pages2 [])
@@ -479,8 +479,8 @@ selectAlbumsCountTest :: Test
 selectAlbumsCountTest = testDatabase $ do
     zero <- selectAlbumsCount []
 
-    let pages1 = [Page "p1" 1 "e1"]
-        pages2 = [Page "p2" 2 "e2", Page "p3" 3 "e3"]
+    let pages1 = [Page 1 "p1" "e1"]
+        pages2 = [Page 2 "p2" "e2", Page 3 "p3" "e3"]
 
     id1 <- insertAlbum (Album "t1" False (time 10) (time 20) 30 pages1 [])
     id2 <- insertAlbum (Album "t2" True  (time 11) (time 21) 31 pages2 [])
@@ -681,4 +681,4 @@ time = fromSeconds
 selectPages :: Transaction [Entity Page]
 selectPages = do
     conn <- ask
-    lift $ query_ conn "SELECT id, title, number, extension FROM page"
+    lift $ query_ conn "SELECT id, number, title, extension FROM page"
