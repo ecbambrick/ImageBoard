@@ -119,16 +119,15 @@ update (Entity id album) = do
         previous <- DB.selectAlbum id
 
         let isFound    = Validation.verify (isJust previous) (IDNotFound id)
-            cleanAlbum = album { albumTagNames = Tag.cleanTags (albumTagNames album) }
-            results    = validate album <> isFound
+            results    = isFound <> validate album
 
         when (Validation.isValid results) $ do
-            let newTags = albumTagNames $ album
-                oldTags = albumTagNames $ fromEntity $ fromJust previous
+            let newTags = Tag.cleanTags $ albumTagNames $ album
+                oldTags = Tag.cleanTags $ albumTagNames $ fromEntity $ fromJust previous
 
             DB.updateAlbum (Entity id album { albumModified = now })
-            DB.detachTags (oldTags \\ newTags) id
-            DB.attachTags (newTags \\ oldTags) id
+            DB.detachTags  (oldTags \\ newTags) id
+            DB.attachTags  (newTags \\ oldTags) id
             DB.cleanTags
 
         return results
