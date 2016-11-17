@@ -8,19 +8,27 @@ HTMLCollection.prototype.forEach = function(f) {
     return [].forEach.call(this, f);
 }
 
+HTMLCollection.prototype.slice = function(start, end) {
+    return [].slice.call(this, start, end);
+}
+
 // -----------------------------------------------------------------------------
-// HTML Collection
+// Array
 // -----------------------------------------------------------------------------
 
 Array.prototype.last = function() {
     return this[this.length-1];
 }
 
+Array.prototype.exceptLast = function() {
+    return this.slice(0, this.length-1);
+}
+
 // -----------------------------------------------------------------------------
-// HTML Collection
+// Keyboard Event
 // -----------------------------------------------------------------------------
 
-KeyboardEvent.prototype.keyName = function() {
+KeyboardEvent.prototype.friendlyKey = function() {
     if (this.key === " ") return "space"
     else                  return this.key.toLowerCase();
 }
@@ -43,7 +51,7 @@ Kefir.fromKey = (binding, { source, allowInInput } = {}) => {
 
     return Kefir
         .fromEvents(source, 'keyup')
-        .filter(x => x.keyName() == key
+        .filter(x => x.friendlyKey() == key
                   && !(x.shiftKey ^ shift)
                   && !(x.altKey   ^ alt)
                   && !(x.ctrlKey  ^ ctrl)
