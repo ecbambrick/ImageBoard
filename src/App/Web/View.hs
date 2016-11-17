@@ -46,8 +46,9 @@ albumView scope query timeZone entity @ (Entity id Album {..}) = render $ do
                     Elem.actionGroup $ do
                         Elem.actionLink Elem.Grid indexURL
                     Elem.actionGroup $ do
-                        Elem.action Elem.Pencil "edit-show"
                         Elem.action Elem.Trash  "delete-show"
+                        Elem.action Elem.Pencil "edit-show"
+                Elem.searchBox (URL.albums scope 1 "") query
                 Elem.albumDetails album timeZone
                 Elem.spacer
                 Elem.albumTags scope albumTagNames

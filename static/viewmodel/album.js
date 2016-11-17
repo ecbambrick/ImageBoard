@@ -155,6 +155,9 @@ const AlbumViewModel = {
         // Miscellaneous streams.
         // -------------------------------------------------------------
 
+        const focusOnSearch =
+            Kefir.fromKey("s");
+
         const backToIndex =
             Kefir.fromKey("q");
 
@@ -221,6 +224,7 @@ const AlbumViewModel = {
         // Actions.
         deleteSubmitted   .onValue(_ => Utility.goTo(url.index));
         backToIndex       .onValue(_ => Utility.goTo(url.index));
+        focusOnSearch     .onValue(_ => dom.infoSearch.select());
         freeFocus         .onValue(_ => document.activeElement.blur());
     }
 }
