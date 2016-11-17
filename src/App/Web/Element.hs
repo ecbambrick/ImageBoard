@@ -43,7 +43,6 @@ document title initialize html =
             meta_   [content_ "text/html;charset=utf-8",  httpEquiv_ "Content-Type"]
             link_   [rel_ "stylesheet", href_ "/static/style.css"]
             link_   [rel_ "stylesheet", href_ "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"]
-            script_ [type_ ecma6, src_ "https://paldepind.github.io/flyd/flyd.js"] Text.empty
             script_ [type_ ecma6, src_ "https://cdn.jsdelivr.net/kefir/3.1.0/kefir.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/extensions.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/utility.js"] Text.empty
@@ -51,8 +50,9 @@ document title initialize html =
             script_ [type_ ecma6, src_ "/static/action.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/request.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/url.js"] Text.empty
+            script_ [type_ ecma6, src_ "/static/gallery.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/image.js"] Text.empty
-            script_ [type_ ecma6, src_ "/static/album.js"  ] Text.empty
+            script_ [type_ ecma6, src_ "/static/viewmodel/album.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/albums.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/images.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/page.js"   ] Text.empty
@@ -206,10 +206,10 @@ formButton button id text icon =
 -- | Returns an HTML element for displaying album meta data.
 albumDetails :: Album -> TimeZone -> Html ()
 albumDetails Album {..} timeZone =
-    div_ [id_ "details"] $ do
-        div_ [id_ "title"] $ do
+    div_ [class_ "details"] $ do
+        div_ [id_ "title", class_ "title"] $ do
             toHtml albumTitle
-        div_ [id_ "meta"] $ do
+        div_ [class_ "meta"] $ do
             toHtml $ intercalate " | "
                 [ show (length albumPages) ++ " pages"
                 , formatSize albumFileSize ]
@@ -280,6 +280,14 @@ gallery items =
         forM_ items $ \(url, thumbnail) ->
             let style = "background-image: url('" <> thumbnail <> "');"
             in div_ (a_ [href_ url, style_ (Text.pack style)] mempty)
+
+-- | Returns an HTML element for displaying a grid of thumbnails.
+gallery2 :: [(Text, String)] -> Html ()
+gallery2 items =
+    div_ [id_ "gallery2"] $
+        forM_ items $ \(url, thumbnail) ->
+            a_ [href_ url] $
+                img_ [src_ (Text.pack thumbnail)]
 
 ----------------------------------------------------------------------- Utility
 

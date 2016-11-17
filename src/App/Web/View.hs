@@ -27,30 +27,38 @@ import Lucid.Base          ( Html(..), renderText )
 
 -- | Renders a view for the given album as text containing HTML.
 albumView :: Scope -> String -> TimeZone -> Entity Album -> Text
-albumView scope query timeZone (Entity id album @ Album{..}) = render $ do
-    let title  = "Album " <> display id
-        onload = JS.functionCall "Album.initializePage" args
-        args   = [ JS.toJSON (scopeName scope)
-                 , JS.toJSON id
-                 , JS.toJSON query ]
+albumView scope query timeZone entity @ (Entity id Album {..}) = render $ do
+    let title    = Text.pack albumTitle
+        album    = entityData entity
+        indexURL = URL.albums scope 1 query
+        albumURL = URL.album scope id
+        onload   = JS.functionCall "AlbumViewModel.register" args
+        args     = [ JS.toJSON (scopeName scope)
+                   , JS.toJSON query
+                   , JS.toJSON entity ]
 
     Elem.document title onload $ do
-        Elem.aside $ Elem.infoPanel $ do
-            Elem.actions $ do
-                Elem.actionGroup $ do
-                    Elem.actionLink Elem.Grid (URL.albums scope 1 query)
-                Elem.actionGroup $ do
-                    Elem.action Elem.Pencil "edit-show"
-                    Elem.action Elem.Trash  "delete"
-            Elem.albumDetails album timeZone
-            Elem.albumTags scope albumTagNames
-        Elem.gallery $
+        Elem.sideBar $ do
+            Elem.actionLink Elem.Grid indexURL
+        Elem.aside $ do
+            Elem.infoPanel $ do
+                Elem.actions $ do
+                    Elem.actionGroup $ do
+                        Elem.actionLink Elem.Grid indexURL
+                    Elem.actionGroup $ do
+                        Elem.action Elem.Pencil "edit-show"
+                        Elem.action Elem.Trash  "delete-show"
+                Elem.albumDetails album timeZone
+                Elem.spacer
+                Elem.albumTags scope albumTagNames
+            Elem.editPanel albumURL $ do
+                Elem.textBoxField  "Title" "title" "edit-title"
+                Elem.textAreaField "Tags"  "tags"  "edit-tags"
+            Elem.deletePanel albumURL
+        Elem.gallery2 $
             flip map albumPages $ \page @ Page {..} ->
                 ( URL.page scope id pageNumber
                 , Path.getPageThumbnailURL id page)
-        Elem.editForm (URL.album scope id) $ do
-            Elem.textBoxField  "Title" "title" "edit-title"
-            Elem.textAreaField "Tags"  "tags"  "edit-tags"
 
 -- | Renders an index view for albums as text containing HTML.
 albumsView :: Scope -> String -> Int -> Int -> Int -> [Entity Album] -> Text

@@ -343,3 +343,23 @@ hr {
     border-right: 1px solid #3e3e3e;
     padding-right: 20px;
 }
+
+#gallery2 {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    overflow: hidden;
+    justify-content: center;
+}
+
+#gallery2 a:hover {
+    background-color: inherit;
+}
+
+#gallery2 img {
+    display: flex;
+}
+
+#gallery2 img:hover {
+    opacity: 0.8;
+}
