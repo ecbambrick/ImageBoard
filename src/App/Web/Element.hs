@@ -81,6 +81,12 @@ actionLink icon link =
     let classes = "action fa " <> renderIcon icon
     in a_ [href_ link, class_ classes] mempty
 
+-- Returns an a HTML link with the given icon and URL.
+disabledAction :: Icon -> Html ()
+disabledAction icon =
+    let classes = "disabled action fa " <> renderIcon icon
+    in a_ [href_ "#", class_ classes] mempty
+
 ------------------------------------------------------------------------ Panels
 
 -- | Returns an HTML element representing the side menu.

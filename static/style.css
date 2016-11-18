@@ -363,3 +363,13 @@ hr {
 #gallery2 img:hover {
     opacity: 0.8;
 }
+
+.disabled {
+    color: #3e3e3e;
+}
+
+.disabled:hover {
+    background-color: inherit;
+    color: #3e3e3e;
+    cursor: default;
+}
