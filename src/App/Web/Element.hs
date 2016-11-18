@@ -54,7 +54,7 @@ document title initialize html =
             script_ [type_ ecma6, src_ "/static/viewmodel/image.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/album.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/albums.js" ] Text.empty
-            script_ [type_ ecma6, src_ "/static/images.js" ] Text.empty
+            script_ [type_ ecma6, src_ "/static/viewmodel/images.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/page.js"   ] Text.empty
             script_ [type_ ecma6] (JS.onDocumentLoad initialize)
         body_ html
@@ -169,7 +169,7 @@ uploadForm scope = do
             textBoxField  "Title" "title"        "upload-title"
             textAreaField "Tags"  "tags"         "upload-tags"
             fileField     "File"  "uploadedFile" "upload-file"
-            formButton    Submit "" "Upload" UpArrow
+            formButton Submit "upload-submit" "Upload" UpArrow
 
 -- | Returns an HTML element for modifying a post property using a text box.
 textAreaField :: Text -> Text -> Text -> Html ()

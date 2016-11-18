@@ -30,12 +30,13 @@ albumView :: Scope -> String -> TimeZone -> Entity Album -> Text
 albumView scope query timeZone entity @ (Entity id Album {..}) = render $ do
     let title    = Text.pack albumTitle
         album    = entityData entity
-        indexURL = URL.albums scope 1 query
-        albumURL = URL.album scope id
         onload   = JS.functionCall "AlbumViewModel.register" args
         args     = [ JS.toJSON (scopeName scope)
                    , JS.toJSON query
                    , JS.toJSON entity ]
+
+    let indexURL = URL.albums scope 1 query
+        albumURL = URL.album scope id
 
     Elem.document title onload $ do
         Elem.sideBar $ do
@@ -141,29 +142,44 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
 -- | Renders an index view for images as text containing HTML.
 imagesView :: Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
 imagesView scope query page total pageSize images = render $ do
-    let prevAvailable = page > 1
-        nextAvailable = page * pageSize < total
-        title         = "Images (" <> display total <> ")"
-        onload        = JS.functionCall "Images.initializePage" args
-        args          = [ JS.toJSON (scopeName scope)
-                        , JS.toJSON prevAvailable
-                        , JS.toJSON nextAvailable
-                        , JS.toJSON page
-                        , JS.toJSON query ]
+    let title       = "Images (" <> display total <> ")"
+        canPrevious = page > 1
+        canNext     = page * pageSize < total
+        onload      = JS.functionCall "ImagesViewModel.register" args
+        args        = [ JS.toJSON (scopeName scope)
+                      , JS.toJSON query
+                      , JS.toJSON page
+                      , JS.toJSON canPrevious
+                      , JS.toJSON canNext ]
+
+    let previousPageURL = URL.images scope (page - 1) query
+        firstPageURL    = URL.images scope 1          query
+        nextPageURL     = URL.images scope (page + 1) query
+
+    let previousPageAction icon =
+            if canPrevious
+                then Elem.actionLink     icon previousPageURL
+                else Elem.disabledAction icon
+
+        nextPageAction icon =
+            if canNext
+                then Elem.actionLink     icon nextPageURL
+                else Elem.disabledAction icon
 
     Elem.document title onload $ do
-        Elem.aside $ Elem.infoPanel $ do
-            Elem.searchBox (URL.images scope 1 "") query
-            Elem.actions $ do
-                Elem.actionGroup $ do
-                    when prevAvailable $
-                        Elem.actionLink Elem.LeftArrow (URL.images scope (page - 1) query)
-                Elem.actionGroup $ do
-                    when nextAvailable $
-                        Elem.actionLink Elem.RightArrow (URL.images scope (page + 1) query)
-            Elem.spacer
-            Elem.uploadForm scope
-        Elem.gallery $
+        Elem.sideBar $ do
+            previousPageAction Elem.UpArrow
+            nextPageAction     Elem.DownArrow
+        Elem.aside $ do
+            Elem.infoPanel $ do
+                Elem.actions $ do
+                    Elem.actionGroup $ do
+                        previousPageAction Elem.LeftArrow
+                        nextPageAction     Elem.RightArrow
+                Elem.searchBox firstPageURL query
+                Elem.spacer
+                Elem.uploadForm scope
+        Elem.gallery2 $
             flip map images $ \(Entity id image) ->
                 ( URL.image scope id query
                 , Path.getImageThumbnailURL image)
