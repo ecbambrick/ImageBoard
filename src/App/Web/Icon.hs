@@ -18,6 +18,8 @@ data Icon
     | Search
     | Stop
     | Pause
+    | Image
+    | Book
 
 -- | Renders the given icon as a CSS class.
 render :: Icon -> Text
@@ -34,3 +36,5 @@ render icon = case icon of
     Search     -> "fa-search"
     Stop       -> "fa-stop"
     Pause      -> "fa-pause"
+    Image      -> "fa-image"
+    Book       -> "fa-book"

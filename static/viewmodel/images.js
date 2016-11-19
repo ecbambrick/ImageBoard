@@ -49,12 +49,15 @@ const ImagesViewModel = {
         const goToNextPage =
             Kefir.fromKey("space")
                  .filter(_ => canNext)
-                 .filter(_ => Utility.getPagePosition().bottom)
+                 .filter(_ => Utility.getPagePosition().bottom);
 
         const goToPreviousPage =
             Kefir.fromKey("shift+space")
                  .filter(_ => canPrevious)
-                 .filter(_ => Utility.getPagePosition().top)
+                 .filter(_ => Utility.getPagePosition().top);
+
+        const goToAlbums =
+            Kefir.fromKey("a");
 
         const freeFocus =
             Kefir.fromKey("escape", { allowInInput: true });
@@ -86,6 +89,7 @@ const ImagesViewModel = {
         // Actions.
         goToNextPage      .onValue(_ => Utility.goTo(url.nextPage));
         goToPreviousPage  .onValue(_ => Utility.goTo(url.previousPage));
+        goToAlbums        .onValue(_ => Utility.goTo(url.albums));
         focusOnSearch     .onValue(_ => dom.search.select());
         freeFocus         .onValue(_ => document.activeElement.blur());
     }

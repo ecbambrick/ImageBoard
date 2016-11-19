@@ -156,6 +156,7 @@ imagesView scope query page total pageSize images = render $ do
     let previousPageURL = URL.images scope (page - 1) query
         firstPageURL    = URL.images scope 1          query
         nextPageURL     = URL.images scope (page + 1) query
+        galleryURL      = URL.albums scope 1          query
 
     let previousPageAction icon =
             if canPrevious
@@ -171,12 +172,16 @@ imagesView scope query page total pageSize images = render $ do
         Elem.sideBar $ do
             previousPageAction Icon.UpArrow
             nextPageAction     Icon.DownArrow
+            Elem.separator
+            Elem.actionLink    Icon.Book galleryURL
         Elem.aside $ do
             Elem.infoPanel $ do
                 Elem.actions $ do
                     Elem.actionGroup $ do
                         previousPageAction Icon.LeftArrow
                         nextPageAction     Icon.RightArrow
+                    Elem.actionGroup $ do
+                        Elem.actionLink Icon.Book galleryURL
                 Elem.searchBox firstPageURL query
                 Elem.spacer
                 Elem.uploadForm scope
