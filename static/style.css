@@ -349,7 +349,7 @@ hr {
     flex-wrap: wrap;
     width: 100%;
     overflow: hidden;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 #gallery2 a:hover {
@@ -358,6 +358,7 @@ hr {
 
 #gallery2 img {
     display: flex;
+    box-sizing: border-box;
 }
 
 #gallery2 img:hover {

@@ -11,10 +11,23 @@ const Gallery = {
         const images     = element.getElementsByTagName("img");
         const rows       = Gallery._partition(images, maxHeight, totalWidth, padding);
 
-        for (let { images, width } of rows) {
-            const height = Math.min(maxHeight, maxHeight * totalWidth / width);
+        element.style.marginBottom = "-" + padding + "px";
+
+        for (let { images, height } of rows) {
             Gallery._resizeFirstImages(images, height, padding);
             Gallery._resizeLastImage(images, height, totalWidth, padding);
+        }
+
+        // Resizing the images can cause the scroll bar to appear thus changing
+        // the element's width. Resize the last image in each row to account
+        // for the new scroll bar.
+        const newTotalWidth = element.offsetWidth;
+
+        if (newTotalWidth != totalWidth)
+        {
+            for (let { images, height } of rows) {
+                Gallery._resizeLastImage(images, height, newTotalWidth, padding);
+            }
         }
     },
 
@@ -26,7 +39,7 @@ const Gallery = {
 
             image.style.padding = `0 ${padding}px ${padding}px 0`;
             image.height        = height;
-            image.width         = width;
+            image.width         = width + padding;
         }
     },
 
@@ -40,13 +53,13 @@ const Gallery = {
                                         .map(x => x.width)
                                         .reduce((x, y) => x + y, 0);
 
-        const scaledWidth    = image.naturalWidth * height / image.naturalHeight;
+        const scaledWidth    = image.naturalWidth * height / image.naturalHeight + padding;
         const remainingWidth = totalWidth - totalImageLengths - totalPadding;
         const width          = Math.min(scaledWidth, remainingWidth);
 
-        image.style.padding = 0;
+        image.style.padding = `0 0 ${padding}px 0`;
         image.height        = height;
-        image.width         = width;
+        image.width         = width + padding;
     },
 
     // Partitions the list of images into rows based on each image's width.
@@ -55,6 +68,7 @@ const Gallery = {
         let i    = 0;
 
         while (i < images.length) {
+            let rowImages = []
             let width = 0;
             let j     = i;
 
@@ -66,7 +80,10 @@ const Gallery = {
                 j     += 1;
             }
 
-            rows.push({ width: width, images: images.slice(i, j) });
+            rows.push({
+                height: Math.min(maxHeight, Math.ceil(maxHeight * totalWidth / width)),
+                images: images.slice(i, j),
+            });
 
             i = j;
         }
