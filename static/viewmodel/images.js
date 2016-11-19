@@ -17,8 +17,6 @@ const ImagesViewModel = {
             uploadSubmit: document.getElementById("upload-submit"),
         };
 
-        console.log(page)
-
         // URL shortcuts.
         const url = {
             previousPage: Url.images(scope, page - 1, query),
@@ -81,7 +79,7 @@ const ImagesViewModel = {
         // Redraw the gallery.
         windowResize.onValue(() => {
             dom.gallery.style.visibility = "hidden";
-            Gallery.register(dom.gallery, { maxHeight: 700, padding: 10 });
+            Gallery.register(dom.gallery, { maxHeight: 500, padding: 10 });
             dom.gallery.style.visibility = "visible";
         });
 

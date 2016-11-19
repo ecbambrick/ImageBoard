@@ -145,8 +145,10 @@ const ImageViewModel = {
 
         const currentTags =
             Kefir.fromEvents(dom.editTags, 'keyup')
-                 .map(x => x.target.value.split(",").map(String.trim))
+                 .map(x => x.target.value)
                  .sampledBy(editSubmitted)
+                 .map(x => x.split(",").map(String.trim))
+                 .map(Utility.sortAndRemoveDuplicates)
                  .ignoreErrors()
                  .toProperty(() => currentImage.tags);
 
@@ -155,10 +157,8 @@ const ImageViewModel = {
 
         const visibleTags =
             Kefir.combine([currentTags, nextTags], Array.concat)
-                 .map(x =>
-                         Utility.sortAndRemoveDuplicates(x)
-                                .map(y => `<a class='tag' href='${url.tag(y)}'>${y}</a>`)
-                                .join("\n"));
+                 .map(x => x.map(y => `<a class='tag' href='${url.tag(y)}'>${y}</a>`)
+                            .join("\n"));
 
         const defaultTagsString =
             currentTags.sampledBy(isEditing)
