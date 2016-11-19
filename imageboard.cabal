@@ -35,6 +35,7 @@ executable imageboard
         App.Path,
         App.Validation,
         App.Web.Element,
+        App.Web.Icon,
         App.Web.Route,
         App.Web.Server,
         App.Web.URL,

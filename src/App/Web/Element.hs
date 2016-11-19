@@ -3,6 +3,7 @@
 
 module App.Web.Element where
 
+import qualified App.Web.Icon    as Icon
 import qualified App.Web.URL     as URL
 import qualified Data.Text       as Text
 import qualified Numeric         as Numeric
@@ -10,6 +11,7 @@ import qualified System.FilePath as FilePath
 import qualified Text.JavaScript as JS
 
 import App.Core.Types ( Album(..), Image(..), Scope(..) )
+import App.Web.Icon   ( Icon )
 import Control.Monad  ( forM_ )
 import Data.DateTime  ( TimeZone, defaultFormatDate )
 import Data.Monoid    ( (<>), mempty )
@@ -19,10 +21,6 @@ import Lucid.Base     ( Html, toHtml )
 import Lucid.Html5
 
 ------------------------------------------------------------------------- Types
-
--- | A UI icon.
-data Icon = LeftArrow | RightArrow | UpArrow | DownArrow | Grid | Pencil
-          | Trash | Check | Cross | Search | Stop | Pause
 
 -- | The action a form button performs.
 data ButtonType = Submit | Cancel
@@ -72,19 +70,19 @@ actionGroup = div_
 -- | Returns an HTML link with the given icon and ID.
 action :: Icon -> Text -> Html ()
 action icon id =
-    let classes = "action fa " <> renderIcon icon
+    let classes = "action fa " <> Icon.render icon
     in a_ [id_ id, href_ "#", class_ classes] mempty
 
 -- Returns an a HTML link with the given icon and URL.
 actionLink :: Icon -> Text -> Html ()
 actionLink icon link =
-    let classes = "action fa " <> renderIcon icon
+    let classes = "action fa " <> Icon.render icon
     in a_ [href_ link, class_ classes] mempty
 
 -- Returns an a HTML link with the given icon and URL.
 disabledAction :: Icon -> Html ()
 disabledAction icon =
-    let classes = "disabled action fa " <> renderIcon icon
+    let classes = "disabled action fa " <> Icon.render icon
     in a_ [href_ "#", class_ classes] mempty
 
 ------------------------------------------------------------------------ Panels
@@ -118,8 +116,8 @@ editPanel url html =
         div_ [class_ "error"] mempty
         html
         div_ [class_ "edit-actions"] $ do
-            formButton Submit "edit-submit" "Submit" Check
-            formButton Cancel "edit-cancel" "Cancel" Cross
+            formButton Submit "edit-submit" "Submit" Icon.Check
+            formButton Cancel "edit-cancel" "Cancel" Icon.Cross
 
 -- | Returns an HTML element representing a panel for deleting a post.
 deletePanel :: Text -> Html ()
@@ -131,8 +129,8 @@ deletePanel url =
             input_ [id_ "delete-permanent", type_ "checkbox"]
             span_ "Delete Permanently"
         div_ [class_ "edit-actions"] $ do
-            formButton Submit "delete-submit" "Delete" Check
-            formButton Cancel "delete-cancel" "Cancel" Cross
+            formButton Submit "delete-submit" "Delete" Icon.Check
+            formButton Cancel "delete-cancel" "Cancel" Icon.Cross
 
 ------------------------------------------------------------------------- Forms
 
@@ -143,8 +141,8 @@ editForm actionURL html =
         form_ [id_ "edit-form", action_ actionURL, method_ "post"] $ do
             html
             div_ [id_ "edit-actions"] $ do
-                action Check "edit-submit"
-                action Cross "edit-cancel"
+                action Icon.Check "edit-submit"
+                action Icon.Cross "edit-cancel"
 
 -- | Returns an HTML form for filtering posts.
 searchBox :: Text -> String -> Html ()
@@ -154,7 +152,7 @@ searchBox actionURL query =
         , action_ actionURL
         , method_ "get" ] $ do
             input_  [ id_ "search-text", type_ "text", name_ "q", value_ (Text.pack query) ]
-            formButton Submit "search-submit" "" Search
+            formButton Submit "search-submit" "" Icon.Search
 
 -- | Returns an HTML element representing a file upload form.
 uploadForm :: Scope -> Html ()
@@ -169,7 +167,7 @@ uploadForm scope = do
             textBoxField  "Title" "title"        "upload-title"
             textAreaField "Tags"  "tags"         "upload-tags"
             fileField     "File"  "uploadedFile" "upload-file"
-            formButton Submit "upload-submit" "Upload" UpArrow
+            formButton Submit "upload-submit" "Upload" Icon.UpArrow
 
 -- | Returns an HTML element for modifying a post property using a text box.
 textAreaField :: Text -> Text -> Text -> Html ()
@@ -195,7 +193,7 @@ fileField label name id =
 -- | Returns an HTML form button
 formButton :: ButtonType -> Text -> Text -> Icon -> Html ()
 formButton button id text icon =
-    let glyph = i_ [class_ ("fa " <> renderIcon icon)] mempty
+    let glyph = i_ [class_ ("fa " <> Icon.render icon)] mempty
 
         buttonType = case button of
             Submit -> [type_ "submit"]
@@ -303,19 +301,3 @@ formatSize value
     | value <= 10^3 = "1kb"
     | value >= 10^6 = Numeric.showFFloat (Just 1) (fromIntegral value / 1000000) "mb"
     | otherwise     = Numeric.showFFloat (Just 0) (fromIntegral value / 1000)    "kb"
-
--- | Renders the given icon as a CSS class.
-renderIcon :: Icon -> Text
-renderIcon icon = case icon of
-    LeftArrow  -> "fa-arrow-left"
-    RightArrow -> "fa-arrow-right"
-    UpArrow    -> "fa-arrow-up"
-    DownArrow  -> "fa-arrow-down"
-    Grid       -> "fa-th-large"
-    Pencil     -> "fa-pencil"
-    Trash      -> "fa-trash"
-    Check      -> "fa-check"
-    Cross      -> "fa-times"
-    Search     -> "fa-search"
-    Stop       -> "fa-stop"
-    Pause      -> "fa-pause"

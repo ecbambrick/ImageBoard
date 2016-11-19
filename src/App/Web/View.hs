@@ -8,6 +8,7 @@ import qualified App.Core.Album   as Album
 import qualified App.Core.Scope   as Scope
 import qualified App.Path         as Path
 import qualified App.Web.Element  as Elem
+import qualified App.Web.Icon     as Icon
 import qualified App.Web.URL      as URL
 import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText
@@ -40,15 +41,15 @@ albumView scope query timeZone entity @ (Entity id Album {..}) = render $ do
 
     Elem.document title onload $ do
         Elem.sideBar $ do
-            Elem.actionLink Elem.Grid indexURL
+            Elem.actionLink Icon.Grid indexURL
         Elem.aside $ do
             Elem.infoPanel $ do
                 Elem.actions $ do
                     Elem.actionGroup $ do
-                        Elem.actionLink Elem.Grid indexURL
+                        Elem.actionLink Icon.Grid indexURL
                     Elem.actionGroup $ do
-                        Elem.action Elem.Trash  "delete-show"
-                        Elem.action Elem.Pencil "edit-show"
+                        Elem.action Icon.Trash  "delete-show"
+                        Elem.action Icon.Pencil "edit-show"
                 Elem.searchBox (URL.albums scope 1 "") query
                 Elem.albumDetails album timeZone
                 Elem.spacer
@@ -81,10 +82,10 @@ albumsView scope query page total pageSize albums = render $ do
             Elem.actions $ do
                 Elem.actionGroup $ do
                     when prevAvailable $
-                        Elem.actionLink Elem.LeftArrow (URL.albums scope (page - 1) query)
+                        Elem.actionLink Icon.LeftArrow (URL.albums scope (page - 1) query)
                 Elem.actionGroup $ do
                     when nextAvailable $
-                        Elem.actionLink Elem.RightArrow (URL.albums scope (page + 1) query)
+                        Elem.actionLink Icon.RightArrow (URL.albums scope (page + 1) query)
             Elem.spacer
             Elem.uploadForm scope
         Elem.gallery $
@@ -112,22 +113,22 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
 
     Elem.document title onload $ do
         Elem.sideBar $ do
-            Elem.actionLink Elem.UpArrow   (URL.image  scope prev query)
-            Elem.actionLink Elem.Grid      (URL.images scope 1    query)
-            Elem.actionLink Elem.DownArrow (URL.image  scope next query)
+            Elem.actionLink Icon.UpArrow   (URL.image  scope prev query)
+            Elem.actionLink Icon.Grid      (URL.images scope 1    query)
+            Elem.actionLink Icon.DownArrow (URL.image  scope next query)
             Elem.separator
-            Elem.action Elem.Pause "toggle-double-compact"
+            Elem.action Icon.Pause "toggle-double-compact"
         Elem.aside $ do
             Elem.infoPanel $ do
                 Elem.actions $ do
                     Elem.actionGroup $ do
-                        Elem.actionLink Elem.LeftArrow  (URL.image  scope prev query)
-                        Elem.actionLink Elem.Grid       (URL.images scope 1    query)
-                        Elem.actionLink Elem.RightArrow (URL.image  scope next query)
+                        Elem.actionLink Icon.LeftArrow  (URL.image  scope prev query)
+                        Elem.actionLink Icon.Grid       (URL.images scope 1    query)
+                        Elem.actionLink Icon.RightArrow (URL.image  scope next query)
                     Elem.actionGroup $ do
-                        Elem.action Elem.Trash  "delete-show"
-                        Elem.action Elem.Pencil "edit-show"
-                        Elem.action Elem.Pause  "toggle-double"
+                        Elem.action Icon.Trash  "delete-show"
+                        Elem.action Icon.Pencil "edit-show"
+                        Elem.action Icon.Pause  "toggle-double"
                 Elem.searchBox (URL.images scope 1 "") query
                 Elem.imageDetails image1 timeZone Elem.MainImage
                 Elem.imageDetails image2 timeZone Elem.SecondaryImage
@@ -168,14 +169,14 @@ imagesView scope query page total pageSize images = render $ do
 
     Elem.document title onload $ do
         Elem.sideBar $ do
-            previousPageAction Elem.UpArrow
-            nextPageAction     Elem.DownArrow
+            previousPageAction Icon.UpArrow
+            nextPageAction     Icon.DownArrow
         Elem.aside $ do
             Elem.infoPanel $ do
                 Elem.actions $ do
                     Elem.actionGroup $ do
-                        previousPageAction Elem.LeftArrow
-                        nextPageAction     Elem.RightArrow
+                        previousPageAction Icon.LeftArrow
+                        nextPageAction     Icon.RightArrow
                 Elem.searchBox firstPageURL query
                 Elem.spacer
                 Elem.uploadForm scope
