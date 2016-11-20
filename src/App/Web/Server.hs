@@ -6,6 +6,7 @@ import qualified App.Core.Album                as Album
 import qualified App.Core.Image                as Image
 import qualified App.Core.Post                 as Post
 import qualified App.Core.Scope                as Scope
+import qualified App.Core.Tag                  as Tag
 import qualified App.Path                      as Path
 import qualified App.Web.Route                 as Route
 import qualified App.Web.URL                   as URL
@@ -72,6 +73,7 @@ routes = do
 
     albumRoutes
     imageRoutes
+    tagRoutes
 
 -- Album route handlers.
 albumRoutes :: Spock.SpockT (ReaderT Config IO) ()
@@ -230,6 +232,22 @@ imageRoutes = do
             (Nothing, _) -> return ()
             (_,   False) -> Image.delete MarkAsDeleted     id
             (_,    True) -> Image.delete PermanentlyDelete id
+
+-- | Tag route handlers.
+tagRoutes :: Spock.SpockT (ReaderT Config IO) ()
+tagRoutes = do
+
+    -- Renders the tag index page which lists all tags.
+    get Route.tags $ \scopeName -> do
+        result <- runMaybeT $ do
+            scope <- MaybeT $ Scope.querySingle scopeName
+            tags  <- lift   $ Tag.get
+
+            return (View.tagsView scope tags)
+
+        case result of
+            Nothing   -> notFound
+            Just view -> html view
 
 ----------------------------------------------------------------------- Utility
 

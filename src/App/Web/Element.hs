@@ -293,6 +293,16 @@ gallery2 items =
             a_ [href_ url] $
                 img_ [src_ (Text.pack thumbnail)]
 
+-- | Returns an HTML element for displaying a list of tags.
+tagList :: Scope -> [String] -> Html ()
+tagList scope tagNames =
+    div_ [id_ "tag-list"] $
+        forM_ tagNames $ \name ->
+            div_ [class_ "tag-item"] $ do
+                span_ [class_ "tag-name"] (toHtml name)
+                actionLink Icon.Image  $ URL.images scope 1 name
+                actionLink Icon.Book   $ URL.albums scope 1 name
+
 ----------------------------------------------------------------------- Utility
 
 -- | Formats the given integral value as a file size.

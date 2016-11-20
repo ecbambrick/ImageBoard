@@ -31,6 +31,10 @@ images = Spock.var <//> "images"
 page :: Spock.Path '[String, ID, Int]
 page = Spock.var <//> "album" <//> Spock.var <//> Spock.var
 
+-- | The route to the list of tags.
+tags :: Spock.Path '[String]
+tags = Spock.var <//> "tags"
+
 -- | The route to upload a new post.
 upload :: Spock.Path '[String]
 upload = Spock.var <//> "upload"

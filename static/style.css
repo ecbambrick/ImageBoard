@@ -374,3 +374,27 @@ hr {
     color: #3e3e3e;
     cursor: default;
 }
+
+#tag-list {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.tag-item {
+    display: flex;
+    width: 100%;
+}
+
+.tag-item:hover {
+    background-color: #3e3e3e
+}
+
+.tag-item > * {
+    flex: 0;
+}
+
+.tag-item > *:first-child {
+    flex: 1;
+}

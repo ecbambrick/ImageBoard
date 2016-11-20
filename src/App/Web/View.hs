@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards   #-}
 
 module App.Web.View
-    ( albumView, albumsView, imageView, imagesView, pageView ) where
+    ( albumView, albumsView, imageView, imagesView, pageView, tagsView ) where
 
 import qualified App.Core.Album   as Album
 import qualified App.Core.Scope   as Scope
@@ -14,7 +14,7 @@ import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText
 import qualified Text.JavaScript  as JS
 
-import App.Core.Types      ( Album(..), Image(..), Page(..), Scope(..) )
+import App.Core.Types      ( Album(..), Image(..), Page(..), Scope(..), Tag(..) )
 import Control.Applicative ( (<|>) )
 import Control.Monad       ( when )
 import Data.Monoid         ( (<>) )
@@ -190,7 +190,7 @@ imagesView scope query page total pageSize images = render $ do
                 ( URL.image scope id query
                 , Path.getImageThumbnailURL image)
 
--- | Renders a view for the give page of the given album as text containing
+-- | Renders a view for the given page of the given album as text containing
 -- | HTML.
 pageView :: Scope -> Entity Album -> Int -> Text
 pageView scope (Entity id album) number = render $ do
@@ -209,6 +209,15 @@ pageView scope (Entity id album) number = render $ do
         case page of
             Nothing   -> mempty
             Just page -> Elem.display (Path.getPageURL id page) ""
+
+-- | Renders a view for the list of tags as text containing HTML.
+tagsView :: Scope -> [Entity Tag] -> Text
+tagsView scope tags = render $ do
+    let title = "Tags"
+        onload = JS.functionCall "console.log" ["hello"]
+
+    Elem.document title onload $ do
+        Elem.tagList scope (map (tagName . entityData) tags)
 
 ----------------------------------------------------------------------- Utility
 
