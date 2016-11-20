@@ -52,6 +52,9 @@ data Join = BaseTable | InnerJoin (Maybe Where) deriving (Show)
 -- | The ORDER BY clause of a query.
 data OrderBy = Asc Column | Desc Column | Random deriving (Show)
 
+-- | The GROUP BY clause of a query.
+data GroupBy = GroupBy Column deriving (Show)
+
 -- | The WHERE clause of a query.
 data Where = All
            | Not Where
@@ -70,6 +73,7 @@ data QueryData = QueryData
     , queryFrom    :: [From]
     , queryWhere   :: [Where]
     , queryOrderBy :: [OrderBy]
+    , queryGroupBy :: [GroupBy]
     , queryOffset  :: Maybe Int
     , queryLimit   :: Maybe Int
     } deriving (Show)
@@ -141,6 +145,9 @@ randomOrder = state $ setOrder (Just Random)
 -- | Removes all orderings from the query.
 clearOrder :: Query ()
 clearOrder = state $ setOrder Nothing
+
+groupBy :: Column -> Query ()
+groupBy = state . addGroupBy . GroupBy
 
 -------------------------------------------------------------- Filter Functions
 
@@ -228,7 +235,7 @@ count = Count
 type QueryResult a = (a, (Int, QueryData))
 
 -- | An empty query.
-emptyQuery = QueryData [] [] [] [] Nothing Nothing
+emptyQuery = QueryData [] [] [] [] [] Nothing Nothing
 
 -- | Adds the given filter to the given query data when called by a state
 -- | monad.
@@ -243,6 +250,11 @@ addOrder :: OrderBy -> (Int, QueryData) -> QueryResult ()
 addOrder order (i, q) = ((), (i, q { queryOrderBy = x:xs }))
     where xs = queryOrderBy q
           x  = order
+
+addGroupBy :: GroupBy -> (Int, QueryData) -> QueryResult ()
+addGroupBy groupBy (i, q) = ((), (i, q { queryGroupBy = x:xs }))
+    where xs = queryGroupBy q
+          x  = groupBy
 
 -- | Adds the table with the given name to the given query data when called by
 -- | a state monad.

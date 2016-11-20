@@ -31,6 +31,9 @@ instance ToSQLite OrderBy where
     toSQLite (Desc column) = toSQLite column <+> "DESC"
     toSQLite (Random)      = "RANDOM()"
 
+instance ToSQLite GroupBy where
+    toSQLite (GroupBy column) = toSQLite column
+
 instance ToSQLite Where where
     toSQLite (All)                  = "true"
     toSQLite (Not filter)           = "NOT" <+> toSQLite filter
@@ -50,12 +53,13 @@ instance ToSQLite From where
 
 instance ToSQLite QueryData where
     toSQLite QueryData {..} = intercalate "\n" $ filter (not . null)
-        [ selectClause queryFrom querySelect
-        , fromClause   queryFrom
-        , whereClause  queryWhere
-        , orderClause  queryOrderBy
-        , limitClause  queryLimit
-        , offsetClause queryOffset ]
+        [ selectClause  queryFrom querySelect
+        , fromClause    queryFrom
+        , whereClause   queryWhere
+        , groupByClause queryGroupBy
+        , orderClause   queryOrderBy
+        , limitClause   queryLimit
+        , offsetClause  queryOffset ]
 
 -- | Generates a select clause.
 selectClause :: [From] -> [Column] -> String
@@ -75,6 +79,11 @@ orderClause :: [OrderBy] -> String
 orderClause orders
     | null orders = ""
     | otherwise   = "ORDER BY" <+> intercalate ", " (reverseMap toSQLite orders)
+
+groupByClause :: [GroupBy] -> String
+groupByClause groupBy
+    | null groupBy = ""
+    | otherwise    = "GROUP BY" <+> intercalate ", " (reverseMap toSQLite groupBy)
 
 -- | Generates a from clause.
 fromClause :: [From] -> String
