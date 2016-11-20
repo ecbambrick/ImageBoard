@@ -21,8 +21,7 @@ type Table = String -> Column
 -- | A mapping between a column name and a value.
 data Mapping = Mapping
     { mappingColumn :: String
-    , mappingValue  :: Value
-    } deriving (Show)
+    , mappingValue  :: Value }
 
 -- | A SQL value.
 data Value where
@@ -31,35 +30,27 @@ data Value where
     SQLColumn :: Column -> Value
     SQLBool   :: Bool   -> Value
 
-instance Show Value where
-    show (SQLNumber x) = "SQLNumber " ++ show x
-    show (SQLString x) = "SQLString " ++ show x
-    show (SQLBool   x) = "SQLBool "   ++ show x
-    show (SQLColumn x) = "SQLObject " ++ show x
-
 -- | A SQL table column.
-data Column = AliasedColumn Int String
-            | NamedColumn String String
-            | Count
-            deriving (Show)
+data Column where
+    AliasedColumn :: Int    -> String -> Column
+    NamedColumn   :: String -> String -> Column
+    Count         :: (ToValue a) => a -> Column
 
 -- | The FROM clause of a query.
-data From = From String Int Join deriving (Show)
+data From = From String Int Join
 
 -- | The type of join for a table.
 data Join = BaseTable
           | InnerJoin (Maybe Where)
           | LeftJoin  (Maybe Where)
-          deriving (Show)
 
 -- | The ORDER BY clause of a query.
 data OrderBy = Asc Column
              | Desc Column
              | Random
-             deriving (Show)
 
 -- | The GROUP BY clause of a query.
-data GroupBy = GroupBy Column deriving (Show)
+data GroupBy = GroupBy Column
 
 -- | The WHERE clause of a query.
 data Where = All
@@ -71,7 +62,6 @@ data Where = All
            | Greater Column Value
            | Less Column Value
            | Like Column String
-           deriving (Show)
 
 -- | The data for a query.
 data QueryData = QueryData
@@ -81,8 +71,7 @@ data QueryData = QueryData
     , queryOrderBy :: [OrderBy]
     , queryGroupBy :: [GroupBy]
     , queryOffset  :: Maybe Int
-    , queryLimit   :: Maybe Int
-    } deriving (Show)
+    , queryLimit   :: Maybe Int }
 
 -- | Converts a normal value to a SQL value.
 class ToValue a where
@@ -241,7 +230,7 @@ anything = return All
 (<<) column value = Mapping column (toValue value)
 
 -- | Returns a column representing the total number of results.
-count :: Column
+count :: (ToValue a) => a -> Column
 count = Count
 
 ----------------------------------------------------------------------- Utility

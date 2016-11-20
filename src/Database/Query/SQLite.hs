@@ -24,7 +24,7 @@ instance ToSQLite Value where
 instance ToSQLite Column where
     toSQLite (AliasedColumn table column) = alias table |.| column
     toSQLite (NamedColumn    name column) = name |.| column
-    toSQLite Count                        = "COUNT(*)"
+    toSQLite (Count                value) = "COUNT(" ++ toSQLite (toValue value) ++ ")"
 
 instance ToSQLite OrderBy where
     toSQLite (Asc column)  = toSQLite column <+> "ASC"
