@@ -49,6 +49,8 @@ instance ToSQLite From where
     toSQLite (From name i join) = case join of
         InnerJoin (Just filter) -> "INNER JOIN" <+> name |+| alias i <!> toSQLite filter
         InnerJoin Nothing       -> "INNER JOIN" <+> name |+| alias i
+        LeftJoin (Just filter)  -> "LEFT JOIN"  <+> name |+| alias i <!> toSQLite filter
+        LeftJoin Nothing        -> "LEFT JOIN"  <+> name |+| alias i
         BaseTable               -> "FROM"       <+> name |+| alias i
 
 instance ToSQLite QueryData where

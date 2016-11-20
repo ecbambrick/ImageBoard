@@ -47,10 +47,16 @@ data Column = AliasedColumn Int String
 data From = From String Int Join deriving (Show)
 
 -- | The type of join for a table.
-data Join = BaseTable | InnerJoin (Maybe Where) deriving (Show)
+data Join = BaseTable
+          | InnerJoin (Maybe Where)
+          | LeftJoin  (Maybe Where)
+          deriving (Show)
 
 -- | The ORDER BY clause of a query.
-data OrderBy = Asc Column | Desc Column | Random deriving (Show)
+data OrderBy = Asc Column
+             | Desc Column
+             | Random
+             deriving (Show)
 
 -- | The GROUP BY clause of a query.
 data GroupBy = GroupBy Column deriving (Show)
@@ -93,10 +99,15 @@ instance ToValue Bool    where toValue = SQLBool
 
 --------------------------------------------------------------- Query functions
 
--- | Selects from the table with the given name and returns a function to map
--- | the table to column names.
+-- | Selects/inner joins from the table with the given name and returns a
+-- | function to map the table to column names.
 from :: String -> Query Table
-from = state . addTable
+from = state . addTable (InnerJoin Nothing)
+
+-- | Selects/left joins from the table with the given name and returns a
+-- | function to map the table to column names.
+fromLeft :: String -> Query Table
+fromLeft = state . addTable (LeftJoin Nothing)
 
 -- | Joins the given table based on the given filter and then returns the first
 -- | argument.
@@ -106,8 +117,12 @@ on queryMapper queryFilter = do
     filter <- Just <$> queryFilter mapper
 
     state $ \(i,q) ->
-        let ([(From name _ _)], xs) = splitAt 1 (queryFrom q)
-            x                       = From name (i - 1) (InnerJoin filter)
+        let ([(From name _ join)], xs) = splitAt 1 (queryFrom q)
+            x                          = From name (i - 1) newJoin
+            newJoin                    = case join of
+                                            (BaseTable  ) -> BaseTable
+                                            (InnerJoin _) -> InnerJoin filter
+                                            (LeftJoin  _) -> LeftJoin  filter
 
         in (AliasedColumn (i-1), (i, q { queryFrom = x:xs }))
 
@@ -258,11 +273,11 @@ addGroupBy groupBy (i, q) = ((), (i, q { queryGroupBy = x:xs }))
 
 -- | Adds the table with the given name to the given query data when called by
 -- | a state monad.
-addTable :: String -> (Int, QueryData) -> QueryResult Table
-addTable name (i, q) = (AliasedColumn i, (i + 1, q { queryFrom = x:xs }))
+addTable :: Join -> String -> (Int, QueryData) -> QueryResult Table
+addTable join name (i, q) = (AliasedColumn i, (i + 1, q { queryFrom = x:xs }))
     where xs = queryFrom q
           x  = if null xs then From name i BaseTable
-                          else From name i (InnerJoin Nothing)
+                          else From name i join
 
 -- | Adds the given list of values to the given query data when called by a
 -- | state monad.
