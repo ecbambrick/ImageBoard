@@ -16,6 +16,7 @@ class Textual a where
     splitOn     :: a -> a -> [a]
     strip       :: a -> a
     toLower     :: a -> a
+    toUpper     :: a -> a
     trim        :: a -> a
 
 instance Textual String where
@@ -25,6 +26,7 @@ instance Textual String where
     splitOn x   = map unpack . Strict.splitOn (pack x)          . pack
     strip       = unpack     . Strict.strip                     . pack
     toLower     = map Char.toLower
+    toUpper     = map Char.toUpper
     trim        = unwords . words
 
 instance Textual Strict.Text where
@@ -34,6 +36,7 @@ instance Textual Strict.Text where
     splitOn     = Strict.splitOn
     strip       = Strict.strip
     toLower     = Strict.toLower
+    toUpper     = Strict.toLower
     trim        = Strict.unwords . Strict.words
 
 instance Textual Lazy.Text where
@@ -43,4 +46,5 @@ instance Textual Lazy.Text where
     splitOn     = Lazy.splitOn
     strip       = Lazy.strip
     toLower     = Lazy.toLower
+    toUpper     = Lazy.toUpper
     trim        = Lazy.unwords . Lazy.words
