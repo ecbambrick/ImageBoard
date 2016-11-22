@@ -69,6 +69,14 @@ data Tag = Tag
     { tagName :: String
     } deriving (Eq, Show)
 
+-- | A detailed tag contains more detailed meta data regarding a tag.
+data DetailedTag = DetailedTag
+    { detailedTagName       :: String
+    , detailedTagImageCount :: Int
+    , detailedTagAlbumCount :: Int
+    , detailedTagSample     :: Either (Entity Image) (Entity Album)
+    } deriving (Show, Eq)
+
 ---------------------------------------------------------------- JSON instances
 
 instance ToJSON (Entity Image) where

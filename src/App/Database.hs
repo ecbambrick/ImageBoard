@@ -5,12 +5,21 @@
 {-# LANGUAGE RankNTypes        #-}
 
 module App.Database
-    ( createDatabase, deleteDatabase, deletePost, markPostAsDeleted
+    ( createDatabase, deleteDatabase
+
+    , deletePost, markPostAsDeleted
+
     , insertImage, selectHashExists, selectImagesCount, selectImage
-    , selectImages, selectNextImage, selectPreviousImage, selectRandomImage
-    , selectRandomImages, updateImage, insertAlbum, selectAlbum, selectAlbums
-    , selectAlbumsCount, updateAlbum, deleteScope, insertScope, selectScope
-    , updateScope, selectTags, attachTags, cleanTags, detachTags ) where
+    , selectImages, selectNextImage, selectPreviousImage
+    , selectRandomImage, selectRandomImages, updateImage
+
+    , insertAlbum, selectAlbum, selectAlbums
+    , selectAlbumsCount, updateAlbum
+
+    , deleteScope, insertScope, selectScope, updateScope
+
+    , selectTags, selectTagsDetails, attachTags, cleanTags, detachTags
+    ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
@@ -29,8 +38,9 @@ import Database.Engine       ( Entity(..), Transaction(..), ID, FromRow
                              , fromEntity, fromRow, field )
 import Database.Query        ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
                              , (.=), (.>), (.<), (*=), (<<), asc, clearOrder
-                             , count, desc, exists, limit, from, nay, offset, on
-                             , randomOrder, retrieve, wherever )
+                             , count, desc, exists, groupBy, limit, from
+                             , fromLeft, nay, offset, on, randomOrder, retrieve
+                             , wherever )
 import System.Directory      ( doesFileExist, removeFile )
 
 ------------------------------------------------------------------------- Types
@@ -216,6 +226,28 @@ selectTagsByPost postID = SQL.query $ do
     t  <- tags
     pt <- from "post_tag" `on` ("tag_id" *= t "id")
     wherever (pt "post_id" .= postID)
+
+-- | Returns tag data for tags that are attached to at least one post that
+-- | satisfies the given expression.
+-- |
+-- | The results include the following data:
+-- |   * the tag ID
+-- |   * the tag name
+-- |   * the ID of a post with the tag attached
+-- |   * the number of images with the tag
+-- |   * the number of albums with the tag
+selectTagsDetails :: Expression -> Transaction [(ID, String, ID, Int, Int)]
+selectTagsDetails expression = SQL.query $ do
+    t  <- from     "tag"
+    pt <- from     "post_tag"  `on` ("tag_id"  *= t  "id")
+    p  <- from     "post"      `on` ("id"      *= pt "post_id")
+    i  <- fromLeft "image"     `on` ("post_id" *= p  "id")
+    a  <- fromLeft "album"     `on` ("post_id" *= p  "id")
+    satisfying expression p
+    wherever (p "is_deleted" .= False)
+    groupBy  (t "name")
+    asc      (t "name")
+    retrieve [t "id", t "name", p "id", count (i "id"), count (a "id")]
 
 -- | Deletes all tags from the database that are not attached to any post.
 cleanTags :: Transaction ()
@@ -480,14 +512,14 @@ selectAdjacentImage dir id expression = do
 -- | satisfy the given expression.
 selectCount :: String -> Expression -> Transaction Int
 selectCount table expression = do
-    results <- SQL.query $ do
+    (Just results) <- SQL.single $ do
         p <- from "post"
         t <- from table `on` ("post_id" *= p "id")
         wherever (p "is_deleted" .= False)
         satisfying expression p
-        retrieve [count]
+        retrieve [count (p "id")]
 
-    return (head results)
+    return results
 
 -- | Returns the ID of the tag with the given name or nothing if the tag name
 -- | does not exist.
