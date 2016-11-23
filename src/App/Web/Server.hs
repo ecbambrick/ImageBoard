@@ -7,6 +7,7 @@ import qualified App.Core.Image                as Image
 import qualified App.Core.Post                 as Post
 import qualified App.Core.Scope                as Scope
 import qualified App.Core.Tag                  as Tag
+import qualified App.Expression                as Expression
 import qualified App.Path                      as Path
 import qualified App.Web.Route                 as Route
 import qualified App.Web.URL                   as URL
@@ -19,7 +20,6 @@ import qualified Web.Spock                     as Spock
 import App.Config                ( Config(..) )
 import App.Core.Post             ( PostType(..) )
 import App.Core.Types            ( Album(..), DeletionMode(..), Image(..), Scope(..) )
-import App.Expression            ( parse )
 import App.Validation            ( Error(..), Validation(..) )
 import Control.Applicative       ( (<$>), (<*>), (<|>), pure )
 import Control.Monad.Reader      ( ReaderT, asks, liftIO, join )
@@ -89,7 +89,7 @@ albumRoutes = do
             page  <- lift   $ optionalParam "page" 1
             query <- lift   $ strip <$> optionalParam "q" ""
 
-            let fullQuery = parse (query ++ ", " ++ scopeExpression scope)
+            let fullQuery = Expression.parseMany [query, scopeExpression scope]
 
             count  <- lift $ Album.count fullQuery
             albums <- lift $ Album.query fullQuery page
@@ -173,7 +173,7 @@ imageRoutes = do
             page      <- lift   $ optionalParam "page" 1
             query     <- lift   $ strip <$> optionalParam "q" ""
 
-            let fullQuery = parse (query ++ ", " ++ scopeExpression scope)
+            let fullQuery = Expression.parseMany [query, scopeExpression scope]
 
             count  <- lift $ Image.count fullQuery
             images <- lift $ Image.query fullQuery page
@@ -191,7 +191,7 @@ imageRoutes = do
             scope <- MaybeT $ Scope.querySingle scopeName
             query <- lift   $ strip <$> optionalParam "q" ""
 
-            let fullQuery = parse (scopeExpression scope ++ ", " ++ query)
+            let fullQuery = Expression.parseMany [query, scopeExpression scope]
 
             (prev, curr, next) <- MaybeT $ Image.queryTriple fullQuery id
             return (View.imageView scope query timeZone prev curr next)

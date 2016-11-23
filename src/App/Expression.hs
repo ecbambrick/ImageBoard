@@ -1,13 +1,13 @@
 {-# LANGUAGE BangPatterns #-}
 
-module App.Expression ( Token(..), Expression, parse ) where
+module App.Expression ( Token(..), Expression, parse, parseMany ) where
 
 import qualified Text.Parsec as Parsec
 
 import Control.Applicative  ( (<$>), (<*>), (<|>) )
 import Data.Either          ( rights )
 import Data.List            ( delete, nub )
-import Data.Textual         ( trim, splitOn )
+import Data.Textual         ( intercalate, splitOn, trim )
 import Text.Parsec          ( ParseError, many1, noneOf, oneOf, spaces )
 
 ------------------------------------------------------------------------- Types
@@ -27,6 +27,13 @@ data Token = Included String
 -- | i.e. "a,   -b  ,  ,,c" -> [Included "a", Excluded "b", Included "c"]
 parse :: String -> Expression
 parse = neutralize . nub . rights . map tokenize . splitOn ","
+
+-- | Parses the given list of comma-separated strings and returns a single
+-- | expression.
+parseMany :: [String] -> Expression
+parseMany = parse . intercalate ","
+
+----------------------------------------------------------------------- Utility
 
 -- | Converts the given string to a token. If the first non-space character is
 -- | a dash, an excluded token will be returned; otherwise, an included token
