@@ -366,14 +366,16 @@ hr {
 }
 
 .disabled {
-    color: #3e3e3e;
+    color: #666;
 }
 
 .disabled:hover {
     background-color: inherit;
-    color: #3e3e3e;
+    color: #666;
     cursor: default;
 }
+
+/* ----------------------------------------------------------------- Tag List */
 
 #tag-list {
     display: flex;
@@ -383,18 +385,42 @@ hr {
 }
 
 .tag-item {
+    align-items: center;
     display: flex;
-    width: 100%;
+    margin-bottom: 20px;
+    width: 25%;
 }
 
-.tag-item:hover {
-    background-color: #3e3e3e
-}
-
-.tag-item > * {
-    flex: 0;
-}
-
-.tag-item > *:first-child {
+.tag-data {
+    display: flex;
+    flex-direction: column;
     flex: 1;
+    height: calc(100% - 20px);
+    margin: 20px 20px;
+}
+
+.tag-item img {
+    display: flex;
+    height: 150px;
+}
+
+.tag-item img:hover {
+    opacity: 0.8;
+}
+
+.tag-name {
+    font-size: 24px;
+}
+
+.tag-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.tag-header {
+    border-bottom: 1px solid #3e3e3e;
+    font-size: 36px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    width: 100%;
 }

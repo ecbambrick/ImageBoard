@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE MultiWayIf        #-}
 
 module App.Web.View
     ( albumView, albumsView, imageView, imagesView, pageView, tagsView ) where
@@ -14,9 +15,12 @@ import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText
 import qualified Text.JavaScript  as JS
 
-import App.Core.Types      ( Album(..), Image(..), Page(..), Scope(..), Tag(..) )
+import App.Core.Types      ( Album(..), DetailedTag(..), Image(..), Page(..)
+                           , Scope(..), Tag(..) )
 import Control.Applicative ( (<|>) )
-import Control.Monad       ( when )
+import Control.Monad       ( forM_, when )
+import Data.List.Extended  ( groupWith )
+import Data.Char           ( isAlpha, isNumber, toUpper )
 import Data.Monoid         ( (<>) )
 import Data.Text           ( Text )
 import Data.Textual        ( display, intercalate )
@@ -211,13 +215,25 @@ pageView scope (Entity id album) number = render $ do
             Just page -> Elem.display (Path.getPageURL id page) ""
 
 -- | Renders a view for the list of tags as text containing HTML.
-tagsView :: Scope -> [Entity Tag] -> Text
-tagsView scope tags = render $ do
-    let title = "Tags"
-        onload = JS.functionCall "console.log" ["hello"]
+tagsView :: Scope -> [Entity DetailedTag] -> Text
+tagsView scope tagEntities = render $ do
+    let title  = "Tags"
+        onload = JS.functionCall "TagsViewModel.register" args
+        args   = [ JS.toJSON (scopeName scope) ]
+
+    let tags               = map entityData tagEntities
+        groups             = groupWith getGroupHeader tags
+        getGroupHeader tag = let char = head (detailedTagName tag)
+                             in if | isNumber char -> "#"
+                                   | isAlpha  char -> [toUpper char]
+                                   | otherwise     -> "Symbol"
 
     Elem.document title onload $ do
-        Elem.tagList scope (map (tagName . entityData) tags)
+        Elem.tagList $ do
+            forM_ groups $ \group -> do
+                Elem.tagHeader (getGroupHeader (head group))
+                forM_ group $ \tag -> do
+                    Elem.tagDetail scope tag
 
 ----------------------------------------------------------------------- Utility
 

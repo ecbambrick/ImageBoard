@@ -241,7 +241,7 @@ tagRoutes = do
     get Route.tags $ \scopeName -> do
         result <- runMaybeT $ do
             scope <- MaybeT $ Scope.querySingle scopeName
-            tags  <- lift   $ Tag.get
+            tags  <- lift   $ Tag.query scope
 
             return (View.tagsView scope tags)
 

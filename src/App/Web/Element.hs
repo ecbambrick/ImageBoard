@@ -3,6 +3,7 @@
 
 module App.Web.Element where
 
+import qualified App.Path        as Path
 import qualified App.Web.Icon    as Icon
 import qualified App.Web.URL     as URL
 import qualified Data.Text       as Text
@@ -10,14 +11,15 @@ import qualified Numeric         as Numeric
 import qualified System.FilePath as FilePath
 import qualified Text.JavaScript as JS
 
-import App.Core.Types ( Album(..), Image(..), Scope(..) )
-import App.Web.Icon   ( Icon )
-import Control.Monad  ( forM_ )
-import Data.DateTime  ( TimeZone, defaultFormatDate )
-import Data.Monoid    ( (<>), mempty )
-import Data.Text      ( Text )
-import Data.Textual   ( display, intercalate )
-import Lucid.Base     ( Html, toHtml )
+import App.Core.Types       ( Album(..), DetailedTag(..), Image(..), Scope(..) )
+import App.Web.Icon         ( Icon )
+import Control.Monad        ( forM_ )
+import Database.Engine      ( Entity(..) )
+import Data.DateTime        ( TimeZone, defaultFormatDate )
+import Data.Monoid          ( (<>), mempty )
+import Data.Text            ( Text )
+import Data.Textual         ( intercalate )
+import Lucid.Base           ( Html, toHtml )
 import Lucid.Html5
 
 ------------------------------------------------------------------------- Types
@@ -54,6 +56,7 @@ document title initialize html =
             script_ [type_ ecma6, src_ "/static/albums.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/images.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/page.js"   ] Text.empty
+            script_ [type_ ecma6, src_ "/static/viewmodel/tags.js"] Text.empty
             script_ [type_ ecma6] (JS.onDocumentLoad initialize)
         body_ html
 
@@ -205,6 +208,56 @@ formButton button id text icon =
 
     in button_ ([ id_ id, class_ "action"] <> buttonType) label
 
+-------------------------------------------------------------------------- Tags
+
+-- | Returns an HTML element containing a detailed list of tags.
+tagList :: Html () -> Html ()
+tagList = div_ [id_ "tag-list"]
+
+-- | Returns an HTML element containing the given string as a tag header.
+tagHeader :: String -> Html ()
+tagHeader = div_ [class_ "tag-header"] . toHtml
+
+-- | Returns an HTML element containing tag details for the given tag.
+tagDetail :: Scope -> DetailedTag -> Html ()
+tagDetail scope DetailedTag {..} = do
+    let sampleLink = case detailedTagSample of
+            Left  (Entity id _) -> URL.image scope id ""
+            Right (Entity id _) -> URL.album scope id
+
+        sampleThumbnail = case detailedTagSample of
+            Left (Entity _ image) -> Path.getImageThumbnailURL image
+            Right album           -> Path.getAlbumThumbnailURL album
+
+        imageAction = case detailedTagImageCount of
+            0 -> disabledAction Icon.Image
+            _ -> actionLink     Icon.Image $ URL.images scope 1 detailedTagName
+
+        albumAction = case detailedTagAlbumCount of
+            0 -> disabledAction Icon.Book
+            _ -> actionLink     Icon.Book $ URL.albums scope 1 detailedTagName
+
+        imageCount = case detailedTagImageCount of
+            0 -> span_ [class_ "disabled"] "0 images"
+            x -> toHtml (show x ++ " images")
+
+        albumCount = case detailedTagAlbumCount of
+            0 -> span_ [class_ "disabled"] "0 albums"
+            x -> toHtml (show x ++ " albums")
+
+    div_ [class_ "tag-item"] $ do
+        a_ [href_ sampleLink] $ do
+            img_ [src_ (Text.pack sampleThumbnail)]
+        div_ [class_ "tag-data"] $ do
+            span_ [class_ "tag-name"] (toHtml detailedTagName)
+            imageCount
+            br_ []
+            albumCount
+            spacer
+            actionGroup $ do
+                imageAction
+                albumAction
+
 ------------------------------------------------------------------------- Misc.
 
 -- | Returns an HTML element for displaying album meta data.
@@ -292,16 +345,6 @@ gallery2 items =
         forM_ items $ \(url, thumbnail) ->
             a_ [href_ url] $
                 img_ [src_ (Text.pack thumbnail)]
-
--- | Returns an HTML element for displaying a list of tags.
-tagList :: Scope -> [String] -> Html ()
-tagList scope tagNames =
-    div_ [id_ "tag-list"] $
-        forM_ tagNames $ \name ->
-            div_ [class_ "tag-item"] $ do
-                span_ [class_ "tag-name"] (toHtml name)
-                actionLink Icon.Image  $ URL.images scope 1 name
-                actionLink Icon.Book   $ URL.albums scope 1 name
 
 ----------------------------------------------------------------------- Utility
 
