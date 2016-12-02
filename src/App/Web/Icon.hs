@@ -20,6 +20,7 @@ data Icon
     | Pause
     | Image
     | Book
+    | LevelDown
 
 -- | Renders the given icon as a CSS class.
 render :: Icon -> Text
@@ -38,3 +39,4 @@ render icon = case icon of
     Pause      -> "fa-pause"
     Image      -> "fa-image"
     Book       -> "fa-book"
+    LevelDown  -> "fa-level-down"

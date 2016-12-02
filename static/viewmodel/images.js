@@ -10,6 +10,7 @@ const ImagesViewModel = {
         const dom = {
             blur:         () => document.activeElement.blur(),
             gallery:      document.getElementById("gallery2"),
+            images:       document.getElementById("gallery2").childNodes,
             sideBar:      document.getElementById("side-bar"),
             aside:        document.getElementsByTagName("aside")[0],
             search:       document.getElementById("search-text"),
@@ -22,6 +23,7 @@ const ImagesViewModel = {
             previousPage: Url.images(scope, page - 1, query),
             nextPage:     Url.images(scope, page + 1, query),
             albums:       Url.albums(scope, 1,        query),
+            firstResult:  dom.images.isEmpty() ? "#" : dom.images[0].href,
         };
 
         // -------------------------------------------------------------
@@ -43,6 +45,9 @@ const ImagesViewModel = {
         // Miscellaneous streams.
         // -------------------------------------------------------------
 
+        const anyImages =
+            Kefir.constant(() => !dom.images.isEmpty());
+
         const focusOnSearch =
             Kefir.fromKey("s");
 
@@ -58,6 +63,10 @@ const ImagesViewModel = {
 
         const goToAlbums =
             Kefir.fromKey("a");
+
+        const goToFirstResult =
+            Kefir.fromKey("q")
+                 .filterBy(anyImages);
 
         const freeFocus =
             Kefir.fromKey("escape", { allowInInput: true });
@@ -81,15 +90,14 @@ const ImagesViewModel = {
 
         // Redraw the gallery.
         windowResize.onValue(() => {
-            dom.gallery.style.visibility = "hidden";
             Gallery.register(dom.gallery, { maxHeight: 500, padding: 10 });
-            dom.gallery.style.visibility = "visible";
         });
 
         // Actions.
         goToNextPage      .onValue(_ => Utility.goTo(url.nextPage));
         goToPreviousPage  .onValue(_ => Utility.goTo(url.previousPage));
         goToAlbums        .onValue(_ => Utility.goTo(url.albums));
+        goToFirstResult   .onValue(_ => Utility.goTo(url.firstResult));
         focusOnSearch     .onValue(_ => dom.search.select());
         freeFocus         .onValue(_ => document.activeElement.blur());
     }

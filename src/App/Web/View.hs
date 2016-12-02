@@ -21,6 +21,7 @@ import Control.Applicative ( (<|>) )
 import Control.Monad       ( forM_, when )
 import Data.List.Extended  ( groupWith )
 import Data.Char           ( isAlpha, isNumber, toUpper )
+import Data.Maybe          ( listToMaybe )
 import Data.Monoid         ( (<>) )
 import Data.Text           ( Text )
 import Data.Textual        ( display, intercalate )
@@ -148,8 +149,6 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
 imagesView :: Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
 imagesView scope query page total pageSize images = render $ do
     let title       = "Images (" <> display total <> ")"
-        canPrevious = page > 1
-        canNext     = page * pageSize < total
         onload      = JS.functionCall "ImagesViewModel.register" args
         args        = [ JS.toJSON (scopeName scope)
                       , JS.toJSON query
@@ -157,12 +156,17 @@ imagesView scope query page total pageSize images = render $ do
                       , JS.toJSON canPrevious
                       , JS.toJSON canNext ]
 
-    let previousPageURL = URL.images scope (page - 1) query
+        firstID     = entityID <$> listToMaybe images
+        canPrevious = page > 1
+        canNext     = page * pageSize < total
+
+        previousPageURL = URL.images scope (page - 1) query
         firstPageURL    = URL.images scope 1          query
         nextPageURL     = URL.images scope (page + 1) query
         galleryURL      = URL.albums scope 1          query
+        firstResultURL  = URL.image scope <$> firstID <*> pure query
 
-    let previousPageAction icon =
+        previousPageAction icon =
             if canPrevious
                 then Elem.actionLink     icon previousPageURL
                 else Elem.disabledAction icon
@@ -172,9 +176,15 @@ imagesView scope query page total pageSize images = render $ do
                 then Elem.actionLink     icon nextPageURL
                 else Elem.disabledAction icon
 
+        firstResultAction =
+            case firstResultURL of
+                Just url -> Elem.actionLink     Icon.LevelDown url
+                Nothing  -> Elem.disabledAction Icon.LevelDown
+
     Elem.document title onload $ do
         Elem.sideBar $ do
             previousPageAction Icon.UpArrow
+            firstResultAction
             nextPageAction     Icon.DownArrow
             Elem.separator
             Elem.actionLink    Icon.Book galleryURL
@@ -183,6 +193,7 @@ imagesView scope query page total pageSize images = render $ do
                 Elem.actions $ do
                     Elem.actionGroup $ do
                         previousPageAction Icon.LeftArrow
+                        firstResultAction
                         nextPageAction     Icon.RightArrow
                     Elem.actionGroup $ do
                         Elem.actionLink Icon.Book galleryURL
