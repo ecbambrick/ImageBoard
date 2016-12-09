@@ -160,10 +160,11 @@ imagesView scope query page total pageSize images = render $ do
         canPrevious = page > 1
         canNext     = page * pageSize < total
 
+        tagsURL         = URL.tags scope
         previousPageURL = URL.images scope (page - 1) query
         firstPageURL    = URL.images scope 1          query
         nextPageURL     = URL.images scope (page + 1) query
-        galleryURL      = URL.albums scope 1          query
+        albumsURL       = URL.albums scope 1          query
         firstResultURL  = URL.image scope <$> firstID <*> pure query
 
         previousPageAction icon =
@@ -187,7 +188,9 @@ imagesView scope query page total pageSize images = render $ do
             firstResultAction
             nextPageAction     Icon.DownArrow
             Elem.separator
-            Elem.actionLink    Icon.Book galleryURL
+            Elem.actionLink    Icon.Book albumsURL
+            Elem.separator
+            Elem.actionLink    Icon.Tags tagsURL
         Elem.aside $ do
             Elem.infoPanel $ do
                 Elem.actions $ do
@@ -196,7 +199,8 @@ imagesView scope query page total pageSize images = render $ do
                         firstResultAction
                         nextPageAction     Icon.RightArrow
                     Elem.actionGroup $ do
-                        Elem.actionLink Icon.Book galleryURL
+                        Elem.actionLink Icon.Tags tagsURL
+                        Elem.actionLink Icon.Book albumsURL
                 Elem.searchBox firstPageURL query
                 Elem.spacer
                 Elem.uploadForm scope

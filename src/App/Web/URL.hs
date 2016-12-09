@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module App.Web.URL ( album, albums, image, images, page, upload ) where
+module App.Web.URL ( album, albums, image, images, page, tags, upload ) where
 
 import qualified App.Web.Route  as Route
 import qualified Data.Text      as Text
@@ -49,6 +49,10 @@ images scope page query =
 -- | ID and scope.
 page :: Scope -> ID -> Int -> Text
 page scope = Spock.renderRoute Route.page (scopeName scope)
+
+-- | Returns the route to the list of tags with the given scope.
+tags :: Scope -> Text
+tags scope = Spock.renderRoute Route.tags (scopeName scope)
 
 -- | Returns the route to upload a new post.
 upload :: Scope -> Text

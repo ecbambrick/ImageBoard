@@ -21,6 +21,7 @@ data Icon
     | Image
     | Book
     | LevelDown
+    | Tags
 
 -- | Renders the given icon as a CSS class.
 render :: Icon -> Text
@@ -40,3 +41,4 @@ render icon = case icon of
     Image      -> "fa-image"
     Book       -> "fa-book"
     LevelDown  -> "fa-level-down"
+    Tags       -> "fa-tags"
