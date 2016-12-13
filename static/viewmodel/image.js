@@ -80,11 +80,11 @@ const ImageViewModel = {
         // Display streams.
         // -------------------------------------------------------------
 
-        const isCompact =
+        const compactToggle =
             Kefir.fromKey("h")
                  .scan((x, _) => !x, Session.compactMode);
 
-        const currentPanel =
+        const panelToggle =
             Kefir.merge([
                 Kefir.fromClick(dom.editButton)   .map(_ => "edit"),
                 Kefir.fromKey("e")                .map(_ => "edit"),
@@ -95,9 +95,33 @@ const ImageViewModel = {
                 Kefir.fromKey("escape")           .map(_ => "info"),
                 editSubmitted                     .map(_ => "info"),
             ])
-            .skipDuplicates()
-            .filterBy(isCompact.map(x => !x))
             .toProperty(() => "info");
+
+        const displayMode =
+            Kefir.combine([compactToggle, panelToggle], (x, y) => { return { compact: x, panel: y } })
+                 .scan((prev, curr) => {
+
+                      // Don't change the panel in compact mode.
+                      if (prev.compact) {
+                          return { compact: curr.compact, panel: prev.panel }
+                      }
+
+                      // Don't change compact mode when not showing the "info" panel.
+                      else if (prev.panel != "info") {
+                          return { compact: prev.compact, panel: curr.panel }
+                      }
+
+                      // Otherwise, accept the new state.
+                      return curr;
+                 })
+
+        const isCompact =
+            displayMode.map(({ compact }) => compact)
+                       .skipDuplicates()
+
+        const currentPanel =
+            displayMode.map(({ panel }) => panel)
+                       .skipDuplicates()
 
         const isShowingInfo =
             currentPanel.map(x => x === "info");
@@ -114,6 +138,7 @@ const ImageViewModel = {
                 Kefir.fromClick(dom.doubleViewButton),
                 Kefir.fromClick(dom.doubleViewCompact),
             ])
+            .filterBy(isShowingInfo)
             .scan((x, y) => !x, Session.doubleView)
             .combine(isShowingInfo, (x, y) => x && y)
             .map(x => currentImage.hash != nextImage.hash && x)
@@ -182,7 +207,8 @@ const ImageViewModel = {
             Kefir.fromKey("s");
 
         const backToIndex =
-            Kefir.fromKey("q");
+            Kefir.fromKey("q")
+                 .filterBy(isShowingInfo);
 
         const goToNextImage =
             Kefir.fromKey("space");

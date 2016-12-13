@@ -73,18 +73,11 @@ const AlbumViewModel = {
         // Display streams.
         // -------------------------------------------------------------
 
-        const isCompact =
+        const compactToggle =
             Kefir.fromKey("h")
                  .scan((x, _) => !x, Session.compactMode);
 
-        const windowResize =
-            Kefir.merge([
-                isCompact.skip(1),
-                Kefir.fromEvents(window, "load"),
-                Kefir.fromEvents(window, "resize").debounce(100),
-            ]);
-
-        const currentPanel =
+        const panelToggle =
             Kefir.merge([
                 Kefir.fromClick(dom.editButton)   .map(_ => "edit"),
                 Kefir.fromKey("e")                .map(_ => "edit"),
@@ -95,9 +88,40 @@ const AlbumViewModel = {
                 Kefir.fromKey("escape")           .map(_ => "info"),
                 editSubmitted                     .map(_ => "info"),
             ])
-            .skipDuplicates()
-            .filterBy(isCompact.map(x => !x))
             .toProperty(() => "info");
+
+        const displayMode =
+            Kefir.combine([compactToggle, panelToggle], (x, y) => { return { compact: x, panel: y } })
+                 .scan((prev, curr) => {
+
+                      // Don't change the panel in compact mode.
+                      if (prev.compact) {
+                          return { compact: curr.compact, panel: prev.panel }
+                      }
+
+                      // Don't change compact mode when not showing the "info" panel.
+                      else if (prev.panel != "info") {
+                          return { compact: prev.compact, panel: curr.panel }
+                      }
+
+                      // Otherwise, accept the new state.
+                      return curr;
+                 })
+
+        const isCompact =
+            displayMode.map(({ compact }) => compact)
+                       .skipDuplicates()
+
+        const currentPanel =
+            displayMode.map(({ panel }) => panel)
+                       .skipDuplicates()
+
+        const windowResize =
+            Kefir.merge([
+                isCompact.skip(1),
+                Kefir.fromEvents(window, "load"),
+                Kefir.fromEvents(window, "resize").debounce(100),
+            ]);
 
         const isShowingInfo =
             currentPanel.map(x => x === "info");
@@ -159,7 +183,8 @@ const AlbumViewModel = {
             Kefir.fromKey("s");
 
         const backToIndex =
-            Kefir.fromKey("q");
+            Kefir.fromKey("q")
+                 .filterBy(isShowingInfo);
 
         const freeFocus =
             Kefir.fromKey("escape", { allowInInput: true });
