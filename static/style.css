@@ -351,8 +351,8 @@ hr {
     justify-content: flex-start;
 }
 
-#gallery2 a:hover {
-    background-color: inherit;
+#gallery2 a {
+    background-color: #fff;
 }
 
 #gallery2 img {
@@ -361,7 +361,11 @@ hr {
 }
 
 #gallery2 img:hover {
-    opacity: 0.8;
+    opacity: 0.7;
+}
+
+.selected img {
+    border: 5px solid #6495ED;
 }
 
 .disabled {

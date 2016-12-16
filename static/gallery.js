@@ -8,10 +8,17 @@ const Gallery = {
     // Registers the given element as a gallery with the given options.
     register: (element, { maxHeight = 250, padding = 0 } = {}) => {
         const totalWidth = element.offsetWidth;
+        const containers = element.childNodes;
         const images     = element.getElementsByTagName("img");
         const rows       = Gallery._partition(images, maxHeight, totalWidth, padding);
 
+        for (let container of containers)
+        {
+            container.style.margin = `0 ${padding}px ${padding}px 0`;
+        }
+
         element.style.marginBottom = "-" + padding + "px";
+        element.style.marginRight  = "-" + padding + "px";
 
         for (let { images, height } of rows) {
             Gallery._resizeFirstImages(images, height, padding);
@@ -37,9 +44,8 @@ const Gallery = {
         for (let image of images.exceptLast()) {
             const width = image.naturalWidth * height / image.naturalHeight;
 
-            image.style.padding = `0 ${padding}px ${padding}px 0`;
-            image.height        = height;
-            image.width         = width + padding;
+            image.height = height;
+            image.width  = width + padding;
         }
     },
 
@@ -50,16 +56,15 @@ const Gallery = {
         const totalPadding      = images.length * padding;
         const image             = images.last();
         const totalImageLengths = images.exceptLast()
-                                        .map(x => x.width)
+                                        .map(x => x.offsetWidth)
                                         .reduce((x, y) => x + y, 0);
 
         const scaledWidth    = image.naturalWidth * height / image.naturalHeight + padding;
         const remainingWidth = totalWidth - totalImageLengths - totalPadding;
         const width          = Math.min(scaledWidth, remainingWidth);
 
-        image.style.padding = `0 0 ${padding}px 0`;
-        image.height        = height;
-        image.width         = width + padding;
+        image.height = height;
+        image.width  = width;
     },
 
     // Partitions the list of images into rows based on each image's width.

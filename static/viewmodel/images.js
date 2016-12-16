@@ -16,14 +16,10 @@ const ImagesViewModel = {
             search:       document.getElementById("search-text"),
             uploadTags:   document.getElementById("upload-tags"),
             uploadSubmit: document.getElementById("upload-submit"),
-        };
 
-        // URL shortcuts.
-        const url = {
-            previousPage: Url.images(scope, page - 1, query),
-            nextPage:     Url.images(scope, page + 1, query),
-            albums:       Url.albums(scope, 1,        query),
-            firstResult:  dom.images.isEmpty() ? "#" : dom.images[0].href,
+            get selectedImage() {
+                return document.getElementsByClassName("selected")[0];
+            },
         };
 
         // -------------------------------------------------------------
@@ -41,32 +37,34 @@ const ImagesViewModel = {
                 Kefir.fromEvents(window, "resize").debounce(100),
             ]);
 
+        const selectedImage =
+            Kefir.merge([
+                Kefir.fromKey("arrowleft").map(() => -1),
+                Kefir.fromKey("arrowright").map(() => 1),
+            ])
+            .scan((x, y) => Math.mod(x + y, dom.images.length), 0);
+
         // -------------------------------------------------------------
         // Miscellaneous streams.
         // -------------------------------------------------------------
-
-        const anyImages =
-            Kefir.constant(() => !dom.images.isEmpty());
 
         const focusOnSearch =
             Kefir.fromKey("s");
 
         const goToNextPage =
             Kefir.fromKey("space")
-                 .filter(_ => canNext)
-                 .filter(_ => Utility.getPagePosition().bottom);
+                 .filter(_ => canNext && Utility.getPagePosition().bottom);
 
         const goToPreviousPage =
             Kefir.fromKey("shift+space")
-                 .filter(_ => canPrevious)
-                 .filter(_ => Utility.getPagePosition().top);
-
-        const goToAlbums =
-            Kefir.fromKey("a");
+                 .filter(_ => canPrevious && Utility.getPagePosition().top);
 
         const goToFirstResult =
             Kefir.fromKey("q")
-                 .filterBy(anyImages);
+                 .filter(_ => dom.selectedImage.href);
+
+        const goToAlbums =
+            Kefir.fromKey("a");
 
         const freeFocus =
             Kefir.fromKey("escape", { allowInInput: true });
@@ -88,16 +86,25 @@ const ImagesViewModel = {
             }
         });
 
+        // Highlight currently selected image.
+        selectedImage.onValue(x => {
+            if (dom.selectedImage) {
+                dom.selectedImage.classList.remove("selected");
+            }
+
+            dom.images[x].classList.add("selected");
+        });
+
         // Redraw the gallery.
         windowResize.onValue(() => {
             Gallery.register(dom.gallery, { maxHeight: 500, padding: 10 });
         });
 
         // Actions.
-        goToNextPage      .onValue(_ => Utility.goTo(url.nextPage));
-        goToPreviousPage  .onValue(_ => Utility.goTo(url.previousPage));
-        goToAlbums        .onValue(_ => Utility.goTo(url.albums));
-        goToFirstResult   .onValue(_ => Utility.goTo(url.firstResult));
+        goToNextPage      .onValue(_ => Utility.goTo(Url.images(scope, page + 1, query)));
+        goToPreviousPage  .onValue(_ => Utility.goTo(Url.images(scope, page - 1, query)));
+        goToAlbums        .onValue(_ => Utility.goTo(Url.albums(scope, 1,        query)));
+        goToFirstResult   .onValue(_ => Utility.goTo(dom.selectedImage.href));
         focusOnSearch     .onValue(_ => dom.search.select());
         freeFocus         .onValue(_ => document.activeElement.blur());
     }
