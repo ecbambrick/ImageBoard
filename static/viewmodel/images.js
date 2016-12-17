@@ -88,11 +88,25 @@ const ImagesViewModel = {
 
         // Highlight currently selected image.
         selectedImage.onValue(x => {
+            let selected = dom.images[x];
+
+            if (!selected) {
+                return;
+            }
+
             if (dom.selectedImage) {
                 dom.selectedImage.classList.remove("selected");
             }
 
-            dom.images[x].classList.add("selected");
+            selected.classList.add("selected");
+
+            if (!window.isElementInView(selected)) {
+                window.scroll({
+                    left: selected.offsetLeft,
+                    top:  selected.offsetTop - 20,
+                    behavior: "smooth",
+                });
+            }
         });
 
         // Redraw the gallery.

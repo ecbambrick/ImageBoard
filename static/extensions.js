@@ -1,6 +1,19 @@
 "use strict"
 
 // -----------------------------------------------------------------------------
+// Window
+// -----------------------------------------------------------------------------
+
+Window.prototype.isElementInView = function(element) {
+    let windowTop    = window.pageYOffset;
+    let windowBottom = window.pageYOffset + window.innerHeight;
+    let top          = element.offsetTop;
+    let bottom       = element.offsetTop + element.clientHeight;
+
+    return top >= windowTop && bottom <= windowBottom;
+}
+
+// -----------------------------------------------------------------------------
 // Node List
 // -----------------------------------------------------------------------------
 
