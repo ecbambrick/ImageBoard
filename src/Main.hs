@@ -28,7 +28,7 @@ main = CLI.cli "Image board." $ do
     -- Import all relevant files from the given directory.
     CLI.command "import" $ do
         inPath    <- CLI.argument "path"
-        moveFiles <- CLI.option ('m', "move") "Moves files to the given directory after being imported."
+        moveFiles <- CLI.option ('o', "out") "Moves files to the given output directory after being imported."
         tagString <- CLI.option ('t', "tags") "Include tags for each imported file."
 
         let outPath = if isTesting then Nothing else moveFiles
