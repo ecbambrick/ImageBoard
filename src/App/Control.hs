@@ -88,6 +88,6 @@ withTestEnvironment f = do
         let commands = filter (/= "\n") $ splitOn ";" schema
         in  mapM_ execute commands
 
-    f (Config 8000 database testDir 100 256 utcTimeZone)
+    f (Config 8000 database testDir 100 512 utcTimeZone)
 
     Dir.removeDirectoryRecursive testDir
