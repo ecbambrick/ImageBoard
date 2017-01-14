@@ -18,12 +18,10 @@ createThumbnail :: Int -> FilePath -> FilePath -> IO ()
 createThumbnail size from to = do
     let process = (Process.proc name args) { std_out = CreatePipe, std_err = CreatePipe }
         name    = "ffmpeg"
-        width   = "'if(gt(iw,ih),512,-1)'"
-        height  = "'if(gt(iw,ih),-1,512)'"
         args    = [ "-i", from
                   , "-y"
                   , "-vframes", "1"
-                  , "-vf", "scale=" ++ width ++ ":" ++ height
+                  , "-vf", "scale=-1:min(" ++ show size ++ "\\,ih)"
                   , to ]
 
     Dir.createDirectoryIfMissing True (FilePath.takeDirectory to)
