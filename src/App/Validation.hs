@@ -66,3 +66,7 @@ validateSingle (Valid:xs)    = validateSingle xs
 verify :: Bool -> Error -> Validation
 verify True  _   = Valid
 verify False err = Invalid [err]
+
+-- | Returns invalid with the given error.
+invalidate :: Error -> Validation
+invalidate err = Invalid [err]
