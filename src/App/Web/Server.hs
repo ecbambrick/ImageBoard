@@ -133,14 +133,9 @@ albumRoutes = do
         result <- runMaybeT $ do
             scope            <- MaybeT $ Scope.querySingle scopeName
             (Entity _ album) <- MaybeT $ Album.querySingle id
-
-            let originalTitle = albumTitle album
-                originalTags  = intercalate "," (albumTagNames album)
-
-            title  <- lift $ optionalParam "title" originalTitle
-            tags   <- lift $ splitOn "," <$> optionalParam "tags" originalTags
-            result <- lift $ Album.update (Entity id album { albumTitle    = title
-                                                           , albumTagNames = tags })
+            title            <- lift $ optionalParam "title" (albumTitle album)
+            tags             <- lift $ optionalParam "tags" (intercalate "," (albumTagNames album))
+            result           <- lift $ Album.update id title (splitOn "," tags)
 
             return (URL.album scope id, result)
 
@@ -206,15 +201,10 @@ imageRoutes = do
         result <- runMaybeT $ do
             scope            <- MaybeT $ Scope.querySingle scopeName
             (Entity _ image) <- MaybeT $ Image.querySingle id
-
-            let originalTitle = imageTitle image
-                originalTags  = intercalate "," (imageTagNames image)
-
-            query  <- lift $ strip <$> optionalParam "q" ""
-            title  <- lift $ optionalParam "title" originalTitle
-            tags   <- lift $ splitOn "," <$> optionalParam "tags" originalTags
-            result <- lift $ Image.update (Entity id image { imageTitle    = title
-                                                           , imageTagNames = tags })
+            query            <- lift $ optionalParam "q" ""
+            title            <- lift $ optionalParam "title" (imageTitle image)
+            tags             <- lift $ optionalParam "tags" (intercalate "," (imageTagNames image))
+            result           <- lift $ Image.update id title (splitOn "," tags)
 
             return (URL.image scope id query, result)
 

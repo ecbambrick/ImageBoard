@@ -123,26 +123,33 @@ queryTriple expression id = runDB $ do
 
 -- | Updates the given image in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.
-update :: Entity Image -> App Validation
-update (Entity id image) = do
+update :: ID -> String -> [String] -> App Validation
+update id title tags = do
     now      <- liftIO $ getCurrentTime
     previous <- runDB  $ DB.selectImage id
 
-    let isFound    = Validation.verify (isJust previous) (IDNotFound id)
-        cleanImage = image { imageTagNames = Tag.cleanTags (imageTagNames image) }
-        results    = validate cleanImage <> isFound
+    case previous of
+        Just (Entity _ image) -> do
+            let result   = validate newImage
+                newImage = image
+                    { imageTagNames = Tag.cleanTags tags
+                    , imageTitle    = trim title
+                    , imageModified = now }
 
-    when (Validation.isValid results) $
-        runDB $ do
-            let newTags = imageTagNames $ cleanImage
-                oldTags = imageTagNames $ fromEntity $ fromJust previous
+            when (Validation.isValid result) $
+                runDB $ do
+                    let newTags = imageTagNames newImage
+                        oldTags = imageTagNames image
 
-            DB.updateImage (Entity id image { imageModified = now })
-            DB.detachTags (oldTags \\ newTags) id
-            DB.attachTags (newTags \\ oldTags) id
-            DB.cleanTags
+                    DB.updateImage (Entity id newImage)
+                    DB.detachTags (oldTags \\ newTags) id
+                    DB.attachTags (newTags \\ oldTags) id
+                    DB.cleanTags
 
-    return results
+            return result
+
+        Nothing -> do
+            return (Validation.invalidate (IDNotFound id))
 
 ----------------------------------------------------------------------- Utility
 

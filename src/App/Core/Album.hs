@@ -111,26 +111,32 @@ querySingle = runDB . DB.selectAlbum
 
 -- | Updates the given album in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.
-update :: Entity Album -> App Validation
-update (Entity id album) = do
-    now <- liftIO $ getCurrentTime
+update :: ID -> String -> [String] -> App Validation
+update id title tags = do
+    now      <- liftIO $ getCurrentTime
+    previous <- runDB  $ DB.selectAlbum id
 
-    runDB $ do
-        previous <- DB.selectAlbum id
+    case previous of
+        Just (Entity _ album) -> do
+            let result   = validate newAlbum
+                newAlbum = album { albumTagNames = Tag.cleanTags tags
+                                 , albumTitle    = trim title
+                                 , albumModified = now }
 
-        let isFound    = Validation.verify (isJust previous) (IDNotFound id)
-            results    = isFound <> validate album
+            when (Validation.isValid result) $
+                runDB $ do
+                    let newTags = albumTagNames newAlbum
+                        oldTags = albumTagNames album
 
-        when (Validation.isValid results) $ do
-            let newTags = Tag.cleanTags $ albumTagNames $ album
-                oldTags = Tag.cleanTags $ albumTagNames $ fromEntity $ fromJust previous
+                    DB.updateAlbum (Entity id newAlbum)
+                    DB.detachTags (oldTags \\ newTags) id
+                    DB.attachTags (newTags \\ oldTags) id
+                    DB.cleanTags
 
-            DB.updateAlbum (Entity id album { albumModified = now })
-            DB.detachTags  (oldTags \\ newTags) id
-            DB.attachTags  (newTags \\ oldTags) id
-            DB.cleanTags
+            return result
 
-        return results
+        Nothing -> do
+            return (Validation.invalidate (IDNotFound id))
 
 ----------------------------------------------------------------------- Utility
 
