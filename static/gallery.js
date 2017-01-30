@@ -42,10 +42,9 @@ const Gallery = {
     // height. The last image is handled as a separate case.
     _resizeFirstImages: (images, height, padding) => {
         for (let image of images.exceptLast()) {
-            const width = image.naturalWidth * height / image.naturalHeight;
-
+            const width  = image.naturalWidth * height / image.naturalHeight;
             image.height = height;
-            image.width  = width + padding;
+            image.width  = width;
         }
     },
 
@@ -59,7 +58,7 @@ const Gallery = {
                                         .map(x => x.offsetWidth)
                                         .reduce((x, y) => x + y, 0);
 
-        const scaledWidth    = image.naturalWidth * height / image.naturalHeight + padding;
+        const scaledWidth    = image.naturalWidth * height / image.naturalHeight;
         const remainingWidth = totalWidth - totalImageLengths - totalPadding;
         const width          = Math.min(scaledWidth, remainingWidth);
 
