@@ -18,8 +18,8 @@ import Database.Engine      ( Entity(..) )
 import Data.DateTime        ( TimeZone, defaultFormatDate )
 import Data.Monoid          ( (<>), mempty )
 import Data.Text            ( Text )
-import Data.Textual         ( intercalate )
-import Lucid.Base           ( Html, toHtml )
+import Data.Textual         ( display, intercalate )
+import Lucid.Base           ( Html, term, toHtml )
 import Lucid.Html5
 
 ------------------------------------------------------------------------- Types
@@ -87,6 +87,20 @@ disabledAction :: Icon -> Html ()
 disabledAction icon =
     let classes = "disabled action fa " <> Icon.render icon
     in a_ [href_ "#", class_ classes] mempty
+
+----------------------------------------------------------------- Context Menus
+
+-- Returns an HTML context menu with the given ID and list of tag/link pairs.
+thumbContextMenu :: Text -> [(Text, Text)] -> Html ()
+thumbContextMenu menuID tags =
+    -- Bug in firefox prevents default menuitem_ from working.
+    let menuitemfixed_ = term "menuitem"
+        onclick url    = "window.location.href = '" <> url <> "'; return false;"
+
+    in menu_ [type_ "context", id_ menuID] $
+        menu_ [label_ "Search by Tag"] $
+            forM_ tags $ \(name, url) ->
+                menuitemfixed_ [ label_ name, onclick_ (onclick url)] mempty
 
 ------------------------------------------------------------------------ Panels
 
@@ -314,8 +328,8 @@ imageTags scope tagNames =
             a_ [class_ "tag", href_ (URL.images scope 1 name)] (toHtml name)
 
 -- | Returns an HTML element for displaying a full size image(s).
-display :: String -> String -> Html ()
-display url1 url2 =
+canvas :: String -> String -> Html ()
+canvas url1 url2 =
     let image src id = img_   [ id_ id, class_ "image", src_ (Text.pack src) ]
         video src id = video_ [ id_ id, class_ "video", src_ (Text.pack src)
                               , autoplay_ "", loop_ "", controls_ ""] mempty :: Html ()
@@ -337,6 +351,20 @@ gallery items =
         forM_ items $ \(url, thumbnail) ->
             let style = "background-image: url('" <> thumbnail <> "');"
             in div_ (a_ [href_ url, style_ (Text.pack style)] mempty)
+
+-- | Returns an HTML element for display a grid of image thumbnails.
+imageGallery :: Scope -> String -> [Entity Image] -> Html ()
+imageGallery scope query images =
+    div_ [id_ "gallery2"] $
+        forM_ images $ \(Entity id image) -> do
+            let menuID = "context-" <> display id
+                url    = URL.image scope id query
+                thumb  = Text.pack $ Path.getImageThumbnailURL image
+                tags   = map (\tag -> (Text.pack tag, URL.images scope 0 tag)) (imageTagNames image)
+
+            a_ [contextmenu_ menuID, href_ url] $ do
+                img_ [src_ thumb]
+                thumbContextMenu menuID tags
 
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery2 :: [(Text, String)] -> Html ()

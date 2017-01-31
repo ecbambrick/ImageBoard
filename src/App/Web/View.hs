@@ -143,7 +143,7 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
             Elem.deletePanel (URL.image scope curr query)
-        Elem.display source1 source2
+        Elem.canvas source1 source2
 
 -- | Renders an index view for images as text containing HTML.
 imagesView :: Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
@@ -204,10 +204,7 @@ imagesView scope query page total pageSize images = render $ do
                 Elem.searchBox firstPageURL query
                 Elem.spacer
                 Elem.uploadForm scope
-        Elem.gallery2 $
-            flip map images $ \(Entity id image) ->
-                ( URL.image scope id query
-                , Path.getImageThumbnailURL image)
+        Elem.imageGallery scope query images
 
 -- | Renders a view for the given page of the given album as text containing
 -- | HTML.
@@ -227,7 +224,7 @@ pageView scope (Entity id album) number = render $ do
     Elem.document title onload $ do
         case page of
             Nothing   -> mempty
-            Just page -> Elem.display (Path.getPageURL id page) ""
+            Just page -> Elem.canvas (Path.getPageURL id page) ""
 
 -- | Renders a view for the list of tags as text containing HTML.
 tagsView :: Scope -> [Entity DetailedTag] -> Text
