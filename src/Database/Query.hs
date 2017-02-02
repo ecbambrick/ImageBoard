@@ -118,7 +118,7 @@ on queryMapper queryFilter = do
 -- | Adds the given list of columns to the columns that are to be returned by
 -- | the query.
 retrieve :: [Column] -> Query ()
-retrieve = state . addValues
+retrieve = state . setValues
 
 -- | Adds the given filter to the query.
 wherever :: Filter -> Query ()
@@ -268,10 +268,10 @@ addTable join name (i, q) = (AliasedColumn i, (i + 1, q { queryFrom = x:xs }))
           x  = if null xs then From name i BaseTable
                           else From name i join
 
--- | Adds the given list of values to the given query data when called by a
--- | state monad.
-addValues :: [Column] -> (Int, QueryData) -> QueryResult ()
-addValues values (i, q) = ((), (i, q { querySelect = querySelect q ++ values }))
+-- | Sets the given query data's retrieved values to the given list of columns
+-- | when called by a state monad.
+setValues :: [Column] -> (Int, QueryData) -> QueryResult ()
+setValues values (i, q) = ((), (i, q { querySelect = values }))
 
 -- | Sets the given query data's limit to the given amount when called by a
 -- | state monad.
