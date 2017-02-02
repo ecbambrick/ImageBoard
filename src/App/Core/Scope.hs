@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
-module App.Core.Scope ( getDefault, delete, insertOrUpdate, querySingle ) where
+module App.Core.Scope ( defaultScope, delete, insertOrUpdate, querySingle ) where
 
 import qualified App.Database   as DB
 import qualified App.Path       as Path
@@ -13,12 +13,11 @@ import App.Validation        ( Error(..), Validation )
 import Control.Monad         ( void, when )
 import Data.Char             ( isAlphaNum )
 import Data.Functor.Extended ( (<$$>) )
-import Database.Engine       ( Entity(..), fromEntity )
 
 -------------------------------------------------------------------------- CRUD
 
-getDefault :: Scope
-getDefault = Scope defaultName ""
+defaultScope :: Scope
+defaultScope = Scope "all" ""
 
 -- | Deletes the scope with the given name.
 delete :: String -> App ()
@@ -32,31 +31,26 @@ insertOrUpdate name expression = runDB $ do
         results = validate scope
 
     when (Validation.isValid results) $ do
-        existingScope <- DB.selectScope name
+        existingID <- DB.selectScopeID name
 
-        case existingScope of
-            Nothing            -> void $ DB.insertScope scope
-            Just (Entity id _) -> void $ DB.updateScope (Entity id scope)
+        case existingID of
+            Nothing -> void $ DB.insertScope scope
+            Just id -> void $ DB.updateScope id scope
 
     return results
 
 -- | Returns the scope with the given name.
 querySingle :: String -> App (Maybe Scope)
-querySingle name =
-    if name == defaultName
-        then return (Just (Scope defaultName ""))
-        else fromEntity <$$> runDB (DB.selectScope name)
+querySingle name
+    | name == scopeName defaultScope = return (Just defaultScope)
+    | otherwise                      = runDB (DB.selectScope name)
 
 ----------------------------------------------------------------------- Utility
-
--- | The scope name for displaying all results.
-defaultName :: String
-defaultName = "all"
 
 -- | Returns valid if the given scope is valid; otherwise invalid.
 validate :: Scope -> Validation
 validate (Scope name expr) =
-    let invalidNames  = [ defaultName
+    let invalidNames  = [ scopeName defaultScope
                         , Path.getDataPrefix
                         , Path.getStaticPrefix
                         , Path.getApiPrefix ]

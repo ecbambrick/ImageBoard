@@ -14,7 +14,6 @@ import qualified Text.JavaScript as JS
 import App.Core.Types       ( Album(..), DetailedTag(..), Image(..), Scope(..) )
 import App.Web.Icon         ( Icon )
 import Control.Monad        ( forM_ )
-import Database.Engine      ( Entity(..) )
 import Data.DateTime        ( TimeZone, defaultFormatDate )
 import Data.Monoid          ( (<>), mempty )
 import Data.Text            ( Text )
@@ -236,12 +235,12 @@ tagHeader = div_ [class_ "tag-header"] . toHtml
 tagDetail :: Scope -> DetailedTag -> Html ()
 tagDetail scope DetailedTag {..} = do
     let sampleLink = case detailedTagSample of
-            Left  (Entity id _) -> URL.image scope id ""
-            Right (Entity id _) -> URL.album scope id
+            Left  (Image {..}) -> URL.image scope imageID ""
+            Right (Album {..}) -> URL.album scope albumID
 
         sampleThumbnail = case detailedTagSample of
-            Left (Entity _ image) -> Path.getImageThumbnailURL image
-            Right album           -> Path.getAlbumThumbnailURL album
+            Left  image -> Path.getImageThumbnailURL image
+            Right album -> Path.getAlbumThumbnailURL album
 
         imageAction = case detailedTagImageCount of
             0 -> disabledAction Icon.Image
@@ -353,14 +352,14 @@ gallery items =
             in div_ (a_ [href_ url, style_ (Text.pack style)] mempty)
 
 -- | Returns an HTML element for display a grid of image thumbnails.
-imageGallery :: Scope -> String -> [Entity Image] -> Html ()
+imageGallery :: Scope -> String -> [Image] -> Html ()
 imageGallery scope query images =
     div_ [id_ "gallery2"] $
-        forM_ images $ \(Entity id image) -> do
-            let menuID = "context-" <> display id
-                url    = URL.image scope id query
+        forM_ images $ \image @ Image {..} -> do
+            let menuID = "context-" <> display imageID
+                url    = URL.image scope imageID query
                 thumb  = Text.pack $ Path.getImageThumbnailURL image
-                tags   = map (\tag -> (Text.pack tag, URL.images scope 0 tag)) (imageTagNames image)
+                tags   = map (\tag -> (Text.pack tag, URL.images scope 0 tag)) imageTagNames
 
             a_ [contextmenu_ menuID, href_ url] $ do
                 img_ [src_ thumb]

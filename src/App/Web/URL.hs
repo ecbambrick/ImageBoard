@@ -7,10 +7,9 @@ import qualified Data.Text      as Text
 import qualified Network.URI    as URI
 import qualified Web.Spock      as Spock
 
-import App.Core.Types  ( Scope(..) )
+import App.Core.Types  ( Scope(..), ID )
 import Data.Monoid     ( (<>) )
 import Data.Text       ( Text )
-import Database.Engine ( ID )
 
 ------------------------------------------------------------------ URL builders
 

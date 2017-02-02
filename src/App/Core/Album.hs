@@ -15,7 +15,7 @@ import qualified System.IO.Metadata as Metadata
 
 import App.Config           ( Config(..) )
 import App.Control          ( runDB )
-import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), Tag(..), App )
+import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), Tag(..), App, ID )
 import App.Expression       ( Expression )
 import App.Validation       ( Error(..), Validation )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
@@ -30,7 +30,6 @@ import Data.Maybe           ( isJust, fromJust )
 import Data.Monoid          ( (<>), mconcat )
 import Data.Ord.Extended    ( comparingAlphaNum )
 import Data.Textual         ( trim )
-import Database.Engine      ( Entity(..), ID, fromEntity )
 import System.FilePath      ( dropExtension, takeBaseName, takeExtension )
 import System.Directory     ( createDirectoryIfMissing, doesDirectoryExist
                             , removeDirectoryRecursive )
@@ -76,7 +75,7 @@ insert path title tagNames = do
         pages      = map (uncurry toPage) entryPairs
         fileSize   = sum $ map (fromIntegral . eUncompressedSize) entries
         tags       = Tag.cleanTags tagNames
-        album      = Album (trim title) False now now fileSize pages tags
+        album      = Album 0 (trim title) False now now fileSize pages tags
         results    = validate album
 
     when (Validation.isValid results) $ do
@@ -100,13 +99,13 @@ insert path title tagNames = do
     return results
 
 -- | Returns a page of albums based on the given page number and filter.
-query :: Expression -> Int -> App [Entity Album]
+query :: Expression -> Int -> App [Album]
 query expression page = do
     size <- asks configPageSize
     runDB $ DB.selectAlbums expression ((page - 1) * size) size
 
 -- | Returns the album with the given ID.
-querySingle :: ID -> App (Maybe (Entity Album))
+querySingle :: ID -> App (Maybe Album)
 querySingle = runDB . DB.selectAlbum
 
 -- | Updates the given album in the database. Returns valid if the update was
@@ -117,18 +116,19 @@ update id title tags = do
     previous <- runDB  $ DB.selectAlbum id
 
     case previous of
-        Just (Entity _ album) -> do
+        Just previousAlbum -> do
             let result   = validate newAlbum
-                newAlbum = album { albumTagNames = Tag.cleanTags tags
-                                 , albumTitle    = trim title
-                                 , albumModified = now }
+                newAlbum = previousAlbum
+                    { albumTagNames = Tag.cleanTags tags
+                    , albumTitle    = trim title
+                    , albumModified = now }
 
             when (Validation.isValid result) $
                 runDB $ do
                     let newTags = albumTagNames newAlbum
-                        oldTags = albumTagNames album
+                        oldTags = albumTagNames previousAlbum
 
-                    DB.updateAlbum (Entity id newAlbum)
+                    DB.updateAlbum newAlbum
                     DB.detachTags (oldTags \\ newTags) id
                     DB.attachTags (newTags \\ oldTags) id
                     DB.cleanTags

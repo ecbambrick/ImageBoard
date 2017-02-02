@@ -4,10 +4,9 @@
 module App.Path where
 
 import App.Config           ( Config(..) )
-import App.Core.Types       ( Album(..), Image(..), Page(..) )
+import App.Core.Types       ( Album(..), Image(..), Page(..), ID )
 import Control.Monad.Reader ( MonadIO, MonadReader, asks, liftIO, unless )
 import Data.Textual         ( replace )
-import Database.Engine      ( Entity(..), ID )
 import System.Directory     ( doesDirectoryExist )
 import System.FilePath      ( (</>), (<.>), isValid )
 
@@ -81,12 +80,12 @@ getAlbumThumbnailPath id = do
     return (storagePath </> getRelativeAlbumPath id </> "thumbnail.jpg")
 
 -- | Returns the relative URL of the given album.
-getAlbumURL :: Entity Album -> FilePath
-getAlbumURL (Entity id _) = toURL (getRelativeAlbumPath id)
+getAlbumURL :: Album -> FilePath
+getAlbumURL Album {..} = toURL (getRelativeAlbumPath albumID)
 
 -- | Returns the relative URL of the thumbnail of the given album.
-getAlbumThumbnailURL :: Entity Album -> FilePath
-getAlbumThumbnailURL (Entity id _) = toURL (getRelativeAlbumPath id </> "thumbnail.jpg")
+getAlbumThumbnailURL :: Album -> FilePath
+getAlbumThumbnailURL Album {..} = toURL (getRelativeAlbumPath albumID </> "thumbnail.jpg")
 
 -- | Returns the relative file path of the given album.
 getRelativeAlbumPath :: ID -> FilePath

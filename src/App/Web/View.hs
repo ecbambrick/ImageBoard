@@ -26,23 +26,21 @@ import Data.Monoid         ( (<>) )
 import Data.Text           ( Text )
 import Data.Textual        ( display, intercalate )
 import Data.DateTime       ( TimeZone )
-import Database.Engine     ( ID, Entity(..) )
 import Lucid.Base          ( Html(..), renderText )
 
 ------------------------------------------------------------------------- Views
 
 -- | Renders a view for the given album as text containing HTML.
-albumView :: Scope -> String -> TimeZone -> Entity Album -> Text
-albumView scope query timeZone entity @ (Entity id Album {..}) = render $ do
+albumView :: Scope -> String -> TimeZone -> Album -> Text
+albumView scope query timeZone album @ Album {..} = render $ do
     let title    = Text.pack albumTitle
-        album    = entityData entity
         onload   = JS.functionCall "AlbumViewModel.register" args
         args     = [ JS.toJSON (scopeName scope)
                    , JS.toJSON query
-                   , JS.toJSON entity ]
+                   , JS.toJSON album ]
 
     let indexURL = URL.albums scope 1 query
-        albumURL = URL.album scope id
+        albumURL = URL.album scope albumID
 
     Elem.document title onload $ do
         Elem.sideBar $ do
@@ -65,11 +63,11 @@ albumView scope query timeZone entity @ (Entity id Album {..}) = render $ do
             Elem.deletePanel albumURL
         Elem.gallery2 $
             flip map albumPages $ \page @ Page {..} ->
-                ( URL.page scope id pageNumber
-                , Path.getPageThumbnailURL id page)
+                ( URL.page scope albumID pageNumber
+                , Path.getPageThumbnailURL albumID page)
 
 -- | Renders an index view for albums as text containing HTML.
-albumsView :: Scope -> String -> Int -> Int -> Int -> [Entity Album] -> Text
+albumsView :: Scope -> String -> Int -> Int -> Int -> [Album] -> Text
 albumsView scope query page total pageSize albums = render $ do
     let prevAvailable = page > 1
         nextAvailable = page * pageSize < total
@@ -94,26 +92,24 @@ albumsView scope query page total pageSize albums = render $ do
             Elem.spacer
             Elem.uploadForm scope
         Elem.gallery $
-            flip map albums $ \(Entity id album) ->
-                ( URL.album scope id
-                , Path.getAlbumThumbnailURL (Entity id album))
+            flip map albums $ \album @ Album {..} ->
+                ( URL.album scope albumID
+                , Path.getAlbumThumbnailURL album)
 
 -- | Renders a view for the given image as text containing HTML.
-imageView :: Scope -> String -> TimeZone -> Entity Image -> Entity Image -> Entity Image -> Text
-imageView scope query timeZone previousImage currentImage nextImage = render $ do
-    let prev    = entityID previousImage
-        curr    = entityID currentImage
-        next    = entityID nextImage
-        image1  = entityData currentImage
-        image2  = entityData nextImage
+imageView :: Scope -> String -> TimeZone -> Image -> Image -> Image -> Text
+imageView scope query timeZone prevImage currImage nextImage = render $ do
+    let prev    = imageID prevImage
+        curr    = imageID currImage
+        next    = imageID nextImage
         title   = "Image " <> display curr
-        source1 = Path.getImageURL image1
-        source2 = Path.getImageURL image2
+        source1 = Path.getImageURL currImage
+        source2 = Path.getImageURL nextImage
         onload  = JS.functionCall "ImageViewModel.register" args
         args    = [ JS.toJSON (scopeName scope)
                   , JS.toJSON query
-                  , JS.toJSON previousImage
-                  , JS.toJSON currentImage
+                  , JS.toJSON prevImage
+                  , JS.toJSON currImage
                   , JS.toJSON nextImage ]
 
     Elem.document title onload $ do
@@ -135,10 +131,10 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
                         Elem.action Icon.Pencil "edit-show"
                         Elem.action Icon.Pause  "toggle-double"
                 Elem.searchBox (URL.images scope 1 "") query
-                Elem.imageDetails image1 timeZone Elem.MainImage
-                Elem.imageDetails image2 timeZone Elem.SecondaryImage
+                Elem.imageDetails currImage timeZone Elem.MainImage
+                Elem.imageDetails nextImage timeZone Elem.SecondaryImage
                 Elem.spacer
-                Elem.imageTags scope (imageTagNames image1)
+                Elem.imageTags scope (imageTagNames currImage)
             Elem.editPanel (URL.image scope curr query) $ do
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
@@ -146,7 +142,7 @@ imageView scope query timeZone previousImage currentImage nextImage = render $ d
         Elem.canvas source1 source2
 
 -- | Renders an index view for images as text containing HTML.
-imagesView :: Scope -> String -> Int -> Int -> Int -> [Entity Image] -> Text
+imagesView :: Scope -> String -> Int -> Int -> Int -> [Image] -> Text
 imagesView scope query page total pageSize images = render $ do
     let title       = "Images (" <> display total <> ")"
         onload      = JS.functionCall "ImagesViewModel.register" args
@@ -156,7 +152,7 @@ imagesView scope query page total pageSize images = render $ do
                       , JS.toJSON canPrevious
                       , JS.toJSON canNext ]
 
-        firstID     = entityID <$> listToMaybe images
+        firstID     = imageID <$> listToMaybe images
         canPrevious = page > 1
         canNext     = page * pageSize < total
 
@@ -208,33 +204,32 @@ imagesView scope query page total pageSize images = render $ do
 
 -- | Renders a view for the given page of the given album as text containing
 -- | HTML.
-pageView :: Scope -> Entity Album -> Int -> Text
-pageView scope (Entity id album) number = render $ do
-    let pages  = length (albumPages album)
+pageView :: Scope -> Album -> Int -> Text
+pageView scope album @ Album {..} number = render $ do
+    let pages  = length albumPages
         page   = Album.getPage album number <|> Album.getPage album 1
         prev   = if number <= 1 || number > pages then pages else number - 1
         next   = if number >= pages then 1 else number + 1
-        title  = Text.pack (albumTitle album ++ " (" ++ show number ++ "/" ++ show pages ++ ")")
+        title  = Text.pack (albumTitle ++ " (" ++ show number ++ "/" ++ show pages ++ ")")
         onload = JS.functionCall "Page.initializePage" args
         args   = [ JS.toJSON (scopeName scope)
-                 , JS.toJSON id
+                 , JS.toJSON albumID
                  , JS.toJSON prev
                  , JS.toJSON next ]
 
     Elem.document title onload $ do
         case page of
             Nothing   -> mempty
-            Just page -> Elem.canvas (Path.getPageURL id page) ""
+            Just page -> Elem.canvas (Path.getPageURL albumID page) ""
 
 -- | Renders a view for the list of tags as text containing HTML.
-tagsView :: Scope -> [Entity DetailedTag] -> Text
-tagsView scope tagEntities = render $ do
+tagsView :: Scope -> [DetailedTag] -> Text
+tagsView scope tags = render $ do
     let title  = "Tags"
         onload = JS.functionCall "TagsViewModel.register" args
         args   = [ JS.toJSON (scopeName scope) ]
 
-    let tags               = map entityData tagEntities
-        groups             = groupWith getGroupHeader tags
+    let groups             = groupWith getGroupHeader tags
         getGroupHeader tag = let char = head (detailedTagName tag)
                              in if | isNumber char -> "#"
                                    | isAlpha  char -> [toUpper char]

@@ -13,7 +13,7 @@ import qualified Graphics.FFmpeg as Graphics
 
 import App.Config           ( Config(..) )
 import App.Control          ( runDB )
-import App.Core.Types       ( DeletionMode(..), Tag(..), Image(..), App )
+import App.Core.Types       ( DeletionMode(..), Tag(..), Image(..), App, ID )
 import App.Expression       ( Expression )
 import App.Validation       ( Error(..), Validation )
 import Control.Applicative  ( (<$>), (<*>) )
@@ -25,16 +25,10 @@ import Data.List            ( (\\) )
 import Data.Maybe           ( isJust, fromJust )
 import Data.Monoid          ( (<>), mconcat )
 import Data.Textual         ( trim )
-import Database.Engine      ( Entity(..), ID, fromEntity )
 import System.Directory     ( copyFile, createDirectoryIfMissing, doesFileExist
                             , removeFile )
 import System.FilePath      ( takeDirectory )
 import System.IO.Metadata   ( getHash, getSize )
-
-------------------------------------------------------------------------- Types
-
--- | A tuple of three values of the same type.
-type Triple a = (a, a, a)
 
 -------------------------------------------------------------------------- CRUD
 
@@ -54,7 +48,7 @@ delete PermanentlyDelete id = do
         Nothing -> do
             return ()
 
-        Just (Entity _ image) -> do
+        Just image -> do
             imagePath   <- Path.getImagePath image
             thumbPath   <- Path.getImageThumbnailPath image
             imageExists <- liftIO $ doesFileExist imagePath
@@ -80,7 +74,7 @@ insert fromPath ext title tagNames = do
     thumbSize   <- asks   $ configThumbnailSize
 
     let tags        = Tag.cleanTags tagNames
-        image       = Image (trim title) False hash ext 0 0 now now size tags
+        image       = Image 0 (trim title) False hash ext 0 0 now now size tags
         isDuplicate = Validation.verify (not hashExists) (DuplicateHash hash)
         results     = validate image <> isDuplicate
 
@@ -102,18 +96,18 @@ insert fromPath ext title tagNames = do
     return results
 
 -- | Returns a page of images based on the given page number and filter.
-query :: Expression -> Int -> App [Entity Image]
+query :: Expression -> Int -> App [Image]
 query expression page = do
     size <- asks configPageSize
     runDB $ DB.selectImages expression ((page - 1) * size) size
 
 -- | Returns the image with the given ID.
-querySingle :: ID -> App (Maybe (Entity Image))
+querySingle :: ID -> App (Maybe Image)
 querySingle = runDB . DB.selectImage
 
 -- | Returns the image with the given ID along with the two adjacent images
 -- | based on the given filter.
-queryTriple :: Expression -> ID -> App (Maybe (Triple (Entity Image)))
+queryTriple :: Expression -> ID -> App (Maybe (Image, Image, Image))
 queryTriple expression id = runDB $ do
     main <- DB.selectImage id
     next <- DB.selectNextImage id expression
@@ -129,9 +123,9 @@ update id title tags = do
     previous <- runDB  $ DB.selectImage id
 
     case previous of
-        Just (Entity _ image) -> do
+        Just previousImage -> do
             let result   = validate newImage
-                newImage = image
+                newImage = previousImage
                     { imageTagNames = Tag.cleanTags tags
                     , imageTitle    = trim title
                     , imageModified = now }
@@ -139,9 +133,9 @@ update id title tags = do
             when (Validation.isValid result) $
                 runDB $ do
                     let newTags = imageTagNames newImage
-                        oldTags = imageTagNames image
+                        oldTags = imageTagNames previousImage
 
-                    DB.updateImage (Entity id newImage)
+                    DB.updateImage newImage
                     DB.detachTags (oldTags \\ newTags) id
                     DB.attachTags (newTags \\ oldTags) id
                     DB.cleanTags

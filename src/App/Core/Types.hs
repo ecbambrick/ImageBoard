@@ -10,25 +10,29 @@ import qualified Data.Aeson as JSON
 import qualified Data.Text  as Text
 
 import App.Config           ( Config )
-import Data.DateTime        ( DateTime )
 import Data.Aeson           ( ToJSON(..), (.=) )
-import Database.Engine      ( Entity(..) )
+import Data.DateTime        ( DateTime )
+import Data.Int             ( Int64 )
 import Control.Monad.Trans  ( MonadIO )
 import Control.Monad.Reader ( MonadReader )
 
 -- | Main application monad which allows read-only access to configuration
--- | settings.
+-- | settings and arbitrary IO.
 type App a = forall m . (MonadIO m, MonadReader Config m) => m a
+
+-- | The ID of a persisted entity.
+type ID = Int64
 
 -- | The method with which to delete a post. Posts that are marked as deleted
 -- | will remain in the database and file system until they are permanently
 -- | deleted.
 data DeletionMode = MarkAsDeleted | PermanentlyDelete
 
--- | An album contains the meta data of a collection of image files that are
--- | considered an isolated group.
+-- | Meta data regarding a stand-alone collection of image files that has been
+-- | saved.
 data Album = Album
-    { albumTitle       :: String
+    { albumID          :: ID
+    , albumTitle       :: String
     , albumIsFavourite :: Bool
     , albumCreated     :: DateTime
     , albumModified    :: DateTime
@@ -37,9 +41,10 @@ data Album = Album
     , albumTagNames    :: [String]
     } deriving (Eq, Show)
 
--- | An Image contains the meta data of an image file that has been uploaded.
+-- | Meta data regarding an image file that has been saved.
 data Image = Image
-    { imageTitle       :: String
+    { imageID          :: ID
+    , imageTitle       :: String
     , imageIsFavourite :: Bool
     , imageHash        :: String
     , imageExtension   :: String
@@ -51,37 +56,38 @@ data Image = Image
     , imageTagNames    :: [String]
     } deriving (Eq, Show)
 
--- | A page contains the meta data of a single image file within an album.
+-- | Meta data regarding an image file within an album.
 data Page = Page
     { pageNumber    :: Int
     , pageTitle     :: String
     , pageExtension :: String
     } deriving (Eq, Show)
 
--- | A scope contains an alias for an expression to simplify querying.
+-- | An alias for an expression for making frequent queries easier to use.
 data Scope = Scope
     { scopeName       :: String
     , scopeExpression :: String
     } deriving (Eq, Show)
 
--- | A tag can be attached to an image or album as additional meta data.
+-- | A tag that has been attached to an image or album.
 data Tag = Tag
     { tagName :: String
     } deriving (Eq, Show)
 
--- | A detailed tag contains more detailed meta data regarding a tag.
+-- | Meta data regarding a tag,
 data DetailedTag = DetailedTag
-    { detailedTagName       :: String
+    { detailedTagID         :: ID
+    , detailedTagName       :: String
     , detailedTagImageCount :: Int
     , detailedTagAlbumCount :: Int
-    , detailedTagSample     :: Either (Entity Image) (Entity Album)
+    , detailedTagSample     :: Either Image Album
     } deriving (Show, Eq)
 
 ---------------------------------------------------------------- JSON instances
 
-instance ToJSON (Entity Image) where
-    toJSON (Entity entityID Image {..}) = JSON.object
-        [ "id"          .= entityID
+instance ToJSON Image where
+    toJSON Image {..} = JSON.object
+        [ "id"          .= imageID
         , "title"       .= Text.pack imageTitle
         , "isFavourite" .= imageIsFavourite
         , "hash"        .= Text.pack imageHash
@@ -93,9 +99,9 @@ instance ToJSON (Entity Image) where
         , "fileSize"    .= imageFileSize
         , "tags"        .= map Text.pack imageTagNames ]
 
-instance ToJSON (Entity Album) where
-    toJSON (Entity entityID Album {..}) = JSON.object
-        [ "id"          .= entityID
+instance ToJSON Album where
+    toJSON Album {..} = JSON.object
+        [ "id"          .= albumID
         , "title"       .= Text.pack albumTitle
         , "isFavourite" .= albumIsFavourite
         , "created"     .= albumCreated

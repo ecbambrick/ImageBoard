@@ -2,9 +2,8 @@
 {-# LANGUAGE FlexibleContexts  #-}
 
 module Database.Engine
-    ( Entity(..), ID, Transaction, Simple.FromRow, delete, fromEntity, insert
-    , query, runDatabase, Simple.field, Simple.fromRow, single, update
-    , execute ) where
+    ( Transaction, Simple.FromRow, delete, insert, query, runDatabase
+    , Simple.field, Simple.fromRow, single, update, execute ) where
 
 import qualified Database.SQLite.Simple as Simple
 import qualified Database.Query.SQLite  as SQL
@@ -18,25 +17,9 @@ import Database.Query       ( Filter, Mapping, Query, Table, limit )
 
 ------------------------------------------------------------------------- Types
 
--- | The primary key of a database entity.
-type ID = Int64
-
 -- | Database transaction monad which allows access to an open database
 -- | connection.
 type Transaction = ReaderT Simple.Connection IO
-
--- | A database entity with an ID.
-data Entity a = Entity
-    { entityID   :: ID
-    , entityData :: a
-    } deriving (Eq, Show)
-
-instance Functor Entity where
-    fmap f (Entity id x) = Entity id (f x)
-
--- | Returns the enclosed value from an entity.
-fromEntity :: Entity a -> a
-fromEntity (Entity _ x) = x
 
 -- | Runs a transaction with the given database connection string.
 runDatabase :: (MonadIO m) => String -> Transaction a -> m a
@@ -62,7 +45,7 @@ single f = do
 
 -- | Performs an INSERT query on the given table with the give values and
 -- | returns the newly inserted ID.
-insert :: String -> [Mapping] -> Transaction ID
+insert :: String -> [Mapping] -> Transaction Int64
 insert table mappings = do
     conn <- ask
     lift $ do

@@ -16,16 +16,16 @@ module App.Database
     , insertAlbum, selectAlbum, selectAlbums
     , selectAlbumsCount, updateAlbum
 
-    , deleteScope, insertScope, selectScope, updateScope
+    , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
-    , selectTags, selectTagsDetails, attachTags, cleanTags, detachTags
+    , selectTagsDetails, attachTags, cleanTags, detachTags
     ) where
 
 import qualified Database.Engine as SQL
 import qualified Data.Traversable as Traversable
 
 import App.Config            ( Config(..) )
-import App.Core.Types        ( Album(..), Image(..), Page(..), Scope(..), Tag(..), App )
+import App.Core.Types        ( Album(..), Image(..), Page(..), Scope(..), Tag(..), App, ID )
 import App.Expression        ( Token(..), Expression )
 import Control.Applicative   ( (<$>), (<*>), pure )
 import Control.Monad.Reader  ( asks, liftIO, forM_, void, unless )
@@ -34,8 +34,7 @@ import Data.Functor.Extended ( (<$$>) )
 import Data.Int              ( Int64 )
 import Data.Maybe            ( isJust, listToMaybe )
 import Data.Textual          ( replace, splitOn, toLower, trim )
-import Database.Engine       ( Entity(..), Transaction(..), ID, FromRow
-                             , fromEntity, fromRow, field )
+import Database.Engine       ( Transaction(..), FromRow, fromRow, field )
 import Database.Query        ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
                              , (.=), (.>), (.<), (*=), (<<), asc, clearOrder
                              , count, desc, exists, groupBy, limit, from
@@ -54,45 +53,23 @@ instance FromRow Int64 where
 instance FromRow Int where
     fromRow = field
 
-instance FromRow (Entity Album) where
-    fromRow = do
-        entity <- Entity <$> field
-        album  <- Album  <$> field      <*> bool field <*> time field
-                         <*> time field <*> field      <*> pure []
-                         <*> pure []
+instance FromRow Album where
+    fromRow = Album <$> field      <*> field <*> bool field <*> time field
+                    <*> time field <*> field <*> pure []    <*> pure []
 
-        return (entity album)
+instance FromRow Image where
+    fromRow = Image  <$> field      <*> field <*> bool field <*> field
+                     <*> field      <*> field <*> field      <*> time field
+                     <*> time field <*> field <*> pure []
 
-instance FromRow (Entity Image) where
-    fromRow = do
-        entity <- Entity <$> field
-        image  <- Image  <$> field      <*> bool field <*> field
-                         <*> field      <*> field      <*> field
-                         <*> time field <*> time field <*> field
-                         <*> pure []
+instance FromRow Page where
+    fromRow = Page <$> field <*> field <*> field
 
-        return (entity image)
+instance FromRow Tag where
+    fromRow = Tag <$> field
 
-instance FromRow (Entity Page) where
-    fromRow = do
-        entity <- Entity <$> field
-        page   <- Page   <$> field <*> field <*> field
-
-        return (entity page)
-
-instance FromRow (Entity Tag) where
-    fromRow = do
-        entity <- Entity <$> field
-        tag    <- Tag    <$> field
-
-        return (entity tag)
-
-instance FromRow (Entity Scope) where
-    fromRow = do
-        entity <- Entity <$> field
-        scope  <- Scope  <$> field <*> field
-
-        return (entity scope)
+instance FromRow Scope where
+    fromRow = Scope <$> field <*> field
 
 ---------------------------------------------------------------------- Database
 
@@ -152,7 +129,7 @@ insertImage Image {..} = do
 
 -- | Returns the image from the database with the given ID. If no image exists,
 -- | nothing is returned.
-selectImage :: ID -> Transaction (Maybe (Entity Image))
+selectImage :: ID -> Transaction (Maybe Image)
 selectImage id = do
     results <- SQL.single (images >>= wherever . ("id" *= id))
 
@@ -160,7 +137,7 @@ selectImage id = do
 
 -- | Gets a list of images from the database. If a non-empty expression is
 -- | passed in, only images that satisfy the expression will be returned.
-selectImages :: Expression -> Int -> Int -> Transaction [Entity Image]
+selectImages :: Expression -> Int -> Int -> Transaction [Image]
 selectImages expression from count = do
     results <- SQL.query (images >>= paginated expression from count)
 
@@ -168,22 +145,22 @@ selectImages expression from count = do
 
 -- | Returns the image from the database ordered after the image with the
 -- | given ID. If no image exists, nothing is returned.
-selectNextImage :: ID -> Expression -> Transaction (Maybe (Entity Image))
+selectNextImage :: ID -> Expression -> Transaction (Maybe Image)
 selectNextImage = selectAdjacentImage Next
 
 -- | Returns the image from the database ordered before the image with the
 -- | given ID. If no image exists, nothing is returned.
-selectPreviousImage :: ID -> Expression -> Transaction (Maybe (Entity Image))
+selectPreviousImage :: ID -> Expression -> Transaction (Maybe Image)
 selectPreviousImage = selectAdjacentImage Prev
 
 -- | Returns a random image from the database that satisfies the given
 -- | expression. If no image exists, nothing is returned.
-selectRandomImage :: Expression -> Transaction (Maybe (Entity Image))
+selectRandomImage :: Expression -> Transaction (Maybe Image)
 selectRandomImage expression = listToMaybe <$> selectRandomImages expression 1
 
 -- | Returns random images from the database that satisfy the given
 -- | expression.
-selectRandomImages :: Expression -> Int -> Transaction [Entity Image]
+selectRandomImages :: Expression -> Int -> Transaction [Image]
 selectRandomImages expression count = do
     results <- SQL.query $ do
         i <- images
@@ -193,8 +170,8 @@ selectRandomImages expression count = do
     Traversable.sequence (withImageTags <$> results)
 
 -- | Updates the image in the database.
-updateImage :: Entity Image -> Transaction ()
-updateImage (Entity id (Image {..})) = SQL.update "post" ("id" *= id)
+updateImage :: Image -> Transaction ()
+updateImage Image {..} = SQL.update "post" ("id" *= imageID)
     [ "title"        << imageTitle
     , "is_favourite" << imageIsFavourite
     , "modified"     << toSeconds imageModified ]
@@ -216,16 +193,13 @@ selectImagesCount = selectCount "image"
 
 -------------------------------------------------------------------------- Tags
 
--- | Returns a list of all tags from the database.
-selectTags :: Transaction [Entity Tag]
-selectTags = SQL.query tags
-
 -- | Returns a list of all tags attached to the post with the given ID.
-selectTagsByPost :: ID -> Transaction [Entity Tag]
+selectTagsByPost :: ID -> Transaction [Tag]
 selectTagsByPost postID = SQL.query $ do
     t  <- tags
     pt <- from "post_tag" `on` ("tag_id" *= t "id")
     wherever (pt "post_id" .= postID)
+    retrieve [t "name"]
 
 -- | Returns tag data for tags that are attached to at least one post that
 -- | satisfies the given expression.
@@ -323,7 +297,7 @@ insertAlbum Album {..} = do
 
 -- | Returns the album from the database with the given ID. If no album exists,
 -- | nothing is returned.
-selectAlbum :: ID -> Transaction (Maybe (Entity Album))
+selectAlbum :: ID -> Transaction (Maybe Album)
 selectAlbum id = do
     results          <- SQL.single (albums >>= wherever . ("id" *= id))
     withPages        <- Traversable.sequence (withPages     <$> results)
@@ -333,7 +307,7 @@ selectAlbum id = do
 
 -- | Gets a list of albums from the database. If a non-empty expression is
 -- | passed in, only albums that satisfy the expression will be returned.
-selectAlbums :: Expression -> Int -> Int -> Transaction [Entity Album]
+selectAlbums :: Expression -> Int -> Int -> Transaction [Album]
 selectAlbums expression from count = do
     results          <- SQL.query (albums >>= paginated expression from count)
     withPages        <- Traversable.sequence (withPages <$> results)
@@ -346,8 +320,8 @@ selectAlbumsCount :: Expression -> Transaction Int
 selectAlbumsCount = selectCount "album"
 
 -- | Updates the album in the database.
-updateAlbum :: Entity Album -> Transaction ()
-updateAlbum (Entity id (Album {..})) = SQL.update "post" ("id" *= id)
+updateAlbum :: Album -> Transaction ()
+updateAlbum Album {..} = SQL.update "post" ("id" *= albumID)
     [ "title"        << albumTitle
     , "is_favourite" << albumIsFavourite
     , "modified"     << toSeconds albumModified ]
@@ -355,12 +329,12 @@ updateAlbum (Entity id (Album {..})) = SQL.update "post" ("id" *= id)
 ------------------------------------------------------------------------- Pages
 
 -- | Returns the list of all pages owned by the album with the given ID.
-selectPagesByAlbum :: ID -> Transaction [Entity Page]
+selectPagesByAlbum :: ID -> Transaction [Page]
 selectPagesByAlbum postID = SQL.query $ do
     a <- from "album"
     p <- from "page" `on` ("album_id" *= a "id")
     wherever (a "post_id" .= postID)
-    retrieve [ p "id", p "number", p "title", p "extension" ]
+    retrieve [ p "number", p "title", p "extension" ]
     asc (p "number")
 
 ------------------------------------------------------------------------ Scopes
@@ -375,17 +349,25 @@ insertScope Scope {..} = SQL.insert "scope"
     [ "name"       << scopeName
     , "expression" << scopeExpression ]
 
--- | Returns the scope from the database with the given name. If no scope
+-- | Returns the scope with the given name from the database  If no scope
 -- | exists, nothing is returned.
-selectScope :: String -> Transaction (Maybe (Entity Scope))
+selectScope :: String -> Transaction (Maybe Scope)
 selectScope name = SQL.single $ do
     s <- from "scope"
     wherever (s "name" .= name)
-    retrieve [s "id", s "name", s "expression"]
+    retrieve [s "name", s "expression"]
+
+-- | Returns the ID of the scope with the given name from the database. If no
+-- | scope exists, nothing is returned.
+selectScopeID :: String -> Transaction (Maybe ID)
+selectScopeID name = SQL.single $ do
+    s <- from "scope"
+    wherever (s "name" .= name)
+    retrieve [s "id"]
 
 -- | Updates the scope in the database.
-updateScope :: Entity Scope -> Transaction ()
-updateScope (Entity id Scope {..}) = SQL.update "scope" ("id" *= id)
+updateScope :: ID -> Scope -> Transaction ()
+updateScope id Scope {..} = SQL.update "scope" ("id" *= id)
     [ "name"       << scopeName
     , "expression" << scopeExpression ]
 
@@ -449,22 +431,22 @@ paginated expression from count table = do
 --------------------------------------------------------------------- Modifiers
 
 -- | Adds the list of pages to the given album entity.
-withPages :: Entity Album -> Transaction (Entity Album)
-withPages (Entity id album) = do
-    pages <- fromEntity <$$> selectPagesByAlbum id
-    return (Entity id album { albumPages = pages })
+withPages :: Album -> Transaction Album
+withPages album @ Album {..} = do
+    pages <- selectPagesByAlbum albumID
+    return album { albumPages = pages }
 
 -- | Adds the list of tag names to the given image entity.
-withImageTags :: Entity Image -> Transaction (Entity Image)
-withImageTags (Entity id image) = do
-    tagNames <- tagName . fromEntity <$$> selectTagsByPost id
-    return (Entity id image { imageTagNames = tagNames })
+withImageTags :: Image -> Transaction Image
+withImageTags image @ Image {..} = do
+    tagNames <- tagName <$$> selectTagsByPost imageID
+    return image { imageTagNames = tagNames }
 
 -- | Adds the list of tag names to the given image entity.
-withAlbumTags :: Entity Album -> Transaction (Entity Album)
-withAlbumTags (Entity id album) = do
-    tagNames <- tagName . fromEntity <$$> selectTagsByPost id
-    return (Entity id album { albumTagNames = tagNames })
+withAlbumTags :: Album -> Transaction Album
+withAlbumTags album @ Album {..} = do
+    tagNames <- tagName <$$> selectTagsByPost albumID
+    return album { albumTagNames = tagNames }
 
 ----------------------------------------------------------------------- Utility
 
@@ -472,7 +454,7 @@ withAlbumTags (Entity id album) = do
 -- | direction. If there is no next/previous image, then the very first or last
 -- | image is returned instead. If the image with the given ID does not exist,
 -- | nothing is returned.
-selectAdjacentImage :: Direction -> ID -> Expression -> Transaction (Maybe (Entity Image))
+selectAdjacentImage :: Direction -> ID -> Expression -> Transaction (Maybe Image)
 selectAdjacentImage dir id expression = do
     let (operator, ordering) = case dir of
             Next -> ((.<), desc)

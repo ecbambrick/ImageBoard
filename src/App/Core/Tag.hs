@@ -15,12 +15,11 @@ import Control.Monad    ( forM )
 import Data.Char        ( isAlphaNum, isSpace )
 import Data.List        ( nub )
 import Data.Textual     ( trim, toLower )
-import Database.Engine  ( Entity(..) )
 
 -------------------------------------------------------------------------- CRUD
 
 -- | Returns the list of all tag entities.
-query :: Scope -> App [Entity DetailedTag]
+query :: Scope -> App [DetailedTag]
 query Scope {..} = runDB $ do
     tags <- DB.selectTagsDetails (Expression.parse scopeExpression)
 
@@ -32,7 +31,7 @@ query Scope {..} = runDB $ do
                 (Just image, _) -> Left image
                 (_, Just album) -> Right album
 
-        return (Entity tagID (DetailedTag name imageCount albumCount sample))
+        return (DetailedTag tagID name imageCount albumCount sample)
 
 ----------------------------------------------------------------------- Utility
 

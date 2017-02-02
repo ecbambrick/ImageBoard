@@ -6,8 +6,8 @@ module App.Web.Route where
 import qualified App.Path  as Path
 import qualified Web.Spock as Spock
 
-import Database.Engine ( ID )
-import Web.Spock       ( (<//>), Path )
+import App.Core.Types ( ID )
+import Web.Spock      ( (<//>), Path )
 
 ------------------------------------------------------------------------ Routes
 

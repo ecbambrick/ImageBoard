@@ -30,7 +30,6 @@ import Data.Maybe                ( fromMaybe )
 import Data.Monoid               ( (<>), mconcat )
 import Data.Text                 ( Text )
 import Data.Textual              ( display, intercalate, strip, splitOn )
-import Database.Engine           ( Entity(..), fromEntity )
 import Web.PathPieces            ( PathPiece )
 import Web.Spock                 ( delete, get, hookAny, html, post, redirect, root )
 
@@ -56,11 +55,11 @@ routes = do
 
     -- Redirects to the images page.
     get Route.root $ do
-        redirect (URL.images Scope.getDefault 1 "")
+        redirect (URL.images Scope.defaultScope 1 "")
 
     -- Upload an image or album.
     post Route.upload $ \scopeName -> do
-        scope        <- fromMaybe Scope.getDefault <$> Scope.querySingle scopeName
+        scope        <- fromMaybe Scope.defaultScope <$> Scope.querySingle scopeName
         (_, _, path) <- getFile "uploadedFile"
         title        <- optionalParam "title" ""
         tags         <- splitOn "," <$> optionalParam "tags" ""
@@ -131,11 +130,11 @@ albumRoutes = do
     -- parameters.
     post Route.album $ \scopeName id -> do
         result <- runMaybeT $ do
-            scope            <- MaybeT $ Scope.querySingle scopeName
-            (Entity _ album) <- MaybeT $ Album.querySingle id
-            title            <- lift $ optionalParam "title" (albumTitle album)
-            tags             <- lift $ optionalParam "tags" (intercalate "," (albumTagNames album))
-            result           <- lift $ Album.update id title (splitOn "," tags)
+            scope  <- MaybeT $ Scope.querySingle scopeName
+            album  <- MaybeT $ Album.querySingle id
+            title  <- lift $ optionalParam "title" (albumTitle album)
+            tags   <- lift $ optionalParam "tags" (intercalate "," (albumTagNames album))
+            result <- lift $ Album.update id title (splitOn "," tags)
 
             return (URL.album scope id, result)
 
@@ -199,12 +198,12 @@ imageRoutes = do
     -- parameters.
     post Route.image $ \scopeName id -> do
         result <- runMaybeT $ do
-            scope            <- MaybeT $ Scope.querySingle scopeName
-            (Entity _ image) <- MaybeT $ Image.querySingle id
-            query            <- lift $ optionalParam "q" ""
-            title            <- lift $ optionalParam "title" (imageTitle image)
-            tags             <- lift $ optionalParam "tags" (intercalate "," (imageTagNames image))
-            result           <- lift $ Image.update id title (splitOn "," tags)
+            scope  <- MaybeT $ Scope.querySingle scopeName
+            image  <- MaybeT $ Image.querySingle id
+            query  <- lift $ optionalParam "q" ""
+            title  <- lift $ optionalParam "title" (imageTitle image)
+            tags   <- lift $ optionalParam "tags" (intercalate "," (imageTagNames image))
+            result <- lift $ Image.update id title (splitOn "," tags)
 
             return (URL.image scope id query, result)
 
