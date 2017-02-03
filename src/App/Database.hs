@@ -21,22 +21,23 @@ module App.Database
     , selectTagsDetails, attachTags, cleanTags, detachTags
     ) where
 
-import qualified Database.Engine as SQL
+import qualified Database.Engine  as SQL
+import qualified Data.DateTime    as DateTime
 import qualified Data.Traversable as Traversable
 
 import App.Config            ( Config(..) )
 import App.Core.Types        ( Album(..), Image(..), Page(..), Scope(..), Tag(..), App, ID )
-import App.Expression        ( Token(..), Expression )
+import App.Expression        ( Match(..), Token(..), Expression )
 import Control.Applicative   ( (<$>), (<*>), pure )
 import Control.Monad.Reader  ( asks, liftIO, forM_, void, unless )
-import Data.DateTime         ( DateTime, fromSeconds, toSeconds )
+import Data.DateTime         ( DateTime )
 import Data.Functor.Extended ( (<$$>) )
 import Data.Int              ( Int64 )
 import Data.Maybe            ( isJust, listToMaybe )
 import Data.Textual          ( replace, splitOn, toLower, trim )
 import Database.Engine       ( Transaction(..), FromRow, fromRow, field )
 import Database.Query        ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
-                             , (.=), (.>), (.<), (*=), (<<), asc, clearOrder
+                             , (.=), (./=), (.>), (.>=), (.<), (*=), (<<), asc, clearOrder
                              , count, desc, exists, groupBy, limit, from
                              , fromLeft, nay, offset, on, randomOrder, retrieve
                              , wherever )
@@ -111,8 +112,8 @@ insertImage :: Image -> Transaction ID
 insertImage Image {..} = do
     postID <- SQL.insert "post"
         [ "title"        << imageTitle
-        , "created"      << toSeconds imageCreated
-        , "modified"     << toSeconds imageModified
+        , "created"      << DateTime.toSeconds imageCreated
+        , "modified"     << DateTime.toSeconds imageModified
         , "is_favourite" << fromBool imageIsFavourite
         , "is_deleted"   << fromBool False ]
 
@@ -139,7 +140,8 @@ selectImage id = do
 -- | passed in, only images that satisfy the expression will be returned.
 selectImages :: Expression -> Int -> Int -> Transaction [Image]
 selectImages expression from count = do
-    results <- SQL.query (images >>= paginated expression from count)
+    now     <- liftIO $ DateTime.getCurrentTime
+    results <- SQL.query (images >>= paginated expression now from count)
 
     Traversable.sequence (withImageTags <$> results)
 
@@ -162,9 +164,10 @@ selectRandomImage expression = listToMaybe <$> selectRandomImages expression 1
 -- | expression.
 selectRandomImages :: Expression -> Int -> Transaction [Image]
 selectRandomImages expression count = do
+    now     <- liftIO $ DateTime.getCurrentTime
     results <- SQL.query $ do
         i <- images
-        paginated expression 0 count i
+        paginated expression now 0 count i
         randomOrder
 
     Traversable.sequence (withImageTags <$> results)
@@ -174,7 +177,7 @@ updateImage :: Image -> Transaction ()
 updateImage Image {..} = SQL.update "post" ("id" *= imageID)
     [ "title"        << imageTitle
     , "is_favourite" << imageIsFavourite
-    , "modified"     << toSeconds imageModified ]
+    , "modified"     << DateTime.toSeconds imageModified ]
 
 -- | Returns whether or not an image already exists with the given hash.
 selectHashExists :: String -> Transaction Bool
@@ -211,17 +214,19 @@ selectTagsByPost postID = SQL.query $ do
 -- |   * the number of images with the tag
 -- |   * the number of albums with the tag
 selectTagsDetails :: Expression -> Transaction [(ID, String, ID, Int, Int)]
-selectTagsDetails expression = SQL.query $ do
-    t  <- from     "tag"
-    pt <- from     "post_tag"  `on` ("tag_id"  *= t  "id")
-    p  <- from     "post"      `on` ("id"      *= pt "post_id")
-    i  <- fromLeft "image"     `on` ("post_id" *= p  "id")
-    a  <- fromLeft "album"     `on` ("post_id" *= p  "id")
-    satisfying expression p
-    wherever (p "is_deleted" .= False)
-    groupBy  (t "name")
-    asc      (t "name")
-    retrieve [t "id", t "name", p "id", count (i "id"), count (a "id")]
+selectTagsDetails expression =  do
+    now <- liftIO $ DateTime.getCurrentTime
+    SQL.query $ do
+        t  <- from     "tag"
+        pt <- from     "post_tag"  `on` ("tag_id"  *= t  "id")
+        p  <- from     "post"      `on` ("id"      *= pt "post_id")
+        i  <- fromLeft "image"     `on` ("post_id" *= p  "id")
+        a  <- fromLeft "album"     `on` ("post_id" *= p  "id")
+        satisfying expression now p
+        wherever (p "is_deleted" .= False)
+        groupBy  (t "name")
+        asc      (t "name")
+        retrieve [t "id", t "name", p "id", count (i "id"), count (a "id")]
 
 -- | Deletes all tags from the database that are not attached to any post.
 cleanTags :: Transaction ()
@@ -278,8 +283,8 @@ insertAlbum :: Album -> Transaction ID
 insertAlbum Album {..} = do
     postID <- SQL.insert "post"
         [ "title"        << albumTitle
-        , "created"      << toSeconds albumCreated
-        , "modified"     << toSeconds albumModified
+        , "created"      << DateTime.toSeconds albumCreated
+        , "modified"     << DateTime.toSeconds albumModified
         , "is_favourite" << fromBool albumIsFavourite
         , "is_deleted"   << fromBool False ]
 
@@ -309,7 +314,8 @@ selectAlbum id = do
 -- | passed in, only albums that satisfy the expression will be returned.
 selectAlbums :: Expression -> Int -> Int -> Transaction [Album]
 selectAlbums expression from count = do
-    results          <- SQL.query (albums >>= paginated expression from count)
+    now              <- liftIO $ DateTime.getCurrentTime
+    results          <- SQL.query (albums >>= paginated expression now from count)
     withPages        <- Traversable.sequence (withPages <$> results)
     withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
 
@@ -324,7 +330,7 @@ updateAlbum :: Album -> Transaction ()
 updateAlbum Album {..} = SQL.update "post" ("id" *= albumID)
     [ "title"        << albumTitle
     , "is_favourite" << albumIsFavourite
-    , "modified"     << toSeconds albumModified ]
+    , "modified"     << DateTime.toSeconds albumModified ]
 
 ------------------------------------------------------------------------- Pages
 
@@ -407,24 +413,37 @@ tags = do
 
 -- | Returns a query filter that limits the results such that only results that
 -- | satisfy the given expression are returned.
-satisfying :: Expression -> Table -> Query ()
-satisfying [] _         = return ()
-satisfying expression p = forM_ expression $ \case
-    Included token -> wherever $       exists $ query (escape token)
-    Excluded token -> wherever $ nay . exists $ query (escape token)
+satisfying :: Expression -> DateTime -> Table -> Query ()
+satisfying [] _ _           = return ()
+satisfying expression now p = forM_ expression $ \case
+    Included (MatchTags  x) -> wherever $       exists $ query x
+    Excluded (MatchTags  x) -> wherever $ nay . exists $ query x
+    Included (MatchID    x) -> wherever (p "id" .=  x)
+    Excluded (MatchID    x) -> wherever (p "id" ./= x)
+    Excluded MatchToday     -> wherever (p "created" .<  today)
+    Included MatchToday     -> wherever (p "created" .>= today)
+    Excluded MatchThisWeek  -> wherever (p "created" .<  thisWeek)
+    Included MatchThisWeek  -> wherever (p "created" .>= thisWeek)
+    Excluded MatchThisMonth -> wherever (p "created" .<  thisMonth)
+    Included MatchThisMonth -> wherever (p "created" .>= thisMonth)
 
-    where escape  = toLower . trim
-          query x = do
-              pt <- from "post_tag"
-              t  <- from "tag" `on` \t -> t "id" .= pt "tag_id"
-                                       .& p "id" .= pt "post_id"
-              wherever (t "name" ~% x .| t "name" %% (' ':x))
+    where
+        today     = DateTime.toSeconds $ DateTime.dropTime $ now
+        thisWeek  = DateTime.toSeconds $ DateTime.dropTime $ DateTime.addDays now (-6)
+        thisMonth = DateTime.toSeconds $ DateTime.dropTime $ DateTime.addDays now (-29)
+
+        query x = do
+            let x' = toLower (trim x)
+            pt <- from "post_tag"
+            t  <- from "tag" `on` \t -> t "id" .= pt "tag_id"
+                                     .& p "id" .= pt "post_id"
+            wherever (t "name" ~% x' .| t "name" %% (' ':x'))
 
 -- | Returns a paginated query for the given table using the given expression,
 -- | offset, and limit.
-paginated :: Expression -> Int -> Int -> Table -> Query ()
-paginated expression from count table = do
-    satisfying expression table
+paginated :: Expression -> DateTime -> Int -> Int -> Table -> Query ()
+paginated expression now from count table = do
+    satisfying expression now table
     offset from
     limit count
 
@@ -460,6 +479,8 @@ selectAdjacentImage dir id expression = do
             Next -> ((.<), desc)
             Prev -> ((.>), asc )
 
+    now <- liftIO $ DateTime.getCurrentTime
+
     modified <- SQL.single $ do
         p <- from "post"
         wherever (p "id" .= id)
@@ -470,7 +491,7 @@ selectAdjacentImage dir id expression = do
         Nothing -> return Nothing
         Just m  -> SQL.single $ do
             p <- images
-            satisfying expression p
+            satisfying expression now p
             clearOrder
             wherever (p "id" `operator` m)
             ordering (p "created")
@@ -480,7 +501,7 @@ selectAdjacentImage dir id expression = do
         Nothing -> return Nothing
         Just m  -> SQL.single $ do
             p <- images
-            satisfying expression p
+            satisfying expression now p
             clearOrder
             ordering (p "created")
             ordering (p "id")
@@ -494,11 +515,13 @@ selectAdjacentImage dir id expression = do
 -- | satisfy the given expression.
 selectCount :: String -> Expression -> Transaction Int
 selectCount table expression = do
+    now <- liftIO $ DateTime.getCurrentTime
+
     (Just results) <- SQL.single $ do
         p <- from "post"
         t <- from table `on` ("post_id" *= p "id")
         wherever (p "is_deleted" .= False)
-        satisfying expression p
+        satisfying expression now p
         retrieve [count (p "id")]
 
     return results
@@ -517,7 +540,7 @@ bool = fmap (\x -> if x == 0 then False else True)
 
 -- | Maps the given integer to a UTC time.
 time :: (Functor f) => f Integer -> f DateTime
-time = fmap fromSeconds
+time = fmap DateTime.fromSeconds
 
 -- | Converts a boolean to an integer.
 fromBool :: Bool -> Int

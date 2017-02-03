@@ -1,8 +1,10 @@
 module Data.DateTime
-    ( TimeZone, DateTime, defaultFormatDate, getCurrentTime, getCurrentTimeZone
-    , fromSeconds, toSeconds, utcTimeZone ) where
+    ( TimeZone, DateTime, addDays, defaultFormatDate, dropTime, getCurrentTime
+    , getCurrentTimeZone, fromSeconds, toSeconds, utcTimeZone ) where
 
-import Data.Time             ( UTCTime, getCurrentTime )
+import qualified Data.Time.Calendar as Calendar
+
+import Data.Time             ( UTCTime(..), getCurrentTime, secondsToDiffTime )
 import Data.Time.Clock.POSIX ( posixSecondsToUTCTime, utcTimeToPOSIXSeconds )
 import Data.Time.Format      ( defaultTimeLocale, formatTime )
 import Data.Time.LocalTime   ( TimeZone, getCurrentTimeZone, utc, utcToLocalTime )
@@ -15,6 +17,15 @@ defaultFormatDate :: TimeZone -> DateTime -> String
 defaultFormatDate timeZone dateTime =
     let localTime = utcToLocalTime timeZone dateTime
     in  formatTime defaultTimeLocale "%F" localTime
+
+-- | Adds the given number of days to the given date time. Negative numbers
+-- | will result in days being subtracted.
+addDays :: DateTime -> Integer -> DateTime
+addDays (UTCTime date time) days = UTCTime (Calendar.addDays days date) time
+
+-- | Returns the given date time without the time component.
+dropTime :: DateTime -> DateTime
+dropTime (UTCTime date time) = UTCTime date (secondsToDiffTime 0)
 
 -- | Converts an integer to a date time.
 fromSeconds :: Integer -> DateTime
