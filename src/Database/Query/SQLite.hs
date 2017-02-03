@@ -35,15 +35,16 @@ instance ToSQLite GroupBy where
     toSQLite (GroupBy column) = toSQLite column
 
 instance ToSQLite Where where
-    toSQLite (All)                  = "true"
-    toSQLite (Not filter)           = "NOT" <+> toSQLite filter
-    toSQLite (Exists select)        = "EXISTS (" ++ toSQLite select ++ ")"
-    toSQLite (Equals column value)  = toSQLite column <=> toSQLite value
-    toSQLite (Greater column value) = toSQLite column <>> toSQLite value
-    toSQLite (Less column value)    = toSQLite column <<> toSQLite value
-    toSQLite (Like column value)    = toSQLite column <~> liken value
-    toSQLite (And x y)              = toSQLite x      <&> toSQLite y
-    toSQLite (Or x y)               = toSQLite x      <|> toSQLite y
+    toSQLite (All)                       = "true"
+    toSQLite (Not filter)                = "NOT" <+> toSQLite filter
+    toSQLite (Exists select)             = "EXISTS (" ++ toSQLite select ++ ")"
+    toSQLite (Equals column value)       = toSQLite column <=>  toSQLite value
+    toSQLite (Greater column value)      = toSQLite column <>>  toSQLite value
+    toSQLite (GreaterEqual column value) = toSQLite column <>=> toSQLite value
+    toSQLite (Less column value)         = toSQLite column <<>  toSQLite value
+    toSQLite (Like column value)         = toSQLite column <~>  liken value
+    toSQLite (And x y)                   = toSQLite x      <&>  toSQLite y
+    toSQLite (Or x y)                    = toSQLite x      <|>  toSQLite y
 
 instance ToSQLite From where
     toSQLite (From name i join) = case join of
@@ -164,6 +165,10 @@ update table filter mappings
 -- | Joins the two given strings with " > ".
 (<>>) :: String -> String -> String
 (<>>) x y = x ++ " > " ++ y
+
+-- | Joins the two given strings with " >= ".
+(<>=>) :: String -> String -> String
+(<>=>) x y = x ++ " >= " ++ y
 
 -- | Joins the two given strings with " < ".
 (<<>) :: String -> String -> String

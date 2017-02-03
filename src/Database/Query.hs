@@ -60,6 +60,7 @@ data Where = All
            | Exists QueryData
            | Equals Column Value
            | Greater Column Value
+           | GreaterEqual Column Value
            | Less Column Value
            | Like Column String
 
@@ -160,10 +161,20 @@ groupBy = state . addGroupBy . GroupBy
 (.=) :: (ToValue a) => Column -> a -> Filter
 (.=) column value = return $ Equals column (toValue value)
 
+-- | Filters the query such that only results where the given value is not equal
+-- | to the given column are returned.
+(./=) :: (ToValue a) => Column -> a -> Filter
+(./=) column value = return $ Not $ Equals column (toValue value)
+
 -- | Filters the query such that only results where the given value is greater
 -- | than the given column are returned.
 (.>) :: (ToValue a) => Column -> a -> Filter
 (.>) column value = return $ Greater column (toValue value)
+
+-- | Filters the query such that only results where the given value is greater
+-- | than or equal to the given column are returned.
+(.>=) :: (ToValue a) => Column -> a -> Filter
+(.>=) column value = return $ GreaterEqual column (toValue value)
 
 -- | Filters the query such that only results where the given value is less
 -- | than the given column are returned.
