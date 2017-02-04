@@ -11,15 +11,17 @@ import qualified Numeric         as Numeric
 import qualified System.FilePath as FilePath
 import qualified Text.JavaScript as JS
 
-import App.Core.Types       ( Album(..), DetailedTag(..), Image(..), Scope(..) )
-import App.Web.Icon         ( Icon )
-import Control.Monad        ( forM_ )
-import Data.DateTime        ( TimeZone, defaultFormatDate )
-import Data.Monoid          ( (<>), mempty )
-import Data.Text            ( Text )
-import Data.Textual         ( display, intercalate )
-import Lucid.Base           ( Html, term, toHtml )
-import Lucid.Html5
+-- Bug in firefox prevents default menuitem_ from working.
+import Lucid.Html5 hiding ( menuitem_ )
+
+import App.Core.Types ( Album(..), DetailedTag(..), Image(..), Scope(..), ID )
+import App.Web.Icon   ( Icon )
+import Control.Monad  ( forM_ )
+import Data.DateTime  ( TimeZone, defaultFormatDate )
+import Data.Monoid    ( (<>), mempty )
+import Data.Text      ( Text )
+import Data.Textual   ( display, intercalate )
+import Lucid.Base     ( Html, term, toHtml )
 
 ------------------------------------------------------------------------- Types
 
@@ -90,16 +92,30 @@ disabledAction icon =
 ----------------------------------------------------------------- Context Menus
 
 -- Returns an HTML context menu with the given ID and list of tag/link pairs.
-thumbContextMenu :: Text -> [(Text, Text)] -> Html ()
-thumbContextMenu menuID tags =
-    -- Bug in firefox prevents default menuitem_ from working.
-    let menuitemfixed_ = term "menuitem"
-        onclick url    = "window.location.href = '" <> url <> "'; return false;"
+thumbnailMenu :: (String -> Text) -> String -> ID -> [String] -> Html ()
+thumbnailMenu buildURL query postID tags =
+    let menuitem_   = flip (term "menuitem") mempty
+        onclick url = "window.location.href = '" <> buildURL url <> "'; return false;"
 
-    in menu_ [type_ "context", id_ menuID] $
+    in menu_ [type_ "context", id_ (getMenuID postID)] $ do
+
+        menuitem_ [ label_ "Exclude this Item"
+                  , onclick_ (onclick (query ++ ", -id:" ++ show postID)) ]
+
         menu_ [label_ "Search by Tag"] $
-            forM_ tags $ \(name, url) ->
-                menuitemfixed_ [ label_ name, onclick_ (onclick url)] mempty
+            forM_ tags $ \tag ->
+                menuitem_ [ label_ (Text.pack tag)
+                          , onclick_ (onclick tag) ]
+
+        menu_ [label_ "Include Tag"] $
+            forM_ tags $ \tag ->
+                menuitem_ [ label_ (Text.pack tag)
+                          , onclick_ (onclick (query ++ ", " ++ tag)) ]
+
+        menu_ [label_ "Exclude Tag"] $
+            forM_ tags $ \tag ->
+                menuitem_ [ label_ (Text.pack tag)
+                          , onclick_ (onclick (query ++ ", -" ++ tag)) ]
 
 ------------------------------------------------------------------------ Panels
 
@@ -356,14 +372,13 @@ imageGallery :: Scope -> String -> [Image] -> Html ()
 imageGallery scope query images =
     div_ [id_ "gallery2"] $
         forM_ images $ \image @ Image {..} -> do
-            let menuID = "context-" <> display imageID
-                url    = URL.image scope imageID query
-                thumb  = Text.pack $ Path.getImageThumbnailURL image
-                tags   = map (\tag -> (Text.pack tag, URL.images scope 0 tag)) imageTagNames
+            let url      = URL.image scope imageID query
+                thumb    = Text.pack $ Path.getImageThumbnailURL image
+                buildURL = URL.images scope 0
 
-            a_ [contextmenu_ menuID, href_ url] $ do
+            a_ [contextmenu_ (getMenuID imageID), href_ url] $ do
                 img_ [src_ thumb]
-                thumbContextMenu menuID tags
+                thumbnailMenu buildURL query imageID imageTagNames
 
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery2 :: [(Text, String)] -> Html ()
@@ -381,3 +396,7 @@ formatSize value
     | value <= 10^3 = "1kb"
     | value >= 10^6 = Numeric.showFFloat (Just 1) (fromIntegral value / 1000000) "mb"
     | otherwise     = Numeric.showFFloat (Just 0) (fromIntegral value / 1000)    "kb"
+
+-- | Converts the given post ID to a context menu ID
+getMenuID :: ID -> Text
+getMenuID postID = "menu-" <> display postID
