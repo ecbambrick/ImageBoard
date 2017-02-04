@@ -6,38 +6,39 @@ module App.Web.Route where
 import qualified App.Path  as Path
 import qualified Web.Spock as Spock
 
-import App.Core.Types ( ID )
-import Web.Spock      ( (<//>), Path )
+import App.Core.Types          ( ID )
+import Web.Spock               ( (<//>), Path )
+import Web.Routing.Combinators ( PathState(..) )
 
 ------------------------------------------------------------------------ Routes
 
 -- | The route to an album with the given ID.
-album :: Spock.Path '[String, ID]
+album :: Path '[String, ID] Open
 album = Spock.var <//> "album" <//> Spock.var
 
 -- | The route to the list of albums.
-albums :: Spock.Path '[String]
+albums :: Path '[String] Open
 albums = Spock.var <//> "albums"
 
 -- | The route to the image with the given ID.
-image :: Spock.Path '[String, ID]
+image :: Path '[String, ID] Open
 image = Spock.var <//> "image" <//> Spock.var
 
 -- | The route to the list of images.
-images :: Spock.Path '[String]
+images :: Path '[String] Open
 images = Spock.var <//> "images"
 
 -- | The route to the given page number from the album with the given ID.
-page :: Spock.Path '[String, ID, Int]
+page :: Path '[String, ID, Int] Open
 page = Spock.var <//> "album" <//> Spock.var <//> Spock.var
 
 -- | The route to the list of tags.
-tags :: Spock.Path '[String]
+tags :: Path '[String] Open
 tags = Spock.var <//> "tags"
 
 -- | The route to upload a new post.
-upload :: Spock.Path '[String]
+upload :: Path '[String] Open
 upload = Spock.var <//> "upload"
 
-root :: Spock.Path '[]
+root :: Path '[] Open
 root = Spock.root

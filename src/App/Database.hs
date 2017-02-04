@@ -28,7 +28,6 @@ import qualified Data.Traversable as Traversable
 import App.Config            ( Config(..) )
 import App.Core.Types        ( Album(..), Image(..), Page(..), Scope(..), Tag(..), App, ID )
 import App.Expression        ( Match(..), Token(..), Expression )
-import Control.Applicative   ( (<$>), (<*>), pure )
 import Control.Monad.Reader  ( asks, liftIO, forM_, void, unless )
 import Data.DateTime         ( DateTime )
 import Data.Functor.Extended ( (<$$>) )

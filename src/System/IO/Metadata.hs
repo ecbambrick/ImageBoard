@@ -11,7 +11,6 @@ import qualified System.Directory     as Dir
 import qualified System.IO            as IO
 
 import Data.ByteString.Lazy ( ByteString )
-import Data.Functor         ( (<$>) )
 import Data.Int             ( Int64 )
 import Data.Maybe           ( catMaybes, listToMaybe )
 import Text.Printf          ( printf )

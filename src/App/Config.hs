@@ -5,7 +5,6 @@ module App.Config where
 import qualified Data.Configurator as Configurator
 import qualified Data.DateTime     as DateTime
 
-import Control.Applicative  ( (<$>), (<*>) )
 import Data.Configurator    ( Worth(..) )
 import Data.DateTime        ( TimeZone )
 import System.FilePath      ( (</>) )

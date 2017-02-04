@@ -21,7 +21,6 @@ import App.Config                ( Config(..) )
 import App.Core.Post             ( PostType(..) )
 import App.Core.Types            ( Album(..), DeletionMode(..), Image(..), Scope(..) )
 import App.Validation            ( Error(..), Validation(..) )
-import Control.Applicative       ( (<$>), (<*>), (<|>), pure )
 import Control.Monad.Reader      ( ReaderT, asks, liftIO, join )
 import Control.Monad.Trans       ( MonadIO, lift )
 import Control.Monad.Trans.Maybe ( MaybeT(..), runMaybeT )
@@ -31,14 +30,17 @@ import Data.Monoid               ( (<>), mconcat )
 import Data.Text                 ( Text )
 import Data.Textual              ( display, intercalate, strip, splitOn )
 import Web.PathPieces            ( PathPiece )
-import Web.Spock                 ( delete, get, hookAny, html, post, redirect, root )
+import Web.Spock                 ( SpockM, delete, get, hookAny, html, post
+                                 , redirect, root )
 
 ---------------------------------------------------------------------- Handlers
 
 -- | The route handling for the web service.
-routes :: Spock.SpockT (ReaderT Config IO) ()
+routes :: SpockM () () Config ()
 routes = do
     storagePath <- asks configStoragePath
+    pageSize    <- asks configPageSize
+    timeZone    <- asks configTimeZone
 
     -- Enables access to thumbnails and images in the storage path.
     Spock.middleware $ Middleware.staticPolicy $ mconcat
@@ -69,16 +71,6 @@ routes = do
             InvalidPost e -> requestError (display e)
             AlbumPost     -> redirect (URL.albums scope 1 "")
             ImagePost     -> redirect (URL.images scope 1 "")
-
-    albumRoutes
-    imageRoutes
-    tagRoutes
-
--- Album route handlers.
-albumRoutes :: Spock.SpockT (ReaderT Config IO) ()
-albumRoutes = do
-    pageSize <- asks configPageSize
-    timeZone <- asks configTimeZone
 
     -- Renders the albums page with albums that match the query parameter
     -- within the given scope.
@@ -153,12 +145,6 @@ albumRoutes = do
             (_,   False) -> Album.delete MarkAsDeleted     id
             (_,    True) -> Album.delete PermanentlyDelete id
 
--- Image route handlers.
-imageRoutes :: Spock.SpockT (ReaderT Config IO) ()
-imageRoutes = do
-    pageSize <- asks configPageSize
-    timeZone <- asks configTimeZone
-
     -- Renders the images page with images that match the query parameter
     -- within the given scope.
     get Route.images $ \scopeName -> do
@@ -221,10 +207,6 @@ imageRoutes = do
             (Nothing, _) -> return ()
             (_,   False) -> Image.delete MarkAsDeleted     id
             (_,    True) -> Image.delete PermanentlyDelete id
-
--- | Tag route handlers.
-tagRoutes :: Spock.SpockT (ReaderT Config IO) ()
-tagRoutes = do
 
     -- Renders the tag index page which lists all tags.
     get Route.tags $ \scopeName -> do

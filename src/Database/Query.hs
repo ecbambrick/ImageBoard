@@ -3,7 +3,6 @@
 
 module Database.Query where
 
-import Control.Applicative ( (<$>), (<*>) )
 import Control.Monad.State ( State, execState, state, get )
 import Data.Int            ( Int64 )
 

@@ -7,7 +7,7 @@ module App.Expression
 import qualified Text.Parsec as Parsec
 
 import App.Core.Types       ( ID )
-import Control.Applicative  ( (<$>), (<*>), (<|>), empty )
+import Control.Applicative  ( (<|>), empty )
 import Data.Either          ( rights )
 import Data.List            ( delete, nub )
 import Data.Textual         ( intercalate, splitOn, trim )

@@ -19,22 +19,23 @@ import Data.DateTime        ( utcTimeZone )
 import Data.Textual         ( splitOn )
 import Database.Engine      ( Transaction, execute, runDatabase )
 import System.FilePath      ( (</>) )
-import Web.Spock            ( SpockT, ActionT, runSpock, spockT )
+import Web.Spock            ( SpockActionCtx, SpockM, runSpock, spock, getState )
+import Web.Spock.Config     ( PoolOrConn(..), defaultSpockCfg )
 
 --------------------------------------------------------------------- Instances
 
-instance (MonadReader r m) => MonadReader r (ActionT m) where
-    ask       = lift ask
+instance MonadReader r (SpockActionCtx ctx conn sess r) where
+    ask       = getState
     local f m = runReaderT (lift m) . f =<< ask
 
-instance (MonadReader r m) => MonadReader r (SpockT m) where
-    ask       = lift ask
+instance MonadReader r (SpockM conn sess r) where
+    ask       = getState
     local f m = runReaderT (lift m) . f =<< ask
 
 ------------------------------------------------------------------ Interpreters
 
 -- | Runs the application with the settings from the config file.
-runApplication :: App () -> IO ()
+runApplication :: ReaderT Config IO () -> IO ()
 runApplication application = do
     config <- Config.loadConfig
 
@@ -43,13 +44,28 @@ runApplication application = do
         application
 
 -- | Runs the server with the settings from the config file.
-runServer :: SpockT (ReaderT Config IO) () -> IO ()
+runServer :: SpockM () () Config () -> IO ()
 runServer routes = do
-    config <- Config.loadConfig
+    appConfig   <- Config.loadConfig
+    spockConfig <- defaultSpockCfg () PCNoDatabase appConfig
 
-    runSpock (configPort config) $ spockT (flip runReaderT config) $ do
+    runSpock (configPort appConfig) $ spock spockConfig $ do
         Everything.initialize
         routes
+
+-- | Runs the application using a blank database and a temporary storage
+-- | directory. Used for testing.
+-- testApplication :: App () -> IO ()
+testApplication :: ReaderT Config IO () -> IO ()
+testApplication application = withTestEnvironment $ \config -> do
+    runReaderT application config
+
+-- | Runs the application server using a blank database and a temporary storage
+-- | directory. Used for testing.
+testServer :: SpockM () () Config () -> IO ()
+testServer routes = withTestEnvironment $ \appConfig -> do
+    spockConfig <- defaultSpockCfg () PCNoDatabase appConfig
+    runSpock (configPort appConfig) $ spock spockConfig routes
 
 -- | Run a database transaction using the connection string in the application
 -- | config.
@@ -57,18 +73,6 @@ runDB :: Transaction a -> App a
 runDB command = do
     db <- asks configDatabaseConnection
     runDatabase db command
-
--- | Runs the application using a blank database and a temporary storage
--- | directory. Used for testing.
-testApplication :: App a -> IO ()
-testApplication application = withTestEnvironment $ \config ->
-    runReaderT application config
-
--- | Runs the application server using a blank database and a temporary storage
--- | directory. Used for testing.
-testServer :: SpockT (ReaderT Config IO) () -> IO ()
-testServer routes = withTestEnvironment $ \config ->
-    runSpock (configPort config) $ spockT (flip runReaderT config) routes
 
 ----------------------------------------------------------------------- Utility
 

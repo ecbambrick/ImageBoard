@@ -11,7 +11,6 @@ import qualified System.Console.Args as CLI
 
 import App.Validation       ( isValid )
 import Control.Monad.Reader ( liftIO, unless, when )
-import Data.Functor         ( (<$>) )
 import Data.Textual         ( splitOn, toLower )
 
 main = CLI.cli "Image board." $ do
@@ -21,6 +20,7 @@ main = CLI.cli "Image board." $ do
                                       else CLI.run . Application.runApplication
         runServer      = if isTesting then CLI.run . Application.testServer
                                       else CLI.run . Application.runServer
+
     -- Run the web server.
     CLI.command "run" $ do
         runServer Server.routes
