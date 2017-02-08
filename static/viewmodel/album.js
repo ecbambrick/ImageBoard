@@ -152,13 +152,13 @@ const AlbumViewModel = {
             Kefir.fromEvents(dom.editTags, 'keyup')
                  .map(x => x.target.value)
                  .sampledBy(editSubmitted)
-                 .map(x => x.split(",").map(String.trim))
-                 .map(Utility.sortAndRemoveDuplicates)
+                 .map(x => x.split(",").map(String.trim).filter(x => x != ""))                 
                  .ignoreErrors()
                  .toProperty(() => album.tags);
 
         const visibleTags =
-            tags.map(x => x.map(y => `<a class='tag' href='${url.tag(y)}'>${y}</a>`)
+            tags.map(Utility.sortAndRemoveDuplicates)
+                .map(x => x.map(y => `<a class='tag' href='${url.tag(y)}'>${y}</a>`)
                            .join("\n"));
 
         const defaultTagsString =
