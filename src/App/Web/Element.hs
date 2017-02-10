@@ -54,7 +54,7 @@ document title initialize html =
             script_ [type_ ecma6, src_ "/static/gallery.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/image.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/album.js"] Text.empty
-            script_ [type_ ecma6, src_ "/static/albums.js" ] Text.empty
+            script_ [type_ ecma6, src_ "/static/viewmodel/albums.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/images.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/page.js"   ] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/tags.js"] Text.empty
@@ -379,6 +379,19 @@ imageGallery scope query images =
             a_ [contextmenu_ (getMenuID imageID), href_ url] $ do
                 img_ [src_ thumb]
                 thumbnailMenu buildURL query imageID imageTagNames
+
+-- | Returns an HTML element for display a grid of album thumbnails.
+albumGallery :: Scope -> String -> [Album] -> Html ()
+albumGallery scope query albums =
+    div_ [id_ "gallery2"] $
+        forM_ albums $ \album @ Album {..} -> do
+            let url      = URL.album scope albumID
+                thumb    = Text.pack $ Path.getAlbumThumbnailURL album
+                buildURL = URL.albums scope 0
+
+            a_ [contextmenu_ (getMenuID albumID), href_ url] $ do
+                img_ [src_ thumb]
+                thumbnailMenu buildURL query albumID albumTagNames
 
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery2 :: [(Text, String)] -> Html ()

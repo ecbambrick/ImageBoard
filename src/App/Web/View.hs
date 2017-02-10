@@ -69,32 +69,64 @@ albumView scope query timeZone album @ Album {..} = render $ do
 -- | Renders an index view for albums as text containing HTML.
 albumsView :: Scope -> String -> Int -> Int -> Int -> [Album] -> Text
 albumsView scope query page total pageSize albums = render $ do
-    let prevAvailable = page > 1
-        nextAvailable = page * pageSize < total
-        title         = "Albums (" <> display total <> ")"
-        onload        = JS.functionCall "Albums.initializePage" args
-        args          = [ JS.toJSON (scopeName scope)
-                        , JS.toJSON prevAvailable
-                        , JS.toJSON nextAvailable
-                        , JS.toJSON page
-                        , JS.toJSON query ]
+    let title       = "Albums (" <> display total <> ")"
+        onload      = JS.functionCall "AlbumsViewModel.register" args
+        args        = [ JS.toJSON (scopeName scope)
+                      , JS.toJSON query
+                      , JS.toJSON page
+                      , JS.toJSON canPrevious
+                      , JS.toJSON canNext ]
+
+        firstID     = albumID <$> listToMaybe albums
+        canPrevious = page > 1
+        canNext     = page * pageSize < total
+
+        tagsURL         = URL.tags scope
+        previousPageURL = URL.albums scope (page - 1) query
+        firstPageURL    = URL.albums scope 1          query
+        nextPageURL     = URL.albums scope (page + 1) query
+        imagesURL       = URL.images scope 1          query
+        firstResultURL  = URL.album scope <$> firstID
+
+        previousPageAction icon =
+            if canPrevious
+                then Elem.actionLink     icon previousPageURL
+                else Elem.disabledAction icon
+
+        nextPageAction icon =
+            if canNext
+                then Elem.actionLink     icon nextPageURL
+                else Elem.disabledAction icon
+
+        firstResultAction =
+            case firstResultURL of
+                Just url -> Elem.actionLink     Icon.LevelDown url
+                Nothing  -> Elem.disabledAction Icon.LevelDown
 
     Elem.document title onload $ do
-        Elem.aside $ Elem.infoPanel $ do
-            Elem.searchBox (URL.albums scope 1 "") query
-            Elem.actions $ do
-                Elem.actionGroup $ do
-                    when prevAvailable $
-                        Elem.actionLink Icon.LeftArrow (URL.albums scope (page - 1) query)
-                Elem.actionGroup $ do
-                    when nextAvailable $
-                        Elem.actionLink Icon.RightArrow (URL.albums scope (page + 1) query)
-            Elem.spacer
-            Elem.uploadForm scope
-        Elem.gallery $
-            flip map albums $ \album @ Album {..} ->
-                ( URL.album scope albumID
-                , Path.getAlbumThumbnailURL album)
+        Elem.sideBar $ do
+            previousPageAction Icon.UpArrow
+            firstResultAction
+            nextPageAction     Icon.DownArrow
+            Elem.separator
+            Elem.actionLink    Icon.Image imagesURL
+            Elem.separator
+            Elem.actionLink    Icon.Tags tagsURL
+        Elem.aside $ do
+            Elem.infoPanel $ do
+                Elem.actions $ do
+                    Elem.actionGroup $ do
+                        previousPageAction Icon.LeftArrow
+                        firstResultAction
+                        nextPageAction     Icon.RightArrow
+                    Elem.actionGroup $ do
+                        Elem.actionLink Icon.Tags tagsURL
+                        Elem.actionLink Icon.Image imagesURL
+                Elem.searchBox firstPageURL query
+                Elem.spacer
+                Elem.uploadForm scope
+        Elem.albumGallery scope query albums
+
 
 -- | Renders a view for the given image as text containing HTML.
 imageView :: Scope -> String -> TimeZone -> Image -> Image -> Image -> Text
