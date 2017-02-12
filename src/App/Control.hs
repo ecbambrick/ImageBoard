@@ -20,7 +20,7 @@ import Data.Textual         ( splitOn )
 import Database.Engine      ( Transaction, execute, runDatabase )
 import System.FilePath      ( (</>) )
 import Web.Spock            ( SpockActionCtx, SpockM, runSpock, spock, getState )
-import Web.Spock.Config     ( PoolOrConn(..), defaultSpockCfg )
+import Web.Spock.Config     ( SpockCfg(..), PoolOrConn(..), defaultSpockCfg )
 
 --------------------------------------------------------------------- Instances
 
@@ -47,7 +47,7 @@ runApplication application = do
 runServer :: SpockM () () Config () -> IO ()
 runServer routes = do
     appConfig   <- Config.loadConfig
-    spockConfig <- defaultSpockCfg () PCNoDatabase appConfig
+    spockConfig <- customSpockConfig appConfig
 
     runSpock (configPort appConfig) $ spock spockConfig $ do
         Everything.initialize
@@ -64,7 +64,7 @@ testApplication application = withTestEnvironment $ \config -> do
 -- | directory. Used for testing.
 testServer :: SpockM () () Config () -> IO ()
 testServer routes = withTestEnvironment $ \appConfig -> do
-    spockConfig <- defaultSpockCfg () PCNoDatabase appConfig
+    spockConfig <- customSpockConfig appConfig
     runSpock (configPort appConfig) $ spock spockConfig routes
 
 -- | Run a database transaction using the connection string in the application
@@ -75,6 +75,11 @@ runDB command = do
     runDatabase db command
 
 ----------------------------------------------------------------------- Utility
+
+-- | Gets a customized version of the default Spock configuration.
+customSpockConfig config = do
+    spockConfig <- defaultSpockCfg () PCNoDatabase config
+    return spockConfig { spc_maxRequestSize = Nothing }
 
 -- | Runs the given IO function with a test database and test storage path.
 withTestEnvironment :: (Config -> IO a) -> IO ()
