@@ -56,7 +56,7 @@ document title initialize html =
             script_ [type_ ecma6, src_ "/static/viewmodel/album.js"] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/albums.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/images.js" ] Text.empty
-            script_ [type_ ecma6, src_ "/static/page.js"   ] Text.empty
+            script_ [type_ ecma6, src_ "/static/viewmodel/page.js" ] Text.empty
             script_ [type_ ecma6, src_ "/static/viewmodel/tags.js"] Text.empty
             script_ [type_ ecma6] (JS.onDocumentLoad initialize)
         body_ html
@@ -327,6 +327,15 @@ imageDetails Image {..} timeZone imageType =
             toHtml imageHash
             br_ []
             toHtml ("uploaded " ++ defaultFormatDate timeZone imageCreated)
+
+-- | Returns an HTML element for displaying page meta data.
+pageDetails :: Album -> Int -> Html ()
+pageDetails Album {..} page =
+    div_ [class_ "details"] $ do
+        div_ [class_ "title"] $ do
+            toHtml albumTitle
+        div_ [class_ "meta"] $ do
+            toHtml $ show page ++ " / " ++ show (length albumPages)
 
 -- | Returns an HTML element containing the given list of album tag names.
 albumTags :: Scope -> [String] -> Html ()

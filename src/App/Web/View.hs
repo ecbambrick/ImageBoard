@@ -237,22 +237,43 @@ imagesView scope query page total pageSize images = render $ do
 -- | Renders a view for the given page of the given album as text containing
 -- | HTML.
 pageView :: Scope -> Album -> Int -> Text
-pageView scope album @ Album {..} number = render $ do
-    let pages  = length albumPages
-        page   = Album.getPage album number <|> Album.getPage album 1
-        prev   = if number <= 1 || number > pages then pages else number - 1
-        next   = if number >= pages then 1 else number + 1
-        title  = Text.pack (albumTitle ++ " (" ++ show number ++ "/" ++ show pages ++ ")")
-        onload = JS.functionCall "Page.initializePage" args
+pageView scope album @ Album {..} curr = render $ do
+    let title  = Text.pack (albumTitle ++ " (" ++ show curr ++ "/" ++ show pages ++ ")")
+        onload = JS.functionCall "PageViewModel.register" args
         args   = [ JS.toJSON (scopeName scope)
                  , JS.toJSON albumID
                  , JS.toJSON prev
                  , JS.toJSON next ]
 
+        pages = length albumPages
+        prev  = curr - 1 `rollOver` length albumPages
+        next  = curr + 1 `rollOver` length albumPages
+
+        indexURL    = URL.album scope albumID
+        prevPageURL = URL.page  scope albumID prev
+        nextPageURL = URL.page  scope albumID next
+
+        source1  = maybe "" (Path.getPageURL albumID) (Album.getPage album curr)
+        source2  = maybe "" (Path.getPageURL albumID) (Album.getPage album next)
+
     Elem.document title onload $ do
-        case page of
-            Nothing   -> mempty
-            Just page -> Elem.canvas (Path.getPageURL albumID page) ""
+        Elem.sideBar $ do
+            Elem.actionLink Icon.UpArrow   prevPageURL
+            Elem.actionLink Icon.Grid      indexURL
+            Elem.actionLink Icon.DownArrow nextPageURL
+            Elem.separator
+            Elem.action Icon.Pause "toggle-double-compact"
+        Elem.aside $ do
+            Elem.infoPanel $ do
+                Elem.actions $ do
+                    Elem.actionGroup $ do
+                        Elem.actionLink Icon.LeftArrow  prevPageURL
+                        Elem.actionLink Icon.Grid       indexURL
+                        Elem.actionLink Icon.RightArrow nextPageURL
+                    Elem.actionGroup $ do
+                        Elem.action Icon.Pause "toggle-double"
+                Elem.pageDetails album curr
+        Elem.canvas source1 source2
 
 -- | Renders a view for the list of tags as text containing HTML.
 tagsView :: Scope -> [DetailedTag] -> Text
@@ -261,7 +282,7 @@ tagsView scope tags = render $ do
         onload = JS.functionCall "TagsViewModel.register" args
         args   = [ JS.toJSON (scopeName scope) ]
 
-    let groups             = groupWith getGroupHeader tags
+        groups             = groupWith getGroupHeader tags
         getGroupHeader tag = let char = head (detailedTagName tag)
                              in if | isNumber char -> "#"
                                    | isAlpha  char -> [toUpper char]
@@ -279,3 +300,11 @@ tagsView scope tags = render $ do
 -- | Renders the given HTML as text.
 render :: Html () -> Text
 render = LazyText.toStrict . renderText
+
+-- | Returns the first number unless it is greater than or less than the
+-- | second number, in which case the value rolls over.
+rollOver :: (Ord a, Num a) => a -> a -> a; infixl 3 `rollOver`
+rollOver x y
+    | x > y     = 1
+    | x < 1     = y
+    | otherwise = x
