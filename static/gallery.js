@@ -60,7 +60,7 @@ const Gallery = {
 
         const scaledWidth    = image.naturalWidth * height / image.naturalHeight;
         const remainingWidth = totalWidth - totalImageLengths - totalPadding;
-        const width          = Math.min(scaledWidth, remainingWidth);
+        const width          = Math.min(scaledWidth + padding, remainingWidth);
 
         image.height = height;
         image.width  = width;
