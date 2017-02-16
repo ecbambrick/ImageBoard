@@ -24,14 +24,15 @@ query Scope {..} = runDB $ do
     tags <- DB.selectTagsDetails (Expression.parse scopeExpression)
 
     forM tags $ \(tagID, name, postID, imageCount, albumCount) -> do
-        image <- DB.selectImage postID
-        album <- DB.selectAlbum postID
+        categories <- DB.selectTagCategories tagID
+        image      <- DB.selectImage postID
+        album      <- DB.selectAlbum postID
 
         let sample = case (image, album) of
                 (Just image, _) -> Left image
                 (_, Just album) -> Right album
 
-        return (DetailedTag tagID name imageCount albumCount sample)
+        return (DetailedTag tagID name imageCount albumCount sample categories)
 
 ----------------------------------------------------------------------- Utility
 

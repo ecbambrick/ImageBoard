@@ -18,11 +18,12 @@ module App.Database
 
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
-    , selectTagsDetails, attachTags, cleanTags, detachTags
+    , selectTagsDetails, selectTagCategories, attachTags, cleanTags, detachTags
     ) where
 
 import qualified Database.Engine  as SQL
 import qualified Data.DateTime    as DateTime
+import qualified Data.Text        as Text
 import qualified Data.Traversable as Traversable
 
 import App.Config            ( Config(..) )
@@ -33,6 +34,7 @@ import Data.DateTime         ( DateTime )
 import Data.Functor.Extended ( (<$$>) )
 import Data.Int              ( Int64 )
 import Data.Maybe            ( isJust, listToMaybe )
+import Data.Text             ( Text )
 import Data.Textual          ( replace, splitOn, toLower, trim )
 import Database.Engine       ( Transaction(..), FromRow, fromRow, field )
 import Database.Query        ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
@@ -51,6 +53,9 @@ instance FromRow Int64 where
     fromRow = field
 
 instance FromRow Int where
+    fromRow = field
+
+instance FromRow Text where
     fromRow = field
 
 instance FromRow Album where
@@ -226,6 +231,17 @@ selectTagsDetails expression =  do
         groupBy  (t "name")
         asc      (t "name")
         retrieve [t "id", t "name", p "id", count (i "id"), count (a "id")]
+
+-- | Returns the list of category names for the tag with the given ID.
+selectTagCategories :: ID -> Transaction [String]
+selectTagCategories tagID = do
+    categories <- SQL.query $ do
+        c  <- from "category"
+        tc <- from "tag_category" `on` ("category_id" *= c "id")
+        wherever (tc "tag_id" .= tagID)
+        retrieve [c "name"]
+
+    return (Text.unpack <$> categories)
 
 -- | Deletes all tags from the database that are not attached to any post.
 cleanTags :: Transaction ()

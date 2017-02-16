@@ -81,6 +81,7 @@ data DetailedTag = DetailedTag
     , detailedTagImageCount :: Int
     , detailedTagAlbumCount :: Int
     , detailedTagSample     :: Either Image Album
+    , detailedTagCategories :: [String]
     } deriving (Show, Eq)
 
 ---------------------------------------------------------------- JSON instances
