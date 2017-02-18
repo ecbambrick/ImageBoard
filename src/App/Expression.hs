@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module App.Expression
-    ( Token(..), Match(..), Expression, parse, parseMany ) where
+    ( Token(..), Match(..), Expression, combine, parse, parseMany ) where
 
 import qualified Text.Parsec as Parsec
 
@@ -45,6 +45,23 @@ parse = neutralize . nub . rights . map tokenize . map trim . splitOn ","
 -- | expression.
 parseMany :: [String] -> Expression
 parseMany = parse . intercalate ","
+
+-- | Converts the given expression to a comma-separated string.
+unparse :: Expression -> String
+unparse = intercalate ", " . map unparseToken
+    where
+        unparseToken (Included     x) = unparseMatch x
+        unparseToken (Excluded     x) = "-" ++ unparseMatch x
+        unparseMatch (MatchID      x) = "id:" ++ show x
+        unparseMatch (MatchToday    ) = "date:today"
+        unparseMatch (MatchThisWeek ) = "date:this week"
+        unparseMatch (MatchThisMonth) = "date:this month"
+        unparseMatch (MatchTags    x) = x
+
+-- | Combines the given list of comma-separated strings into a single
+-- | comma-separated string.
+combine :: [String] -> String
+combine = unparse . parseMany
 
 ----------------------------------------------------------------------- Utility
 

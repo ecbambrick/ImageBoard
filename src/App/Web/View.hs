@@ -81,12 +81,12 @@ albumsView scope query page total pageSize albums = render $ do
         canPrevious = page > 1
         canNext     = page * pageSize < total
 
-        tagsURL         = URL.tags scope
+        tagsURL         = URL.tags   scope query
         previousPageURL = URL.albums scope (page - 1) query
         firstPageURL    = URL.albums scope 1          query
         nextPageURL     = URL.albums scope (page + 1) query
         imagesURL       = URL.images scope 1          query
-        firstResultURL  = URL.album scope <$> firstID
+        firstResultURL  = URL.album  scope <$> firstID
 
         previousPageAction icon =
             if canPrevious
@@ -188,12 +188,12 @@ imagesView scope query page total pageSize images = render $ do
         canPrevious = page > 1
         canNext     = page * pageSize < total
 
-        tagsURL         = URL.tags scope
+        tagsURL         = URL.tags   scope query
         previousPageURL = URL.images scope (page - 1) query
         firstPageURL    = URL.images scope 1          query
         nextPageURL     = URL.images scope (page + 1) query
         albumsURL       = URL.albums scope 1          query
-        firstResultURL  = URL.image scope <$> firstID <*> pure query
+        firstResultURL  = URL.image  scope <$> firstID <*> pure query
 
         previousPageAction icon =
             if canPrevious
@@ -276,11 +276,16 @@ pageView scope album @ Album {..} curr = render $ do
         Elem.canvas source1 source2
 
 -- | Renders a view for the list of tags as text containing HTML.
-tagsView :: Scope -> [DetailedTag] -> Text
-tagsView scope tags = render $ do
+tagsView :: Scope -> String -> [DetailedTag] -> Text
+tagsView scope query tags = render $ do
     let title  = "Tags"
         onload = JS.functionCall "TagsViewModel.register" args
-        args   = [ JS.toJSON (scopeName scope) ]
+        args   = [ JS.toJSON (scopeName scope)
+                 , JS.toJSON query]
+
+        albumsURL = URL.albums scope 1 query
+        imagesURL = URL.images scope 1 query
+        tagsURL   = URL.tags   scope   query
 
         groups             = groupWith getGroupHeader tags
         getGroupHeader tag = let char = head (detailedTagName tag)
@@ -289,11 +294,21 @@ tagsView scope tags = render $ do
                                    | otherwise     -> "Symbol"
 
     Elem.document title onload $ do
+        Elem.sideBar $ do
+            Elem.actionLink Icon.Book  albumsURL
+            Elem.actionLink Icon.Image imagesURL
+        Elem.aside $ do
+            Elem.infoPanel $ do
+                Elem.actions $ do
+                    Elem.actionGroup $ do
+                        Elem.actionLink Icon.Book  albumsURL
+                        Elem.actionLink Icon.Image imagesURL
+                Elem.searchBox tagsURL query
         Elem.tagList $ do
             forM_ groups $ \group -> do
                 Elem.tagHeader (getGroupHeader (head group))
                 forM_ group $ \tag -> do
-                    Elem.tagDetail scope tag
+                    Elem.tagDetail scope query tag
 
 ----------------------------------------------------------------------- Utility
 

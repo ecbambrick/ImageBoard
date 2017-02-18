@@ -50,8 +50,12 @@ page :: Scope -> ID -> Int -> Text
 page scope = Spock.renderRoute Route.page (scopeName scope)
 
 -- | Returns the route to the list of tags with the given scope.
-tags :: Scope -> Text
-tags scope = Spock.renderRoute Route.tags (scopeName scope)
+tags :: Scope -> String -> Text
+tags scope query = 
+    let route  = Spock.renderRoute Route.tags (scopeName scope)
+        params = [("q", query)]
+
+    in route `withParameters` params
 
 -- | Returns the route to upload a new post.
 upload :: Scope -> Text

@@ -212,9 +212,12 @@ routes = do
     get Route.tags $ \scopeName -> do
         result <- runMaybeT $ do
             scope <- MaybeT $ Scope.querySingle scopeName
-            tags  <- lift   $ Tag.query scope
+            query <- lift   $ optionalParam "q" ""
 
-            return (View.tagsView scope tags)
+            let fullQuery = Expression.parseMany [query, scopeExpression scope]
+
+            tags <- lift $ Tag.query fullQuery
+            return (View.tagsView scope query tags)
 
         case result of
             Nothing   -> notFound

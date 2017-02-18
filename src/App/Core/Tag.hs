@@ -5,11 +5,11 @@
 module App.Core.Tag where
 
 import qualified App.Database   as DB
-import qualified App.Expression as Expression
 import qualified App.Validation as Validation
 
 import App.Control      ( runDB )
 import App.Core.Types   ( DetailedTag(..), Scope(..), Tag(..), App )
+import App.Expression   ( Expression )
 import App.Validation   ( Error(..), Validation(..) )
 import Control.Monad    ( forM )
 import Data.Char        ( isAlphaNum, isSpace )
@@ -19,9 +19,9 @@ import Data.Textual     ( trim, toLower )
 -------------------------------------------------------------------------- CRUD
 
 -- | Returns the list of all tag entities.
-query :: Scope -> App [DetailedTag]
-query Scope {..} = runDB $ do
-    tags <- DB.selectTagsDetails (Expression.parse scopeExpression)
+query :: Expression -> App [DetailedTag]
+query expression = runDB $ do
+    tags <- DB.selectTagsDetails expression
 
     forM tags $ \(tagID, name, postID, imageCount, albumCount) -> do
         categories <- DB.selectTagCategories tagID

@@ -3,6 +3,7 @@
 
 module App.Web.Element where
 
+import qualified App.Expression  as Expression
 import qualified App.Path        as Path
 import qualified App.Web.Icon    as Icon
 import qualified App.Web.URL     as URL
@@ -248,10 +249,12 @@ tagHeader :: String -> Html ()
 tagHeader = div_ [class_ "tag-header"] . toHtml
 
 -- | Returns an HTML element containing tag details for the given tag.
-tagDetail :: Scope -> DetailedTag -> Html ()
-tagDetail scope DetailedTag {..} = do
-    let sampleLink = case detailedTagSample of
-            Left  (Image {..}) -> URL.image scope imageID ""
+tagDetail :: Scope -> String -> DetailedTag -> Html ()
+tagDetail scope query DetailedTag {..} = do
+    let fullQuery = Expression.combine [detailedTagName, query]
+
+        sampleLink = case detailedTagSample of
+            Left  (Image {..}) -> URL.image scope imageID query
             Right (Album {..}) -> URL.album scope albumID
 
         sampleThumbnail = case detailedTagSample of
@@ -260,11 +263,11 @@ tagDetail scope DetailedTag {..} = do
 
         imageAction = case detailedTagImageCount of
             0 -> disabledAction Icon.Image
-            _ -> actionLink     Icon.Image $ URL.images scope 1 detailedTagName
+            _ -> actionLink     Icon.Image $ URL.images scope 1 fullQuery
 
         albumAction = case detailedTagAlbumCount of
             0 -> disabledAction Icon.Book
-            _ -> actionLink     Icon.Book $ URL.albums scope 1 detailedTagName
+            _ -> actionLink     Icon.Book $ URL.albums scope 1 fullQuery
 
         imageCount = case detailedTagImageCount of
             0 -> span_ [class_ "disabled"] "0 images"
