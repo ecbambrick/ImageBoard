@@ -49,7 +49,7 @@ validate :: Tag -> Validation
 validate (Tag name) =
     let isValidStartChar []    = False
         isValidStartChar (x:_) = not (elem x "-:")
-        isValidChar x          = isAlphaNum x || isSpace x || elem x "'.-'"
+        isValidChar x          = isAlphaNum x || isSpace x || elem x "'.-'@!☆?"
 
     in Validation.validateSingle
         [ Validation.verify (isValidStartChar name) $ InvalidTag name
