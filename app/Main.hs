@@ -1,7 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Main where
-
 import qualified App.Control         as Application
 import qualified App.Core.Everything as Everything
 import qualified App.Core.Scope      as Scope

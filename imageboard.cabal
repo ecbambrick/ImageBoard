@@ -1,86 +1,112 @@
 name:           imageboard
 version:        0.1.0.0
-homepage:       https://github.com/ecbambrick/imageboard/
-category:       Application
-synopsis:       Image board
+synopsis:       Image Board
 description:    Simple tag-based image organization board.
+homepage:       https://github.com/ecbambrick/imageboard/
 author:         Cole Bambrick
 maintainer:     cole.bambrick@gmail.com
+category:       Application
 build-type:     Simple
 cabal-version:  >= 1.10
 
 data-files:
+    static/viewmodel/*.js
     static/*.js
     static/*.css
     schema.sql
     app.cfg
 
-executable imageboard
-    main-is:            Main.hs
+source-repository head
+    type:     git
+    location: https://github.com/ecbambrick/ImageBoard
+
+library
     hs-source-dirs:     src
     default-language:   Haskell2010
 
-    other-modules:
-        App.Core.Album,
-        App.Core.Everything,
-        App.Core.Image,
-        App.Core.Post,
-        App.Core.Scope,
-        App.Core.Tag,
-        App.Core.Types,
-        App.Control,
-        App.Config,
-        App.Database,
-        App.Expression,
-        App.Import
-        App.Path,
-        App.Validation,
-        App.Web.Element,
-        App.Web.Icon,
-        App.Web.Route,
-        App.Web.Server,
-        App.Web.URL,
-        App.Web.View,
-        Data.Functor.Extended,
-        Data.List.Extended,
-        Data.Ord.Extended,
-        Data.DateTime,
-        Data.Textual,
-        Database.Engine,
-        Database.Query,
-        Database.Query.SQLite,
-        Graphics.FFmpeg,
-        System.IO.Metadata,
-        Text.JavaScript
+    exposed-modules:
+        App.Core.Album
+      , App.Core.Everything
+      , App.Core.Image
+      , App.Core.Post
+      , App.Core.Scope
+      , App.Core.Tag
+      , App.Core.Types
+      , App.Control
+      , App.Config
+      , App.Database
+      , App.Expression
+      , App.Import
+      , App.Path
+      , App.Validation
+      , App.Web.Element
+      , App.Web.Icon
+      , App.Web.Route
+      , App.Web.Server
+      , App.Web.URL
+      , App.Web.View
+      , Data.Functor.Extended
+      , Data.List.Extended
+      , Data.Ord.Extended
+      , Data.DateTime
+      , Data.Textual
+      , Database.Engine
+      , Database.Query
+      , Database.Query.SQLite
+      , Graphics.FFmpeg
+      , System.IO.Metadata
+      , Text.JavaScript
 
     build-depends:
-        base                    == 4.9.*,
-        configurator            == 0.3.*,
-        cryptohash              == 0.11.*,
-        lucid                   == 2.9.*,
-        network-uri             == 2.6.*,
-        Spock                   == 0.11.*,
-        sqlite-simple           == 0.4.*,
-        time                    == 1.6.*,
-        unordered-containers    == 0.2.*,
-        wai-middleware-static   == 0.8.*,
-        zip-archive             == 0.3.*,
-        aeson,
-        ArgumentParser,
-        async,
-        bytestring,
-        deepseq,
-        directory,
-        filepath,
-        http-types,
-        HUnit,
-        mtl,
-        parsec,
-        path-pieces,
-        process,
-        regex-compat,
-        reroute,
-        text,
-        time,
-        transformers,
-        wai
+        base                    == 4.9.*
+      , configurator            == 0.3.*
+      , cryptohash              == 0.11.*
+      , lucid                   == 2.9.*
+      , network-uri             == 2.6.*
+      , Spock                   == 0.11.*
+      , sqlite-simple           == 0.4.*
+      , time                    == 1.6.*
+      , unordered-containers    == 0.2.*
+      , wai-middleware-static   == 0.8.*
+      , zip-archive             == 0.3.*
+      , aeson
+      , async
+      , bytestring
+      , deepseq
+      , directory
+      , filepath
+      , http-types
+      , mtl
+      , parsec
+      , path-pieces
+      , process
+      , regex-compat
+      , reroute
+      , text
+      , time
+      , transformers
+      , wai
+
+executable imageboard-exe
+    hs-source-dirs:     app
+    main-is:            Main.hs
+    ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+    default-language:   Haskell2010
+
+    build-depends:
+        base
+      , imageboard
+      , mtl
+      , ArgumentParser
+
+test-suite imageboard-test
+    hs-source-dirs:     tests
+    main-is:            Spec.hs
+    type:               exitcode-stdio-1.0
+    ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+    default-language:   Haskell2010
+
+    build-depends:
+        base
+      , imageboard
+      , hspec

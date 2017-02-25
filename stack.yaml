@@ -1,9 +1,7 @@
-flags: {}
-extra-package-dbs: []
+resolver: lts-7.18
 packages:
 - '.'
 - location:
     git: https://github.com/ecbambrick/ArgumentParser.git
     commit: faef5af77f691d236c7a40a821bf49aa89b0f695
-extra-deps: []
-resolver: lts-7.18
+  extra-dep: true
