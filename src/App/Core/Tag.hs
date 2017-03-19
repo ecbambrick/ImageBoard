@@ -13,6 +13,7 @@ import App.Expression   ( Expression )
 import App.Validation   ( Error(..), Validation(..) )
 import Control.Monad    ( forM )
 import Data.Char        ( isAlphaNum, isSpace )
+import Data.Either      ( lefts, rights )
 import Data.List        ( nub )
 import Data.Textual     ( trim, toLower )
 
@@ -34,6 +35,27 @@ query expression = runDB $ do
 
         return (DetailedTag tagID name imageCount albumCount sample categories)
 
+-- | Attach the categories specified by the given list of category names to the
+-- | tag with the given name. Returns valid if the the tag and categories each
+-- | exist; otherwise invalid.
+categorize :: String -> [String] -> App Validation
+categorize tagName categoryNames = runDB $ do
+    tagID <- DB.selectTagIDByName tagName
+
+    categoryIDs <- forM categoryNames $ \categoryName -> do
+        categoryID <- DB.selectCategoryIDByName categoryName
+        case categoryID of
+            Just id -> return (Right id)
+            Nothing -> return (Left categoryName)
+
+    let found   = rights categoryIDs
+        missing = lefts  categoryIDs
+
+    case (tagID, found, missing) of
+        (Just tid, cids, []) -> DB.attachCategories tid cids >> return Valid
+        (Nothing,  _,     _) -> return $ Invalid [TagNotFound tagName]
+        (_,        _,    xs) -> return $ Invalid [CategoriesNotFound xs]
+
 ----------------------------------------------------------------------- Utility
 
 -- | Sanitizes the given list of tag names.
@@ -52,5 +74,5 @@ validate (Tag name) =
         isValidChar x          = isAlphaNum x || isSpace x || elem x "'.-'@!☆?"
 
     in Validation.validateSingle
-        [ Validation.verify (isValidStartChar name) $ InvalidTag name
-        , Validation.verify (all isValidChar name)  $ InvalidTag name ]
+        [ Validation.verify (isValidStartChar name) $ InvalidTagName name
+        , Validation.verify (all isValidChar name)  $ InvalidTagName name ]

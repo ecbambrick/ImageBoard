@@ -9,7 +9,9 @@ import Data.Monoid  ( Monoid, mempty, mappend )
 
 -- | The list of possible errors.
 data Error = IDNotFound Int64
-           | InvalidTag String
+           | TagNotFound String
+           | CategoriesNotFound [String]
+           | InvalidTagName String
            | InvalidScopeName String
            | InvalidScopeExpression String
            | DuplicateHash String
@@ -20,9 +22,11 @@ data Error = IDNotFound Int64
 data Validation = Valid | Invalid [Error]
 
 instance Show Error where
-    show (IDNotFound              x) = "No item with ID " ++ show x ++ " was found"
-    show (InvalidTag             []) = "Tag name cannot be empty"
-    show (InvalidTag              x) = "Invalid tag name: " ++ x
+    show (IDNotFound              x) = "No post with ID " ++ show x ++ " was found"
+    show (TagNotFound             x) = "No tag with the name \"" ++ x ++ "\" was found"
+    show (CategoriesNotFound      x) = "No categories with the names \"" ++ show x ++ "\" was found"
+    show (InvalidTagName         []) = "Tag name cannot be empty"
+    show (InvalidTagName          x) = "Invalid tag name: " ++ x
     show (InvalidScopeName       []) = "Scope name cannot be empty"
     show (InvalidScopeName        x) = "Invalid scope name: " ++ x
     show (InvalidScopeExpression []) = "Scope expression cannot be empty"

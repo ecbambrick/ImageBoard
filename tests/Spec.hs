@@ -97,3 +97,7 @@ main = hspec $ do
             it "returns nothing when there are no matching tags" pending
             it "returns every tag when given an empty expression" pending
             it "returns matching tags when given a non-empty expression" pending
+        describe "categorize" $ do
+            it "does not categorize a non-existant tag" pending
+            it "does not categorize a non-existant category" pending
+            it "associates the given tag with each given category" pending

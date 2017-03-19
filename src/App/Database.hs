@@ -18,7 +18,8 @@ module App.Database
 
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
-    , selectTagsDetails, selectTagCategories, attachTags, cleanTags, detachTags
+    , selectTagIDByName, selectTagsDetails, selectTagCategories, attachTags
+    , cleanTags, detachTags, attachCategories, selectCategoryIDByName
     ) where
 
 import qualified Database.Engine  as SQL
@@ -291,6 +292,31 @@ detachTag postID tagName = do
 detachTags :: [String] -> ID -> Transaction ()
 detachTags tagNames postID = mapM_ (detachTag postID) tagNames
 
+-- | Associates the tag with the given ID with all the categories with the given
+-- | IDs.
+attachCategories :: ID -> [ID] -> Transaction ()
+attachCategories tagID categoryIDs =
+    forM_ categoryIDs $ \categoryID ->
+        SQL.insert "tag_category"
+            [ "tag_id"      << tagID
+            , "category_id" << categoryID ]
+
+-- | Returns the ID of the tag with the given name or nothing if the tag name
+-- | does not exist.
+selectTagIDByName :: String -> Transaction (Maybe ID)
+selectTagIDByName tagName = SQL.single $ do
+    t <- from "tag"
+    wherever (t "name" .= tagName)
+    retrieve [t "id"]
+
+-- | Returns the ID of the category with the given name or nothing if the
+-- | category name does not exist.
+selectCategoryIDByName :: String -> Transaction (Maybe ID)
+selectCategoryIDByName categoryName = SQL.single $ do
+    t <- from "category"
+    wherever (t "name" .= categoryName)
+    retrieve [t "id"]
+
 ------------------------------------------------------------------------ Albums
 
 -- | Inserts a new album into the database and returns its ID.
@@ -540,14 +566,6 @@ selectCount table expression = do
         retrieve [count (p "id")]
 
     return results
-
--- | Returns the ID of the tag with the given name or nothing if the tag name
--- | does not exist.
-selectTagIDByName :: String -> Transaction (Maybe ID)
-selectTagIDByName tagName = SQL.single $ do
-    t <- from "tag"
-    wherever (t "name" .= tagName)
-    retrieve [t "id"]
 
 -- | Maps the given integer to a boolean.
 bool :: (Functor f) => f Int -> f Bool
