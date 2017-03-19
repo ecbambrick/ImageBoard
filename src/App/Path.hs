@@ -12,116 +12,85 @@ import System.FilePath      ( (</>), (<.>), isValid )
 
 ------------------------------------------------------------------- Application
 
--- | Returns the URL prefix for requesting data files.
-getDataPrefix :: String
-getDataPrefix = "data"
+-- | Returns the path prefix for data files.
+dataPrefix :: String
+dataPrefix = "data"
 
--- | Returns the URL prefix for requesting static files.
-getStaticPrefix :: String
-getStaticPrefix = "static"
+-- | Returns the path prefix for static files.
+staticPrefix :: String
+staticPrefix = "static"
 
--- | Returns the URL prefix for API methods.
-getApiPrefix :: String
-getApiPrefix = "api"
+-- | Returns the path prefix for API methods.
+apiPrefix :: String
+apiPrefix = "api"
 
--- | Returns the path of the template with the given name.
-getDataPath :: (MonadReader Config m) => m FilePath
-getDataPath = do
+-- | Returns the path to the data directory.
+dataDirectory :: (MonadReader Config m) => m FilePath
+dataDirectory = do
     storagePath <- asks configStoragePath
-    return (storagePath </> getDataPrefix)
+    return (storagePath </> dataPrefix)
 
 ------------------------------------------------------------------------ Images
 
 -- | Returns the absolute file path of the given image.
-getImagePath :: (MonadReader Config m) => Image -> m FilePath
-getImagePath image = do
+imageFile :: (MonadReader Config m) => Image -> m FilePath
+imageFile image = do
     storagePath <- asks configStoragePath
-    return (storagePath </> getRelativeImagePath image)
+    return (storagePath </> relativeImageFile image)
 
--- | Returns the absolute file path of the thumbnail for the given image.
-getImageThumbnailPath :: (MonadReader Config m) => Image -> m FilePath
-getImageThumbnailPath image = do
+-- | Returns the absolute file path for the thumbnail of the given image.
+imageThumb :: (MonadReader Config m) => Image -> m FilePath
+imageThumb image = do
     storagePath <- asks configStoragePath
-    return (storagePath </> getRelativeImageThumbnailPath image)
+    return (storagePath </> relativeImageThumb image)
 
--- | Returns the relative URL of the given image
-getImageURL :: Image -> FilePath
-getImageURL image = toURL (getRelativeImagePath image)
-
--- | Returns the relative URL of the thumbnail for the given image.
-getImageThumbnailURL :: Image -> FilePath
-getImageThumbnailURL image = toURL (getRelativeImageThumbnailPath image)
-
--- | Returns the relative file path of the thumbnail for the given image.
-getRelativeImageThumbnailPath :: Image -> FilePath
-getRelativeImageThumbnailPath image = base </> take 2 hash </> hash <.> "jpg"
-    where base = getDataPrefix </> "thumb"
+-- | Returns the relative file path for the thumbnail of the given image.
+relativeImageThumb :: Image -> FilePath
+relativeImageThumb image = base </> take 2 hash </> hash <.> "jpg"
+    where base = dataPrefix </> "thumb"
           hash = imageHash image
 
 -- | Returns the relative file path of the given image.
-getRelativeImagePath :: Image -> FilePath
-getRelativeImagePath image = base </> take 2 hash </> hash <.> ext
-    where base = getDataPrefix </> "image"
+relativeImageFile :: Image -> FilePath
+relativeImageFile image = base </> take 2 hash </> hash <.> ext
+    where base = dataPrefix </> "image"
           hash = imageHash image
           ext  = imageExtension image
 
 ------------------------------------------------------------------------ Albums
 
--- | Returns the absolute directory path of the given album.
-getAlbumPath :: (MonadReader Config m) => ID -> m FilePath
-getAlbumPath id = do
+-- | Returns the absolute directory path of the album with the given ID.
+albumDirectory :: (MonadReader Config m) => ID -> m FilePath
+albumDirectory id = do
     storagePath <- asks configStoragePath
-    return (storagePath </> getRelativeAlbumPath id)
+    return (storagePath </> relativeAlbumDirectory id)
 
--- | Returns the absolute file path of the thumbnail for the given album.
-getAlbumThumbnailPath :: (MonadReader Config m) => ID -> m FilePath
-getAlbumThumbnailPath id = do
+-- | Returns the absolute file path for the thumbnail of the album with the
+-- | given ID.
+albumThumb :: (MonadReader Config m) => ID -> m FilePath
+albumThumb id = do
     storagePath <- asks configStoragePath
-    return (storagePath </> getRelativeAlbumPath id </> "thumbnail.jpg")
+    return (storagePath </> relativeAlbumDirectory id </> "thumbnail.jpg")
 
--- | Returns the relative URL of the given album.
-getAlbumURL :: Album -> FilePath
-getAlbumURL Album {..} = toURL (getRelativeAlbumPath albumID)
-
--- | Returns the relative URL of the thumbnail of the given album.
-getAlbumThumbnailURL :: Album -> FilePath
-getAlbumThumbnailURL Album {..} = toURL (getRelativeAlbumPath albumID </> "thumbnail.jpg")
-
--- | Returns the relative file path of the given album.
-getRelativeAlbumPath :: ID -> FilePath
-getRelativeAlbumPath id = base </> show (id `mod` 100) </> show id
-    where base = getDataPrefix </> "album"
+-- | Returns the relative directory path of the album with the given ID.
+relativeAlbumDirectory :: ID -> FilePath
+relativeAlbumDirectory id = base </> show (id `mod` 100) </> show id
+    where base = dataPrefix </> "album"
 
 ------------------------------------------------------------------------- Pages
 
--- | Returns the absolute directory path of the given page for the album with
+-- | Returns the absolute file path for the given page of the album with
 -- | the given ID.
-getPagePath :: (MonadReader Config m) => ID -> Page -> m FilePath
-getPagePath id Page {..} = do
+pageFile :: (MonadReader Config m) => ID -> Page -> m FilePath
+pageFile id Page {..} = do
     storagePath <- asks configStoragePath
-    basePath    <- getAlbumPath id
+    basePath    <- albumDirectory id
     return (basePath </> show pageNumber <.> pageExtension)
 
--- | Returns the absolute directory path of the thumbnail for the given page
--- | for the album with the given ID.
-getPageThumbnailPath :: (MonadReader Config m) => ID -> Page -> m FilePath
-getPageThumbnailPath id Page {..} = do
+-- | Returns the absolute file path for the thumbnail for the given page
+-- | of the album with the given ID.
+pageThumb :: (MonadReader Config m) => ID -> Page -> m FilePath
+pageThumb id Page {..} = do
     storagePath <- asks configStoragePath
-    basePath    <- getAlbumPath id
+    basePath    <- albumDirectory id
     return (basePath </> "t" ++ show pageNumber <.> "jpg")
-
--- | Returns the relative URL of the given page.
-getPageURL :: ID -> Page -> FilePath
-getPageURL id Page {..} = toURL path
-    where path = getRelativeAlbumPath id </> show pageNumber <.> pageExtension
-
--- | Returns the relative URL of the thumbnail of the given page.
-getPageThumbnailURL :: ID -> Page -> FilePath
-getPageThumbnailURL id Page {..} = toURL path
-    where path = getRelativeAlbumPath id </> "t" ++ show pageNumber <.> "jpg"
-
------------------------------------------------------------------------ Utility
-
--- | Converts the given file path to a URL.
-toURL :: FilePath -> FilePath
-toURL path = replace "\\" "/" ("/" ++ path)

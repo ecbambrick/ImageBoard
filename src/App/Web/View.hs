@@ -64,7 +64,7 @@ albumView scope query timeZone album @ Album {..} = render $ do
         Elem.gallery2 $
             flip map albumPages $ \page @ Page {..} ->
                 ( URL.page scope albumID pageNumber
-                , Path.getPageThumbnailURL albumID page)
+                , URL.pageThumb albumID page)
 
 -- | Renders an index view for albums as text containing HTML.
 albumsView :: Scope -> String -> Int -> Int -> Int -> [Album] -> Text
@@ -135,8 +135,8 @@ imageView scope query timeZone prevImage currImage nextImage = render $ do
         curr    = imageID currImage
         next    = imageID nextImage
         title   = "Image " <> display curr
-        source1 = Path.getImageURL currImage
-        source2 = Path.getImageURL nextImage
+        source1 = URL.imageFile currImage
+        source2 = URL.imageFile nextImage
         onload  = JS.functionCall "ImageViewModel.register" args
         args    = [ JS.toJSON (scopeName scope)
                   , JS.toJSON query
@@ -253,8 +253,8 @@ pageView scope album @ Album {..} curr = render $ do
         prevPageURL = URL.page  scope albumID prev
         nextPageURL = URL.page  scope albumID next
 
-        source1  = maybe "" (Path.getPageURL albumID) (Album.getPage album curr)
-        source2  = maybe "" (Path.getPageURL albumID) (Album.getPage album next)
+        source1  = maybe "" (URL.pageFile albumID) (Album.getPage album curr)
+        source2  = maybe "" (URL.pageFile albumID) (Album.getPage album next)
 
     Elem.document title onload $ do
         Elem.sideBar $ do

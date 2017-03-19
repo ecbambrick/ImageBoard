@@ -51,9 +51,9 @@ querySingle name
 validate :: Scope -> Validation
 validate (Scope name expr) =
     let invalidNames  = [ scopeName defaultScope
-                        , Path.getDataPrefix
-                        , Path.getStaticPrefix
-                        , Path.getApiPrefix ]
+                        , Path.dataPrefix
+                        , Path.staticPrefix
+                        , Path.apiPrefix ]
 
     in Validation.validate
         [ Validation.verify (length name > 0) (InvalidScopeName name)

@@ -44,7 +44,7 @@ count = runDB . DB.selectAlbumsCount
 delete :: DeletionMode -> ID -> App ()
 delete MarkAsDeleted id = runDB (DB.markPostAsDeleted id)
 delete PermanentlyDelete id = do
-    path <- Path.getAlbumPath id
+    path <- Path.albumDirectory id
 
     liftIO $ do
         pathExists <- doesDirectoryExist path
@@ -82,9 +82,9 @@ insert path title tagNames = do
             return id
 
         unless (null entries) $ do
-            basePath  <- Path.getAlbumPath id
-            firstPath <- Path.getPagePath id (toPage (head entries) 1)
-            thumbPath <- Path.getAlbumThumbnailPath id
+            basePath  <- Path.albumDirectory id
+            firstPath <- Path.pageFile id (toPage (head entries) 1)
+            thumbPath <- Path.albumThumb id
             thumbSize <- asks configThumbnailSize
 
             liftIO $ createDirectoryIfMissing True basePath
@@ -148,8 +148,8 @@ extractFile id (entry, index) = do
     let contents = fromEntry entry
         page     = toPage entry index
 
-    extractPath   <- Path.getPagePath id page
-    thumbnailPath <- Path.getPageThumbnailPath id page
+    extractPath   <- Path.pageFile id page
+    thumbnailPath <- Path.pageThumb id page
     thumbSize     <- asks configThumbnailSize
 
     liftIO $ do

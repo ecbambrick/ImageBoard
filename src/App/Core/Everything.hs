@@ -16,7 +16,7 @@ import Control.Monad.Reader ( asks, liftIO, unless, when )
 -- | Deletes all data from the database.
 delete :: App ()
 delete = do
-    dataPath <- Path.getDataPath
+    dataPath <- Path.dataDirectory
 
     liftIO $ do
         pathExists <- Dir.doesDirectoryExist dataPath
@@ -28,7 +28,7 @@ delete = do
 -- | Initializes a new database if one does not already exist.
 initialize :: App ()
 initialize = do
-    dataPath    <- Path.getDataPath
+    dataPath    <- Path.dataDirectory
     storagePath <- asks configStoragePath
 
     liftIO $ do

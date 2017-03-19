@@ -47,8 +47,8 @@ delete PermanentlyDelete id = do
             return ()
 
         Just image -> do
-            imagePath   <- Path.getImagePath image
-            thumbPath   <- Path.getImageThumbnailPath image
+            imagePath   <- Path.imageFile image
+            thumbPath   <- Path.imageThumb image
             imageExists <- liftIO $ doesFileExist imagePath
             thumbExists <- liftIO $ doesFileExist thumbPath
 
@@ -77,8 +77,8 @@ insert fromPath ext title tagNames = do
         results     = validate image <> isDuplicate
 
     when (Validation.isValid results) $ do
-        toPath    <- Path.getImagePath image
-        thumbPath <- Path.getImageThumbnailPath image
+        toPath    <- Path.imageFile image
+        thumbPath <- Path.imageThumb image
 
         liftIO $ do
             createDirectoryIfMissing True $ takeDirectory toPath

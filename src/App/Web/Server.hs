@@ -46,14 +46,14 @@ routes = do
     Spock.middleware $ Middleware.staticPolicy $ mconcat
         [ Middleware.noDots
         , Middleware.isNotAbsolute
-        , Middleware.hasPrefix Path.getDataPrefix
+        , Middleware.hasPrefix Path.dataPrefix
         , Middleware.addBase storagePath ]
 
     -- Enables access to other static content such as JavaScript and CSS files.
     Spock.middleware $ Middleware.staticPolicy $ mconcat
         [ Middleware.noDots
         , Middleware.isNotAbsolute
-        , Middleware.hasPrefix Path.getStaticPrefix ]
+        , Middleware.hasPrefix Path.staticPrefix ]
 
     -- Redirects to the images page.
     get Route.root $ do

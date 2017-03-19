@@ -258,8 +258,8 @@ tagDetail scope query DetailedTag {..} = do
             Right (Album {..}) -> URL.album scope albumID
 
         sampleThumbnail = case detailedTagSample of
-            Left  image -> Path.getImageThumbnailURL image
-            Right album -> Path.getAlbumThumbnailURL album
+            Left  image -> URL.imageThumb image
+            Right album -> URL.albumThumb album
 
         imageAction = case detailedTagImageCount of
             0 -> disabledAction Icon.Image
@@ -279,7 +279,7 @@ tagDetail scope query DetailedTag {..} = do
 
     div_ [class_ "tag-item"] $ do
         a_ [href_ sampleLink] $ do
-            img_ [src_ (Text.pack sampleThumbnail)]
+            img_ [src_ sampleThumbnail]
         div_ [class_ "tag-data"] $ do
             span_ [class_ "tag-name"] (toHtml detailedTagName)
             imageCount
@@ -355,19 +355,19 @@ imageTags scope tagNames =
             a_ [class_ "tag", href_ (URL.images scope 1 name)] (toHtml name)
 
 -- | Returns an HTML element for displaying a full size image(s).
-canvas :: String -> String -> Html ()
+canvas :: Text -> Text -> Html ()
 canvas url1 url2 =
-    let image src id = img_   [ id_ id, class_ "image", src_ (Text.pack src) ]
-        video src id = video_ [ id_ id, class_ "video", src_ (Text.pack src)
+    let image src id = img_   [ id_ id, class_ "image", src_ src ]
+        video src id = video_ [ id_ id, class_ "video", src_ src
                               , autoplay_ "", loop_ "", controls_ ""] mempty :: Html ()
 
     in main_ [id_ "display"] $ do
         div_ [id_ "current-image-container"] $
-            if FilePath.takeExtension url1 == ".webm"
+            if FilePath.takeExtension (Text.unpack url1) == ".webm"
                 then video url1 "current-image"
                 else image url1 "current-image"
         div_ [id_ "next-image-container", class_ "hidden"] $
-            if FilePath.takeExtension url2 == ".webm"
+            if FilePath.takeExtension (Text.unpack url2) == ".webm"
                 then video url2 "next-image"
                 else image url2 "next-image"
 
@@ -385,7 +385,7 @@ imageGallery scope query images =
     div_ [id_ "gallery2"] $
         forM_ images $ \image @ Image {..} -> do
             let url      = URL.image scope imageID query
-                thumb    = Text.pack $ Path.getImageThumbnailURL image
+                thumb    = URL.imageThumb image
                 buildURL = URL.images scope 0
 
             a_ [contextmenu_ (getMenuID imageID), href_ url] $ do
@@ -398,7 +398,7 @@ albumGallery scope query albums =
     div_ [id_ "gallery2"] $
         forM_ albums $ \album @ Album {..} -> do
             let url      = URL.album scope albumID
-                thumb    = Text.pack $ Path.getAlbumThumbnailURL album
+                thumb    = URL.albumThumb album
                 buildURL = URL.albums scope 0
 
             a_ [contextmenu_ (getMenuID albumID), href_ url] $ do
@@ -406,12 +406,12 @@ albumGallery scope query albums =
                 thumbnailMenu buildURL query albumID albumTagNames
 
 -- | Returns an HTML element for displaying a grid of thumbnails.
-gallery2 :: [(Text, String)] -> Html ()
+gallery2 :: [(Text, Text)] -> Html ()
 gallery2 items =
     div_ [id_ "gallery2"] $
         forM_ items $ \(url, thumbnail) ->
             a_ [href_ url] $
-                img_ [src_ (Text.pack thumbnail)]
+                img_ [src_ thumbnail]
 
 ----------------------------------------------------------------------- Utility
 
