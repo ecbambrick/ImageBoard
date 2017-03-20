@@ -25,7 +25,10 @@ library
     default-language:   Haskell2010
 
     exposed-modules:
-        App.Core.Album
+        App.Console.Everything
+      , App.Console.Import
+      , App.Console.Scope
+      , App.Core.Album
       , App.Core.Everything
       , App.Core.Image
       , App.Core.Post
@@ -36,7 +39,6 @@ library
       , App.Config
       , App.Database
       , App.Expression
-      , App.Import
       , App.Path
       , App.Validation
       , App.Web.Element

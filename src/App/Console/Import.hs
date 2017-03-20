@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
-module App.Import ( fromDirectory ) where
+module App.Console.Import ( directory ) where
 
 import qualified App.Core.Post    as Post
 import qualified System.Directory as Dir
@@ -20,12 +20,14 @@ import Text.Parsec          ( ParseError, (<|>), anyChar, between, char, choice
                             , eof, lookAhead, many, manyTill, noneOf, option
                             , spaces, try )
 
+--------------------------------------------------------------------- Importing
+
 -- | Import each valid file in the given directory into the database. If an
 -- | optional output directory is provided, each imported file will be moved
 -- | to that directory. The given list of tags will be added to each imported
 -- | file.
-fromDirectory :: FilePath -> Maybe FilePath -> [String] -> App ()
-fromDirectory inPath outPath extraTags = do
+directory :: FilePath -> Maybe FilePath -> [String] -> App ()
+directory inPath outPath extraTags = do
     liftIO $ do
         isInPathValid  <- Dir.doesDirectoryExist inPath
         isOutPathValid <- maybe (return True) Dir.doesDirectoryExist outPath

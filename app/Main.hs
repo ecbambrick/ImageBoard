@@ -1,27 +1,30 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-import qualified App.Control         as Application
-import qualified App.Core.Everything as Everything
-import qualified App.Core.Scope      as Scope
-import qualified App.Import          as Import
-import qualified App.Web.Server      as Server
-import qualified System.Console.Args as CLI
+import qualified App.Console.Everything as Console.Everything
+import qualified App.Console.Scope      as Console.Scope
+import qualified App.Console.Import     as Console.Import
+import qualified App.Control            as App
+import qualified App.Web.Server         as Server
+import qualified System.Console.Args    as CLI
 
-import App.Validation       ( isValid )
-import Control.Monad.Reader ( liftIO, unless, when )
-import Data.Textual         ( splitOn, toLower )
+import Data.Textual ( splitOn )
 
 main = CLI.cli "Image board." $ do
     isTesting <- CLI.option "test" "Run the command in a temporary test environment."
 
-    let runApplication = if isTesting then CLI.run . Application.testApplication
-                                      else CLI.run . Application.runApplication
-        runServer      = if isTesting then CLI.run . Application.testServer
-                                      else CLI.run . Application.runServer
+    let runApplication = if isTesting then CLI.run . App.testApplication
+                                      else CLI.run . App.runApplication
+        runServer      = if isTesting then CLI.run . App.testServer
+                                      else CLI.run . App.runServer
 
     -- Run the web server.
     CLI.command "run" $ do
         runServer Server.routes
+
+    -- Delete all data from the database.
+    CLI.command "delete-all-data" $ do
+        autoYes <- CLI.option ('y', "auto-yes") "Automatically answer yes to prompts."
+        runApplication $ Console.Everything.delete autoYes
 
     -- Import all relevant files from the given directory.
     CLI.command "import" $ do
@@ -32,25 +35,7 @@ main = CLI.cli "Image board." $ do
         let outPath = if isTesting then Nothing else moveFiles
             tags    = maybe [] (splitOn ",") tagString
 
-        runApplication $ do
-            Import.fromDirectory inPath outPath tags
-
-    -- Delete all data from the database.
-    CLI.command "delete-all-data" $ do
-        autoYes <- CLI.option ('y', "auto-yes") "Automatically answer yes to prompts."
-
-        runApplication $ do
-            continue <- if autoYes
-                then do
-                    return True
-                else do
-                    liftIO $ putStrLn "Are you sure you want to delete all data?"
-                    response <- liftIO $ toLower <$> getLine
-
-                    return (response == "y" || response == "yes")
-
-            when continue $ do
-                Everything.delete
+        runApplication $ Console.Import.directory inPath outPath tags
 
     -- | Manage scopes.
     CLI.command "scope" $ do
@@ -58,15 +43,8 @@ main = CLI.cli "Image board." $ do
         CLI.command "set" $ do
             name       <- CLI.argument "name"
             expression <- CLI.argument "expression"
-
-            runApplication $ do
-                result <- Scope.insertOrUpdate name expression
-
-                unless (isValid result) $ do
-                    liftIO $ print result
+            runApplication $ Console.Scope.set name expression
 
         CLI.command "remove" $ do
             name <- CLI.argument "name"
-
-            runApplication $ do
-                Scope.delete name
+            runApplication $ Console.Scope.remove name
