@@ -13,7 +13,7 @@ import qualified Graphics.FFmpeg as Graphics
 
 import App.Config           ( Config(..) )
 import App.Control          ( runDB )
-import App.Core.Types       ( DeletionMode(..), Tag(..), Image(..), App, ID )
+import App.Core.Types       ( DeletionMode(..), Image(..), App, ID )
 import App.Expression       ( Expression )
 import App.Validation       ( Error(..), Validation )
 import Control.Monad        ( when )
@@ -150,5 +150,5 @@ update id title tags = do
 validate :: Image -> Validation
 validate Image {..} =
     Validation.validate
-        [ Tag.validateMany $ map Tag imageTagNames
+        [ Tag.validateMany $ imageTagNames
         , Validation.verify (imageFileSize > 0) (InvalidFileSize imageFileSize) ]

@@ -61,8 +61,11 @@ CREATE TABLE category (
 DROP TABLE IF EXISTS tag;
 CREATE TABLE tag (
     id      INTEGER     PRIMARY KEY AUTOINCREMENT,
-    name    TEXT        UNIQUE NOT NULL
+    name    TEXT        UNIQUE NOT NULL,
+    created INTEGER     NOT NULL
 );
+
+CREATE INDEX tag_created_index ON tag(created);
 
 DROP TABLE IF EXISTS post_tag;
 CREATE TABLE post_tag (

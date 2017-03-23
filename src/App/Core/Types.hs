@@ -70,14 +70,17 @@ data Scope = Scope
     } deriving (Eq, Show)
 
 -- | A tag that has been attached to an image or album.
-data Tag = Tag
-    { tagName :: String
+data SimpleTag = SimpleTag
+    { tagID      :: ID
+    , tagName    :: String
+    , tagCreated :: DateTime
     } deriving (Eq, Show)
 
--- | Meta data regarding a tag,
+-- | Meta data regarding a tag.
 data DetailedTag = DetailedTag
     { detailedTagID         :: ID
     , detailedTagName       :: String
+    , detailedTagCreated    :: DateTime
     , detailedTagImageCount :: Int
     , detailedTagAlbumCount :: Int
     , detailedTagSample     :: Either Image Album

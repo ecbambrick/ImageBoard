@@ -16,7 +16,7 @@ import qualified Data.Text.Lazy   as LazyText
 import qualified Text.JavaScript  as JS
 
 import App.Core.Types      ( Album(..), DetailedTag(..), Image(..), Page(..)
-                           , Scope(..), Tag(..) )
+                           , Scope(..) )
 import Control.Applicative ( (<|>) )
 import Control.Monad       ( forM_, when )
 import Data.List.Extended  ( groupWith )

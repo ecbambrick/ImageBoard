@@ -18,8 +18,9 @@ module App.Database
 
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
-    , selectTagIDByName, selectTagsDetails, selectTagCategories, attachTags
-    , cleanTags, detachTags, attachCategories, selectCategoryIDByName
+    , selectTagIDByName, selectTagDetails, selectTagCategories
+    , attachTags, cleanTags, detachTags, attachCategories
+    , selectCategoryIDByName
     ) where
 
 import qualified Database.Engine  as SQL
@@ -28,21 +29,23 @@ import qualified Data.Text        as Text
 import qualified Data.Traversable as Traversable
 
 import App.Config            ( Config(..) )
-import App.Core.Types        ( Album(..), Image(..), Page(..), Scope(..), Tag(..), App, ID )
+import App.Core.Types        ( Album(..), Image(..), Page(..), Scope(..)
+                             , SimpleTag(..), App, ID )
 import App.Expression        ( Match(..), Token(..), Expression )
+import Control.Applicative   ( (<|>) )
 import Control.Monad.Reader  ( asks, liftIO, forM_, void, unless )
 import Data.DateTime         ( DateTime )
 import Data.Functor.Extended ( (<$$>) )
 import Data.Int              ( Int64 )
-import Data.Maybe            ( isJust, listToMaybe )
+import Data.Maybe            ( isJust, listToMaybe, fromMaybe )
 import Data.Text             ( Text )
 import Data.Textual          ( replace, splitOn, toLower, trim )
 import Database.Engine       ( Transaction(..), FromRow, fromRow, field )
 import Database.Query        ( OrderBy(..), Table, Query, (.|), (.&), (~%), (%%)
-                             , (.=), (./=), (.>), (.>=), (.<), (*=), (<<), asc, clearOrder
-                             , count, desc, exists, groupBy, limit, from
-                             , fromLeft, nay, offset, on, randomOrder, retrieve
-                             , wherever )
+                             , (.=), (./=), (.>), (.>=), (.<), (*=), (<<), asc
+                             , clearOrder, count, desc, exists, groupBy, limit
+                             , from, fromLeft, nay, offset, on, randomOrder
+                             , retrieve, wherever )
 import System.Directory      ( doesFileExist, removeFile )
 
 ------------------------------------------------------------------------- Types
@@ -50,14 +53,17 @@ import System.Directory      ( doesFileExist, removeFile )
 -- | The direction to use when selecting an adjacent entity in the database.
 data Direction = Next | Prev
 
+-- | Wrapper around string to create a FromRow instance.
+data WrappedString = WrappedString { innerString :: String }
+
 instance FromRow Int64 where
     fromRow = field
 
 instance FromRow Int where
     fromRow = field
 
-instance FromRow Text where
-    fromRow = field
+instance FromRow WrappedString where
+    fromRow = WrappedString <$> field
 
 instance FromRow Album where
     fromRow = Album <$> field      <*> field <*> bool field <*> time field
@@ -71,8 +77,8 @@ instance FromRow Image where
 instance FromRow Page where
     fromRow = Page <$> field <*> field <*> field
 
-instance FromRow Tag where
-    fromRow = Tag <$> field
+instance FromRow SimpleTag where
+    fromRow = SimpleTag <$> field <*> field <*> time field
 
 instance FromRow Scope where
     fromRow = Scope <$> field <*> field
@@ -202,12 +208,15 @@ selectImagesCount = selectCount "image"
 -------------------------------------------------------------------------- Tags
 
 -- | Returns a list of all tags attached to the post with the given ID.
-selectTagsByPost :: ID -> Transaction [Tag]
-selectTagsByPost postID = SQL.query $ do
-    t  <- tags
-    pt <- from "post_tag" `on` ("tag_id" *= t "id")
-    wherever (pt "post_id" .= postID)
-    retrieve [t "name"]
+selectTagsByPost :: ID -> Transaction [String]
+selectTagsByPost postID = do
+    results <- SQL.query $ do
+        t  <- tags
+        pt <- from "post_tag" `on` ("tag_id" *= t "id")
+        wherever (pt "post_id" .= postID)
+        retrieve [t "name"]
+
+    return (innerString <$> results)
 
 -- | Returns tag data for tags that are attached to at least one post that
 -- | satisfies the given expression.
@@ -218,20 +227,20 @@ selectTagsByPost postID = SQL.query $ do
 -- |   * the ID of a post with the tag attached
 -- |   * the number of images with the tag
 -- |   * the number of albums with the tag
-selectTagsDetails :: Expression -> Transaction [(ID, String, ID, Int, Int)]
-selectTagsDetails expression =  do
+selectTagDetails :: Expression -> Transaction [(ID, String, DateTime, ID, Int, Int)]
+selectTagDetails expression =  do
     now <- liftIO $ DateTime.getCurrentTime
     SQL.query $ do
         t  <- from     "tag"
-        pt <- from     "post_tag"  `on` ("tag_id"  *= t  "id")
-        p  <- from     "post"      `on` ("id"      *= pt "post_id")
-        i  <- fromLeft "image"     `on` ("post_id" *= p  "id")
-        a  <- fromLeft "album"     `on` ("post_id" *= p  "id")
+        pt <- from     "post_tag" `on` ("tag_id"  *= t  "id")
+        p  <- from     "post"     `on` ("id"      *= pt "post_id")
+        i  <- fromLeft "image"    `on` ("post_id" *= p  "id")
+        a  <- fromLeft "album"    `on` ("post_id" *= p  "id")
         satisfying expression now p
         wherever (p "is_deleted" .= False)
         groupBy  (t "name")
         asc      (t "name")
-        retrieve [t "id", t "name", p "id", count (i "id"), count (a "id")]
+        retrieve [t "id", t "name", t "created", p "id", count (i "id"), count (a "id")]
 
 -- | Returns the list of category names for the tag with the given ID.
 selectTagCategories :: ID -> Transaction [String]
@@ -242,7 +251,7 @@ selectTagCategories tagID = do
         wherever (tc "tag_id" .= tagID)
         retrieve [c "name"]
 
-    return (Text.unpack <$> categories)
+    return (innerString <$> categories)
 
 -- | Deletes all tags from the database that are not attached to any post.
 cleanTags :: Transaction ()
@@ -260,21 +269,25 @@ cleanTags = do
 
 -- | Associates the post with the given ID with the tag with the given name.
 -- | If the tag does not exist, it is created.
-attachTag :: ID -> String -> Transaction ()
-attachTag postID tagName = do
-    tagID  <- selectTagIDByName tagName
-    tagID' <- case tagID of
-        Nothing -> SQL.insert "tag" [ "name" << tagName ]
-        Just id -> return id
+attachTag :: ID -> DateTime -> String -> Transaction ()
+attachTag postID created tagName = do
+    let existingID = selectTagIDByName tagName
+        newID      = SQL.insert "tag"
+                        [ "name"    << tagName
+                        , "created" << DateTime.toSeconds created ]
+
+    tagID <- fromMaybe <$> newID <*> existingID
 
     void $ SQL.insert "post_tag"
         [ "post_id" << postID
-        , "tag_id"  << tagID' ]
+        , "tag_id"  << tagID ]
 
 -- | Associates the post with the given ID with all tags that map to the given
 -- | list of names. If any tag does not exists, it is created.
 attachTags :: [String] -> ID -> Transaction ()
-attachTags tagNames postID = mapM_ (attachTag postID) tagNames
+attachTags tagNames postID = do
+    now <- liftIO $ DateTime.getCurrentTime
+    mapM_ (attachTag postID now) tagNames
 
 -- | Disassociates the post with the given ID with the tag with the given name.
 -- | If the tag is not already attached, it is ignored.
@@ -499,13 +512,13 @@ withPages album @ Album {..} = do
 -- | Adds the list of tag names to the given image entity.
 withImageTags :: Image -> Transaction Image
 withImageTags image @ Image {..} = do
-    tagNames <- tagName <$$> selectTagsByPost imageID
+    tagNames <- selectTagsByPost imageID
     return image { imageTagNames = tagNames }
 
 -- | Adds the list of tag names to the given image entity.
 withAlbumTags :: Album -> Transaction Album
 withAlbumTags album @ Album {..} = do
-    tagNames <- tagName <$$> selectTagsByPost albumID
+    tagNames <- selectTagsByPost albumID
     return album { albumTagNames = tagNames }
 
 ----------------------------------------------------------------------- Utility

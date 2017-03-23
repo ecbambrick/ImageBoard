@@ -15,7 +15,7 @@ import qualified System.IO.Metadata as Metadata
 
 import App.Config           ( Config(..) )
 import App.Control          ( runDB )
-import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), Tag(..), App, ID )
+import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), App, ID )
 import App.Expression       ( Expression )
 import App.Validation       ( Error(..), Validation )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
@@ -140,7 +140,7 @@ update id title tags = do
 -- | Returns valid if all fields of the given album are valid; otherwise
 -- | invalid.
 validate :: Album -> Validation
-validate Album {..} = Tag.validateMany $ map Tag albumTagNames
+validate Album {..} = Tag.validateMany albumTagNames
 
 -- | Extracts the given zip file entry.
 extractFile :: ID -> (Entry, Int) -> App ()
