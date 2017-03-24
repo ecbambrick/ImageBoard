@@ -1,6 +1,6 @@
 module Data.DateTime
     ( TimeZone, DateTime, addDays, defaultFormatDate, dropTime, getCurrentTime
-    , getCurrentTimeZone, fromSeconds, toSeconds, utcTimeZone ) where
+    , getCurrentTimeZone, fromDate, fromSeconds, toSeconds, utcTimeZone ) where
 
 import qualified Data.Time.Calendar as Calendar
 
@@ -26,6 +26,13 @@ addDays (UTCTime date time) days = UTCTime (Calendar.addDays days date) time
 -- | Returns the given date time without the time component.
 dropTime :: DateTime -> DateTime
 dropTime (UTCTime date time) = UTCTime date (secondsToDiffTime 0)
+
+-- | Converts a year, month, and day to a date time.
+fromDate :: Integer -> Int -> Int -> DateTime
+fromDate year month day =
+    let date = Calendar.fromGregorian year month day
+        time = secondsToDiffTime 0
+    in UTCTime date time
 
 -- | Converts an integer to a date time.
 fromSeconds :: Integer -> DateTime

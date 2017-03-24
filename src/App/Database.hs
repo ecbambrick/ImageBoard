@@ -18,8 +18,8 @@ module App.Database
 
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
-    , selectTagIDByName, selectTagDetails, selectTagCategories
-    , attachTags, cleanTags, detachTags, attachCategories
+    , selectTagIDByName, selectTagDetails, selectRecentUncategorizedTags
+    , selectTagCategories, attachTags, cleanTags, detachTags, attachCategories
     , selectCategoryIDByName
     ) where
 
@@ -228,7 +228,7 @@ selectTagsByPost postID = do
 -- |   * the number of images with the tag
 -- |   * the number of albums with the tag
 selectTagDetails :: Expression -> Transaction [(ID, String, DateTime, ID, Int, Int)]
-selectTagDetails expression =  do
+selectTagDetails expression = do
     now <- liftIO $ DateTime.getCurrentTime
     SQL.query $ do
         t  <- from     "tag"
@@ -241,6 +241,21 @@ selectTagDetails expression =  do
         groupBy  (t "name")
         asc      (t "name")
         retrieve [t "id", t "name", t "created", p "id", count (i "id"), count (a "id")]
+
+-- | Returns all uncategorized tags created at or after the given date and
+-- | time, sorted by creation time descending.
+selectRecentUncategorizedTags :: DateTime -> Transaction [SimpleTag]
+selectRecentUncategorizedTags date =
+    SQL.query $ do
+        t <- from "tag"
+        wherever (t "created" .>= DateTime.toSeconds date)
+        wherever $ nay $ exists $ do
+            tc <- from "tag_category"
+            wherever (tc "tag_id" .= t "id")
+
+        groupBy  (t "name")
+        desc     (t "created")
+        retrieve [t "id", t "name", t "created"]
 
 -- | Returns the list of category names for the tag with the given ID.
 selectTagCategories :: ID -> Transaction [String]
@@ -271,12 +286,11 @@ cleanTags = do
 -- | If the tag does not exist, it is created.
 attachTag :: ID -> DateTime -> String -> Transaction ()
 attachTag postID created tagName = do
-    let existingID = selectTagIDByName tagName
-        newID      = SQL.insert "tag"
-                        [ "name"    << tagName
-                        , "created" << DateTime.toSeconds created ]
-
-    tagID <- fromMaybe <$> newID <*> existingID
+    existingID <- selectTagIDByName tagName
+    tagID      <- case existingID of
+        Just id -> return id
+        Nothing -> SQL.insert "tag" [ "name"    << tagName
+                                    , "created" << DateTime.toSeconds created ]
 
     void $ SQL.insert "post_tag"
         [ "post_id" << postID
@@ -309,10 +323,18 @@ detachTags tagNames postID = mapM_ (detachTag postID) tagNames
 -- | IDs.
 attachCategories :: ID -> [ID] -> Transaction ()
 attachCategories tagID categoryIDs =
-    forM_ categoryIDs $ \categoryID ->
-        SQL.insert "tag_category"
-            [ "tag_id"      << tagID
-            , "category_id" << categoryID ]
+    forM_ categoryIDs $ \categoryID -> do
+        exists <- SQL.single $ do
+            tc <- from "tag_category"
+            wherever (tc "tag_id" .= tagID)
+            wherever (tc "category_id" .= categoryID)
+            retrieve [tc "tag_id"]
+            :: Transaction (Maybe Int)
+
+        unless (isJust exists) $ do
+            void $ SQL.insert "tag_category"
+                [ "tag_id"      << tagID
+                , "category_id" << categoryID ]
 
 -- | Returns the ID of the tag with the given name or nothing if the tag name
 -- | does not exist.

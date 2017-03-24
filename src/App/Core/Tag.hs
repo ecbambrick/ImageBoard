@@ -36,6 +36,11 @@ query expression = runDB $ do
 
         return (DetailedTag tagID name created imageCount albumCount sample categories)
 
+-- | Returns all uncategorized tags that have been created since the given date
+-- | and time.
+queryRecentUncategorized :: DateTime -> App [SimpleTag]
+queryRecentUncategorized = runDB . DB.selectRecentUncategorizedTags
+
 -- | Attach the categories specified by the given list of category names to the
 -- | tag with the given name. Returns valid if the the tag and categories each
 -- | exist; otherwise invalid.

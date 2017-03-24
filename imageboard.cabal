@@ -25,7 +25,8 @@ library
     default-language:   Haskell2010
 
     exposed-modules:
-        App.Console.Everything
+        App.Console.Category
+      , App.Console.Everything
       , App.Console.Import
       , App.Console.Scope
       , App.Core.Album
@@ -47,6 +48,7 @@ library
       , App.Web.Server
       , App.Web.URL
       , App.Web.View
+      , Data.Control.Monad.Extended
       , Data.Functor.Extended
       , Data.List.Extended
       , Data.Ord.Extended

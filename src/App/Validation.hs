@@ -24,7 +24,7 @@ data Validation = Valid | Invalid [Error]
 instance Show Error where
     show (IDNotFound              x) = "No post with ID " ++ show x ++ " was found"
     show (TagNotFound             x) = "No tag with the name \"" ++ x ++ "\" was found"
-    show (CategoriesNotFound      x) = "No categories with the names \"" ++ show x ++ "\" was found"
+    show (CategoriesNotFound      x) = "No categories with the names " ++ show x ++ " were found"
     show (InvalidTagName         []) = "Tag name cannot be empty"
     show (InvalidTagName          x) = "Invalid tag name: " ++ x
     show (InvalidScopeName       []) = "Scope name cannot be empty"
