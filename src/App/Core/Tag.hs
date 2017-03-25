@@ -8,7 +8,7 @@ import qualified App.Database   as DB
 import qualified App.Validation as Validation
 
 import App.Control      ( runDB )
-import App.Core.Types   ( DetailedTag(..), Scope(..), SimpleTag(..), App )
+import App.Core.Types   ( App, DetailedTag, SimpleTag )
 import App.Expression   ( Expression )
 import App.Validation   ( Error(..), Validation(..) )
 import Control.Monad    ( forM )
@@ -21,20 +21,8 @@ import Data.Textual     ( trim, toLower )
 -------------------------------------------------------------------------- CRUD
 
 -- | Returns the list of all tag entities.
-query :: Expression -> App [DetailedTag]
-query expression = runDB $ do
-    tags <- DB.selectTagDetails expression
-
-    forM tags $ \(tagID, name, created, postID, imageCount, albumCount) -> do
-        categories <- DB.selectTagCategories tagID
-        image      <- DB.selectImage postID
-        album      <- DB.selectAlbum postID
-
-        let sample = case (image, album) of
-                (Just image, _) -> Left image
-                (_, Just album) -> Right album
-
-        return (DetailedTag tagID name created imageCount albumCount sample categories)
+queryDetailed :: Expression -> App [DetailedTag]
+queryDetailed = runDB . DB.selectDetailedTags
 
 -- | Returns all uncategorized tags that have been created since the given date
 -- | and time.

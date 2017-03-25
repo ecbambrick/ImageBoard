@@ -18,7 +18,7 @@ module App.Database
 
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
-    , selectTagIDByName, selectTagDetails, selectRecentUncategorizedTags
+    , selectTagIDByName, selectDetailedTags, selectRecentUncategorizedTags
     , selectTagCategories, attachTags, cleanTags, detachTags, attachCategories
     , selectCategoryIDByName
     ) where
@@ -29,11 +29,11 @@ import qualified Data.Text        as Text
 import qualified Data.Traversable as Traversable
 
 import App.Config            ( Config(..) )
-import App.Core.Types        ( Album(..), Image(..), Page(..), Scope(..)
-                             , SimpleTag(..), App, ID )
+import App.Core.Types        ( Album(..), DetailedTag(..), Image(..), Page(..)
+                             , Scope(..), SimpleTag(..), App, ID )
 import App.Expression        ( Match(..), Token(..), Expression )
 import Control.Applicative   ( (<|>) )
-import Control.Monad.Reader  ( asks, liftIO, forM_, void, unless )
+import Control.Monad.Reader  ( forM, asks, liftIO, forM_, void, unless )
 import Data.DateTime         ( DateTime )
 import Data.Functor.Extended ( (<$$>) )
 import Data.Int              ( Int64 )
@@ -218,19 +218,12 @@ selectTagsByPost postID = do
 
     return (innerString <$> results)
 
--- | Returns tag data for tags that are attached to at least one post that
--- | satisfies the given expression.
--- |
--- | The results include the following data:
--- |   * the tag ID
--- |   * the tag name
--- |   * the ID of a post with the tag attached
--- |   * the number of images with the tag
--- |   * the number of albums with the tag
-selectTagDetails :: Expression -> Transaction [(ID, String, DateTime, ID, Int, Int)]
-selectTagDetails expression = do
-    now <- liftIO $ DateTime.getCurrentTime
-    SQL.query $ do
+-- | Returns all tags that are attached to at least one post that satisfies the
+-- | given expression.
+selectDetailedTags :: Expression -> Transaction [DetailedTag]
+selectDetailedTags expression = do
+    now  <- liftIO $ DateTime.getCurrentTime
+    tags <- SQL.query $ do
         t  <- from     "tag"
         pt <- from     "post_tag" `on` ("tag_id"  *= t  "id")
         p  <- from     "post"     `on` ("id"      *= pt "post_id")
@@ -241,6 +234,18 @@ selectTagDetails expression = do
         groupBy  (t "name")
         asc      (t "name")
         retrieve [t "id", t "name", t "created", p "id", count (i "id"), count (a "id")]
+
+    forM tags $ \(tagID, name, timeStamp, postID, imageCount, albumCount) -> do
+        categories <- selectTagCategories tagID
+        image      <- selectImage postID
+        album      <- selectAlbum postID
+
+        let created = DateTime.fromSeconds timeStamp
+            sample  = case (image, album) of
+                (Just image, _) -> Left image
+                (_, Just album) -> Right album
+
+        return (DetailedTag tagID name created imageCount albumCount sample categories)
 
 -- | Returns all uncategorized tags created at or after the given date and
 -- | time, sorted by creation time descending.

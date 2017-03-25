@@ -216,7 +216,7 @@ routes = do
 
             let fullQuery = Expression.parseMany [query, scopeExpression scope]
 
-            tags <- lift $ Tag.query fullQuery
+            tags <- lift $ Tag.queryDetailed fullQuery
             return (View.tagsView scope query tags)
 
         case result of
