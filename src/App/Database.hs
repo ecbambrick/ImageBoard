@@ -535,13 +535,13 @@ withPages album @ Album {..} = do
 withImageTags :: Image -> Transaction Image
 withImageTags image @ Image {..} = do
     tagNames <- selectTagsByPost imageID
-    return image { imageTagNames = tagNames }
+    return image { imageTags = tagNames }
 
 -- | Adds the list of tag names to the given image entity.
 withAlbumTags :: Album -> Transaction Album
 withAlbumTags album @ Album {..} = do
     tagNames <- selectTagsByPost albumID
-    return album { albumTagNames = tagNames }
+    return album { albumTags = tagNames }
 
 ----------------------------------------------------------------------- Utility
 

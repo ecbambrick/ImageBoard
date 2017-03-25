@@ -124,14 +124,14 @@ update id title tags = do
         Just previousImage -> do
             let result   = validate newImage
                 newImage = previousImage
-                    { imageTagNames = Tag.cleanTags tags
+                    { imageTags = Tag.cleanTags tags
                     , imageTitle    = trim title
                     , imageModified = now }
 
             when (Validation.isValid result) $
                 runDB $ do
-                    let newTags = imageTagNames newImage
-                        oldTags = imageTagNames previousImage
+                    let newTags = imageTags newImage
+                        oldTags = imageTags previousImage
 
                     DB.updateImage newImage
                     DB.detachTags (oldTags \\ newTags) id
@@ -150,5 +150,5 @@ update id title tags = do
 validate :: Image -> Validation
 validate Image {..} =
     Validation.validate
-        [ Tag.validateMany $ imageTagNames
+        [ Tag.validateMany $ imageTags
         , Validation.verify (imageFileSize > 0) (InvalidFileSize imageFileSize) ]

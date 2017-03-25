@@ -390,7 +390,7 @@ imageGallery scope query images =
 
             a_ [contextmenu_ (getMenuID imageID), href_ url] $ do
                 img_ [src_ thumb]
-                thumbnailMenu buildURL query imageID imageTagNames
+                thumbnailMenu buildURL query imageID imageTags
 
 -- | Returns an HTML element for display a grid of album thumbnails.
 albumGallery :: Scope -> String -> [Album] -> Html ()
@@ -403,7 +403,7 @@ albumGallery scope query albums =
 
             a_ [contextmenu_ (getMenuID albumID), href_ url] $ do
                 img_ [src_ thumb]
-                thumbnailMenu buildURL query albumID albumTagNames
+                thumbnailMenu buildURL query albumID albumTags
 
 -- | Returns an HTML element for displaying a grid of thumbnails.
 gallery2 :: [(Text, Text)] -> Html ()

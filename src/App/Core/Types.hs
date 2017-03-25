@@ -38,7 +38,7 @@ data Album = Album
     , albumModified    :: DateTime
     , albumFileSize    :: Int
     , albumPages       :: [Page]
-    , albumTagNames    :: [String]
+    , albumTags        :: [String]
     } deriving (Eq, Show)
 
 -- | Meta data regarding an image file that has been saved.
@@ -53,7 +53,7 @@ data Image = Image
     , imageCreated     :: DateTime
     , imageModified    :: DateTime
     , imageFileSize    :: Int
-    , imageTagNames    :: [String]
+    , imageTags        :: [String]
     } deriving (Eq, Show)
 
 -- | Meta data regarding an image file within an album.
@@ -101,7 +101,7 @@ instance ToJSON Image where
         , "created"     .= imageCreated
         , "modified"    .= imageModified
         , "fileSize"    .= imageFileSize
-        , "tags"        .= map Text.pack imageTagNames ]
+        , "tags"        .= map Text.pack imageTags ]
 
 instance ToJSON Album where
     toJSON Album {..} = JSON.object
@@ -111,7 +111,7 @@ instance ToJSON Album where
         , "created"     .= albumCreated
         , "modified"    .= albumModified
         , "fileSize"    .= albumFileSize
-        , "tags"        .= map Text.pack albumTagNames
+        , "tags"        .= map Text.pack albumTags
         , "pages"       .= map toJSON albumPages ]
 
 instance ToJSON Page where

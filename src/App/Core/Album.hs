@@ -116,14 +116,14 @@ update id title tags = do
         Just previousAlbum -> do
             let result   = validate newAlbum
                 newAlbum = previousAlbum
-                    { albumTagNames = Tag.cleanTags tags
+                    { albumTags = Tag.cleanTags tags
                     , albumTitle    = trim title
                     , albumModified = now }
 
             when (Validation.isValid result) $
                 runDB $ do
-                    let newTags = albumTagNames newAlbum
-                        oldTags = albumTagNames previousAlbum
+                    let newTags = albumTags newAlbum
+                        oldTags = albumTags previousAlbum
 
                     DB.updateAlbum newAlbum
                     DB.detachTags (oldTags \\ newTags) id
@@ -140,7 +140,7 @@ update id title tags = do
 -- | Returns valid if all fields of the given album are valid; otherwise
 -- | invalid.
 validate :: Album -> Validation
-validate Album {..} = Tag.validateMany albumTagNames
+validate Album {..} = Tag.validateMany albumTags
 
 -- | Extracts the given zip file entry.
 extractFile :: ID -> (Entry, Int) -> App ()

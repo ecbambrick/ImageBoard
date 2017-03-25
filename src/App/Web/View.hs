@@ -56,7 +56,7 @@ albumView scope query timeZone album @ Album {..} = render $ do
                 Elem.searchBox (URL.albums scope 1 "") query
                 Elem.albumDetails album timeZone
                 Elem.spacer
-                Elem.albumTags scope albumTagNames
+                Elem.albumTags scope albumTags
             Elem.editPanel albumURL $ do
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"
@@ -166,7 +166,7 @@ imageView scope query timeZone prevImage currImage nextImage = render $ do
                 Elem.imageDetails currImage timeZone Elem.MainImage
                 Elem.imageDetails nextImage timeZone Elem.SecondaryImage
                 Elem.spacer
-                Elem.imageTags scope (imageTagNames currImage)
+                Elem.imageTags scope (imageTags currImage)
             Elem.editPanel (URL.image scope curr query) $ do
                 Elem.textBoxField  "Title" "title" "edit-title"
                 Elem.textAreaField "Tags"  "tags"  "edit-tags"

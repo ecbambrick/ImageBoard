@@ -125,7 +125,7 @@ routes = do
             scope  <- MaybeT $ Scope.querySingle scopeName
             album  <- MaybeT $ Album.querySingle id
             title  <- lift $ optionalParam "title" (albumTitle album)
-            tags   <- lift $ optionalParam "tags" (intercalate "," (albumTagNames album))
+            tags   <- lift $ optionalParam "tags" (intercalate "," (albumTags album))
             result <- lift $ Album.update id title (splitOn "," tags)
 
             return (URL.album scope id, result)
@@ -188,7 +188,7 @@ routes = do
             image  <- MaybeT $ Image.querySingle id
             query  <- lift $ optionalParam "q" ""
             title  <- lift $ optionalParam "title" (imageTitle image)
-            tags   <- lift $ optionalParam "tags" (intercalate "," (imageTagNames image))
+            tags   <- lift $ optionalParam "tags" (intercalate "," (imageTags image))
             result <- lift $ Image.update id title (splitOn "," tags)
 
             return (URL.image scope id query, result)
