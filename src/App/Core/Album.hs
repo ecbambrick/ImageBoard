@@ -10,6 +10,7 @@ import qualified App.Database       as DB
 import qualified App.Path           as Path
 import qualified App.Validation     as Validation
 import qualified Data.ByteString    as ByteString
+import qualified Data.DateTime      as DateTime
 import qualified Graphics.FFmpeg    as Graphics
 import qualified System.IO.Metadata as Metadata
 
@@ -23,7 +24,6 @@ import Control.Monad        ( unless, when )
 import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
 import Data.ByteString.Lazy ( hGetContents, hPut )
-import Data.DateTime        ( getCurrentTime )
 import Data.List            ( (\\), sortBy, find )
 import Data.Ord.Extended    ( comparingAlphaNum )
 import Data.Textual         ( trim )
@@ -65,7 +65,7 @@ insert :: FilePath -> String -> [String] -> App Validation
 insert path title tagNames = do
     file    <- liftIO $ openFile path ReadMode
     archive <- liftIO $ toArchive <$> hGetContents file
-    now     <- liftIO $ getCurrentTime
+    now     <- DateTime.now
 
     let entries    = getImages archive
         entryPairs = zip entries [1..]
@@ -109,8 +109,8 @@ querySingle = runDB . DB.selectAlbum
 -- | successful; otherwise, invalid.
 update :: ID -> String -> [String] -> App Validation
 update id title tags = do
-    now      <- liftIO $ getCurrentTime
-    previous <- runDB  $ DB.selectAlbum id
+    now      <- DateTime.now
+    previous <- runDB $ DB.selectAlbum id
 
     case previous of
         Just previousAlbum -> do

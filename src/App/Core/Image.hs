@@ -9,6 +9,7 @@ import qualified App.Database    as DB
 import qualified App.Core.Tag    as Tag
 import qualified App.Path        as Path
 import qualified App.Validation  as Validation
+import qualified Data.DateTime   as DateTime
 import qualified Graphics.FFmpeg as Graphics
 
 import App.Config           ( Config(..) )
@@ -19,7 +20,6 @@ import App.Validation       ( Error(..), Validation )
 import Control.Monad        ( when )
 import Control.Monad.Trans  ( liftIO )
 import Control.Monad.Reader ( asks )
-import Data.DateTime        ( getCurrentTime )
 import Data.List            ( (\\) )
 import Data.Monoid          ( (<>) )
 import Data.Textual         ( trim )
@@ -66,7 +66,7 @@ delete PermanentlyDelete id = do
 insert :: FilePath -> String -> String -> [String] -> App Validation
 insert fromPath ext title tagNames = do
     hash        <- liftIO $ getHash fromPath
-    now         <- liftIO $ getCurrentTime
+    now         <- DateTime.now
     size        <- liftIO $ fromIntegral <$> getSize fromPath
     hashExists  <- runDB  $ DB.selectHashExists hash
     thumbSize   <- asks   $ configThumbnailSize
@@ -117,8 +117,8 @@ queryTriple expression id = runDB $ do
 -- | successful; otherwise, invalid.
 update :: ID -> String -> [String] -> App Validation
 update id title tags = do
-    now      <- liftIO $ getCurrentTime
-    previous <- runDB  $ DB.selectImage id
+    now      <- DateTime.now
+    previous <- runDB $ DB.selectImage id
 
     case previous of
         Just previousImage -> do

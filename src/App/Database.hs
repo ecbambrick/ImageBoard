@@ -151,7 +151,7 @@ selectImage id = do
 -- | passed in, only images that satisfy the expression will be returned.
 selectImages :: Expression -> Int -> Int -> Transaction [Image]
 selectImages expression from count = do
-    now     <- liftIO $ DateTime.getCurrentTime
+    now     <- DateTime.now
     results <- SQL.query (images >>= paginated expression now from count)
 
     Traversable.sequence (withImageTags <$> results)
@@ -175,7 +175,7 @@ selectRandomImage expression = listToMaybe <$> selectRandomImages expression 1
 -- | expression.
 selectRandomImages :: Expression -> Int -> Transaction [Image]
 selectRandomImages expression count = do
-    now     <- liftIO $ DateTime.getCurrentTime
+    now     <- DateTime.now
     results <- SQL.query $ do
         i <- images
         paginated expression now 0 count i
@@ -222,7 +222,7 @@ selectTagsByPost postID = do
 -- | given expression.
 selectDetailedTags :: Expression -> Transaction [DetailedTag]
 selectDetailedTags expression = do
-    now  <- liftIO $ DateTime.getCurrentTime
+    now  <- DateTime.now
     tags <- SQL.query $ do
         t  <- from     "tag"
         pt <- from     "post_tag" `on` ("tag_id"  *= t  "id")
@@ -305,7 +305,7 @@ attachTag postID created tagName = do
 -- | list of names. If any tag does not exists, it is created.
 attachTags :: [String] -> ID -> Transaction ()
 attachTags tagNames postID = do
-    now <- liftIO $ DateTime.getCurrentTime
+    now <- DateTime.now
     mapM_ (attachTag postID now) tagNames
 
 -- | Disassociates the post with the given ID with the tag with the given name.
@@ -395,7 +395,7 @@ selectAlbum id = do
 -- | passed in, only albums that satisfy the expression will be returned.
 selectAlbums :: Expression -> Int -> Int -> Transaction [Album]
 selectAlbums expression from count = do
-    now              <- liftIO $ DateTime.getCurrentTime
+    now              <- DateTime.now
     results          <- SQL.query (albums >>= paginated expression now from count)
     withPages        <- Traversable.sequence (withPages <$> results)
     withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
@@ -560,7 +560,7 @@ selectAdjacentImage dir id expression = do
             Next -> ((.<), desc)
             Prev -> ((.>), asc )
 
-    now <- liftIO $ DateTime.getCurrentTime
+    now <- DateTime.now
 
     modified <- SQL.single $ do
         p <- from "post"
@@ -596,7 +596,7 @@ selectAdjacentImage dir id expression = do
 -- | satisfy the given expression.
 selectCount :: String -> Expression -> Transaction Int
 selectCount table expression = do
-    now <- liftIO $ DateTime.getCurrentTime
+    now <- DateTime.now
 
     (Just results) <- SQL.single $ do
         p <- from "post"

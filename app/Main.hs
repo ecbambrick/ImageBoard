@@ -41,7 +41,7 @@ main = CLI.cli "Image board." $ do
             tags    = maybe [] (splitOn ",") tagString
 
         runApplication $ do
-            now <- liftIO DateTime.getCurrentTime
+            now <- DateTime.now
             Console.Import.directory inPath outPath tags
             when categorize $ Console.Category.categorizeUnassignedTags now
 
