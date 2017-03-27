@@ -7,6 +7,7 @@ import qualified App.Expression  as Expression
 import qualified App.Path        as Path
 import qualified App.Web.Icon    as Icon
 import qualified App.Web.URL     as URL
+import qualified Data.DateTime   as DateTime
 import qualified Data.Text       as Text
 import qualified Numeric         as Numeric
 import qualified System.FilePath as FilePath
@@ -18,7 +19,7 @@ import Lucid.Html5 hiding ( menuitem_ )
 import App.Core.Types ( Album(..), DetailedTag(..), Image(..), Scope(..), ID )
 import App.Web.Icon   ( Icon )
 import Control.Monad  ( forM_ )
-import Data.DateTime  ( TimeZone, defaultFormatDate )
+import Data.DateTime  ( DateTimeFormat(..), TimeZone )
 import Data.Monoid    ( (<>), mempty )
 import Data.Text      ( Text )
 import Data.Textual   ( display, intercalate )
@@ -303,7 +304,7 @@ albumDetails Album {..} timeZone =
                 [ show (length albumPages) ++ " pages"
                 , formatSize albumFileSize ]
             br_ []
-            toHtml ("uploaded " ++ defaultFormatDate timeZone albumCreated)
+            toHtml ("uploaded " ++ DateTime.format ShortDate timeZone albumCreated)
 
 -- | Returns an HTML element for displaying image meta data.
 imageDetails :: Image -> TimeZone -> ImageType -> Html ()
@@ -329,7 +330,7 @@ imageDetails Image {..} timeZone imageType =
             br_ []
             toHtml imageHash
             br_ []
-            toHtml ("uploaded " ++ defaultFormatDate timeZone imageCreated)
+            toHtml ("uploaded " ++ DateTime.format ShortDate timeZone imageCreated)
 
 -- | Returns an HTML element for displaying page meta data.
 pageDetails :: Album -> Int -> Html ()

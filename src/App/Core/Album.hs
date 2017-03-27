@@ -5,6 +5,7 @@
 module App.Core.Album
     ( count, delete, getPage, insert, query, querySingle, update ) where
 
+import qualified App.Config         as Config
 import qualified App.Core.Tag       as Tag
 import qualified App.Database       as DB
 import qualified App.Path           as Path
@@ -14,7 +15,6 @@ import qualified Data.DateTime      as DateTime
 import qualified Graphics.FFmpeg    as Graphics
 import qualified System.IO.Metadata as Metadata
 
-import App.Config           ( Config(..) )
 import App.Control          ( runDB )
 import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), App, ID )
 import App.Expression       ( Expression )
@@ -22,7 +22,6 @@ import App.Validation       ( Error(..), Validation )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
 import Control.Monad        ( unless, when )
 import Control.Monad.Trans  ( liftIO )
-import Control.Monad.Reader ( asks )
 import Data.ByteString.Lazy ( hGetContents, hPut )
 import Data.List            ( (\\), sortBy, find )
 import Data.Ord.Extended    ( comparingAlphaNum )
@@ -85,7 +84,7 @@ insert path title tagNames = do
             basePath  <- Path.albumDirectory id
             firstPath <- Path.pageFile id (toPage (head entries) 1)
             thumbPath <- Path.albumThumb id
-            thumbSize <- asks configThumbnailSize
+            thumbSize <- Config.thumbnailSize
 
             liftIO $ createDirectoryIfMissing True basePath
             mapM_ (extractFile id) entryPairs
@@ -98,7 +97,7 @@ insert path title tagNames = do
 -- | Returns a page of albums based on the given page number and filter.
 query :: Expression -> Int -> App [Album]
 query expression page = do
-    size <- asks configPageSize
+    size <- Config.pageSize
     runDB $ DB.selectAlbums expression ((page - 1) * size) size
 
 -- | Returns the album with the given ID.
@@ -150,7 +149,7 @@ extractFile id (entry, index) = do
 
     extractPath   <- Path.pageFile id page
     thumbnailPath <- Path.pageThumb id page
-    thumbSize     <- asks configThumbnailSize
+    thumbSize     <- Config.thumbnailSize
 
     liftIO $ do
         withFile extractPath WriteMode (flip hPut contents)

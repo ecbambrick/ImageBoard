@@ -23,6 +23,7 @@ module App.Database
     , selectCategoryIDByName
     ) where
 
+import qualified App.Config       as Config
 import qualified Database.Engine  as SQL
 import qualified Data.DateTime    as DateTime
 import qualified Data.Text        as Text
@@ -33,7 +34,7 @@ import App.Core.Types        ( Album(..), DetailedTag(..), Image(..), Page(..)
                              , Scope(..), SimpleTag(..), App, ID )
 import App.Expression        ( Match(..), Token(..), Expression )
 import Control.Applicative   ( (<|>) )
-import Control.Monad.Reader  ( forM, asks, liftIO, forM_, void, unless )
+import Control.Monad.Reader  ( forM, liftIO, forM_, void, unless )
 import Data.DateTime         ( DateTime )
 import Data.Functor.Extended ( (<$$>) )
 import Data.Int              ( Int64 )
@@ -89,7 +90,7 @@ instance FromRow Scope where
 -- | string. If a database already exists, this function will do nothing.
 createDatabase :: App ()
 createDatabase = do
-    database <- asks configDatabaseConnection
+    database <- Config.databaseConnection
     exists   <- liftIO $ doesFileExist database
     schema   <- liftIO $ readFile "schema.sql"
 
@@ -102,7 +103,7 @@ createDatabase = do
 -- | string. If the database does not exist, this function will do nothing.
 deleteDatabase :: App ()
 deleteDatabase = do
-    database <- asks configDatabaseConnection
+    database <- Config.databaseConnection
 
     liftIO $ removeFile database
 

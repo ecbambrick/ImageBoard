@@ -13,7 +13,7 @@ import qualified System.Directory    as Dir
 import App.Config           ( Config(..) )
 import App.Core.Types       ( App )
 import Control.Monad        ( when )
-import Control.Monad.Reader ( MonadReader, ReaderT, ask, asks, local, runReaderT )
+import Control.Monad.Reader ( MonadReader, ReaderT, ask, local, runReaderT )
 import Control.Monad.Trans  ( lift )
 import Data.DateTime        ( utcTimeZone )
 import Data.Textual         ( splitOn )
@@ -37,7 +37,7 @@ instance MonadReader r (SpockM conn sess r) where
 -- | Runs the application with the settings from the config file.
 runApplication :: ReaderT Config IO () -> IO ()
 runApplication application = do
-    config <- Config.loadConfig
+    config <- Config.load
 
     flip runReaderT config $ do
         Everything.initialize
@@ -46,7 +46,7 @@ runApplication application = do
 -- | Runs the server with the settings from the config file.
 runServer :: SpockM () () Config () -> IO ()
 runServer routes = do
-    appConfig   <- Config.loadConfig
+    appConfig   <- Config.load
     spockConfig <- customSpockConfig appConfig
 
     runSpock (configPort appConfig) $ spock spockConfig $ do
@@ -71,7 +71,7 @@ testServer routes = withTestEnvironment $ \appConfig -> do
 -- | config.
 runDB :: Transaction a -> App a
 runDB command = do
-    db <- asks configDatabaseConnection
+    db <- Config.databaseConnection
     runDatabase db command
 
 ----------------------------------------------------------------------- Utility

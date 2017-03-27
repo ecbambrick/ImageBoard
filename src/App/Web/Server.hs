@@ -2,6 +2,7 @@
 
 module App.Web.Server ( routes ) where
 
+import qualified App.Config                    as Config
 import qualified App.Core.Album                as Album
 import qualified App.Core.Image                as Image
 import qualified App.Core.Post                 as Post
@@ -21,7 +22,6 @@ import App.Config                ( Config(..) )
 import App.Core.Post             ( PostType(..) )
 import App.Core.Types            ( Album(..), DeletionMode(..), Image(..), Scope(..) )
 import App.Validation            ( Error(..), Validation(..) )
-import Control.Monad.Reader      ( ReaderT, asks, liftIO, join )
 import Control.Monad.Trans       ( MonadIO, lift )
 import Control.Monad.Trans.Maybe ( MaybeT(..), runMaybeT )
 import Data.HashMap.Strict       ( (!) )
@@ -38,9 +38,9 @@ import Web.Spock                 ( SpockM, delete, get, hookAny, html, post
 -- | The route handling for the web service.
 routes :: SpockM () () Config ()
 routes = do
-    storagePath <- asks configStoragePath
-    pageSize    <- asks configPageSize
-    timeZone    <- asks configTimeZone
+    storagePath <- Config.storagePath
+    pageSize    <- Config.pageSize
+    timeZone    <- Config.timeZone
 
     -- Enables access to thumbnails and images in the storage path.
     Spock.middleware $ Middleware.staticPolicy $ mconcat

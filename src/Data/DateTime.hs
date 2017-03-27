@@ -1,8 +1,8 @@
 module Data.DateTime
-    ( TimeZone, DateTime
+    ( DateTimeFormat(..), TimeZone, DateTime
     , now, fromDate, fromSeconds, toSeconds, utcTimeZone, getCurrentTimeZone
     , addDays, dropTime
-    , defaultFormatDate) where
+    , format) where
 
 import qualified Data.Time.Calendar as Calendar
 
@@ -14,8 +14,11 @@ import Data.Time.LocalTime   ( TimeZone, getCurrentTimeZone, utc, utcToLocalTime
 
 ------------------------------------------------------------------------- Types
 
--- | Represents a date and time as UTC time.
+-- | A UTC date and time.
 type DateTime = UTCTime
+
+-- | A human-readable date format.
+data DateTimeFormat = ShortDate | TimeStamp
 
 -------------------------------------------------------------------- Conversion
 
@@ -55,8 +58,16 @@ dropTime (UTCTime date time) = UTCTime date (secondsToDiffTime 0)
 
 -------------------------------------------------------------------- Formatting
 
--- | Formats the given date time and time zone using a default format.
-defaultFormatDate :: TimeZone -> DateTime -> String
-defaultFormatDate timeZone dateTime =
-    let localTime = utcToLocalTime timeZone dateTime
-    in  formatTime defaultTimeLocale "%F" localTime
+-- | Converts the given date time format to its string representation.
+convertFormat :: DateTimeFormat -> String
+convertFormat ShortDate = "%Y/%m/%d"
+convertFormat TimeStamp = "%Y-%m-%dT%H-%M-%S"
+
+-- | Returns a formatted string representing the given date time using the
+-- | given format and time zone.
+format :: DateTimeFormat -> TimeZone -> DateTime -> String
+format dateTimeFormat timeZone dateTime =
+    let localTime    = utcToLocalTime timeZone dateTime
+        formatString = convertFormat dateTimeFormat
+
+    in formatTime defaultTimeLocale formatString localTime
