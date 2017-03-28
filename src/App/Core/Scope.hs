@@ -50,13 +50,9 @@ querySingle name
 -- | Returns valid if the given scope is valid; otherwise invalid.
 validate :: Scope -> Validation
 validate (Scope name expr) =
-    let invalidNames  = [ scopeName defaultScope
-                        , Path.dataPrefix
-                        , Path.staticPrefix
-                        , Path.apiPrefix ]
-
+    let defaultName = scopeName defaultScope
     in Validation.validate
         [ Validation.verify (length name > 0) (InvalidScopeName name)
-        , Validation.verify (name `notElem` invalidNames) (InvalidScopeName name)
+        , Validation.verify (name /= defaultName) (InvalidScopeName name)
         , Validation.verify (all isAlphaNum name) (InvalidScopeName name)
         , Validation.verify (length expr > 0) (InvalidScopeExpression expr) ]

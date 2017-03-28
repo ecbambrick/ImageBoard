@@ -34,7 +34,7 @@ load = do
     thumbSize   <- Configurator.lookupDefault 512  config "thumbnail_size"
     timeZone    <- DateTime.getCurrentTimeZone
 
-    let database = storagePath </> "data" </> "database.sqlite3"
+    let database = storagePath </> "database.sqlite3"
 
     return (Config port database storagePath pageSize thumbSize timeZone)
 

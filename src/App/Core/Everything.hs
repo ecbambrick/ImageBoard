@@ -22,23 +22,18 @@ delete = do
         pathExists <- Dir.doesDirectoryExist dataPath
         when pathExists $ do
             Dir.removeDirectoryRecursive dataPath
+            Dir.createDirectory dataPath
 
     initialize
 
 -- | Initializes a new database if one does not already exist.
 initialize :: App ()
 initialize = do
-    dataPath    <- Path.dataDirectory
-    storagePath <- Config.storagePath
-
-    liftIO $ do
-        pathExists <- Dir.doesDirectoryExist storagePath
-        unless pathExists $ do
-            throwIO (ErrorCall "Storage path must point to an existing folder. Please verify app.cfg")
+    dataPath <- Path.dataDirectory
 
     liftIO $ do
         pathExists <- Dir.doesDirectoryExist dataPath
         unless pathExists $ do
-            Dir.createDirectory dataPath
+            throwIO (ErrorCall "Storage path must point to an existing folder. Please verify app.cfg")
 
     Database.createDatabase

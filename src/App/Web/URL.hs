@@ -2,7 +2,8 @@
 {-# LANGUAGE RecordWildCards  #-}
 
 module App.Web.URL
-    ( image, images, imageFile, imageThumb
+    ( dataPrefix, staticPrefix
+    , image, images, imageFile, imageThumb
     , album, albums, albumThumb
     , page, pageFile, pageThumb
     , tags, upload ) where
@@ -18,6 +19,16 @@ import Data.Monoid     ( (<>) )
 import Data.Text       ( Text )
 import Data.Textual    ( replace )
 import System.FilePath ( (</>), (<.>) )
+
+---------------------------------------------------------------------- Prefixes
+
+-- | Returns the route prefix for data files.
+dataPrefix :: String
+dataPrefix = "data"
+
+-- | Returns the route prefix for static files.
+staticPrefix :: String
+staticPrefix = "static"
 
 -------------------------------------------------------------------- Image URLs
 
@@ -117,4 +128,8 @@ withParameters url params =
 
 -- | Converts the given file path to a URL.
 pathToURL :: FilePath -> Text
-pathToURL path = Text.pack $ replace "\\" "/" ("/" ++ path)
+pathToURL path =
+    let absolute x = "/" ++ x
+        url        = replace "\\" "/" (dataPrefix </> path)
+
+    in Text.pack (absolute url)

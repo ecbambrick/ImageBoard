@@ -9,7 +9,6 @@ import qualified App.Core.Post                 as Post
 import qualified App.Core.Scope                as Scope
 import qualified App.Core.Tag                  as Tag
 import qualified App.Expression                as Expression
-import qualified App.Path                      as Path
 import qualified App.Web.Route                 as Route
 import qualified App.Web.URL                   as URL
 import qualified App.Web.View                  as View
@@ -46,14 +45,15 @@ routes = do
     Spock.middleware $ Middleware.staticPolicy $ mconcat
         [ Middleware.noDots
         , Middleware.isNotAbsolute
-        , Middleware.hasPrefix Path.dataPrefix
+        , Middleware.hasPrefix URL.dataPrefix
+        , Middleware.policy (Just . intercalate "/" . drop 1 . splitOn "/")
         , Middleware.addBase storagePath ]
 
     -- Enables access to other static content such as JavaScript and CSS files.
     Spock.middleware $ Middleware.staticPolicy $ mconcat
         [ Middleware.noDots
         , Middleware.isNotAbsolute
-        , Middleware.hasPrefix Path.staticPrefix ]
+        , Middleware.hasPrefix URL.staticPrefix ]
 
     -- Redirects to the images page.
     get Route.root $ do

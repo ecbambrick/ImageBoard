@@ -14,49 +14,33 @@ import System.FilePath      ( (</>), (<.>), isValid )
 
 ------------------------------------------------------------------- Application
 
--- | Returns the path prefix for data files.
-dataPrefix :: String
-dataPrefix = "data"
-
--- | Returns the path prefix for static files.
-staticPrefix :: String
-staticPrefix = "static"
-
--- | Returns the path prefix for API methods.
-apiPrefix :: String
-apiPrefix = "api"
-
 -- | Returns the path to the data directory.
 dataDirectory :: (MonadReader Config m) => m FilePath
-dataDirectory = do
-    storagePath <- Config.storagePath
-    return (storagePath </> dataPrefix)
+dataDirectory = Config.storagePath
 
 ------------------------------------------------------------------------ Images
 
 -- | Returns the absolute file path of the given image.
 imageFile :: (MonadReader Config m) => Image -> m FilePath
 imageFile image = do
-    storagePath <- Config.storagePath
-    return (storagePath </> relativeImageFile image)
+    baseDirectory <- dataDirectory
+    return (baseDirectory </> relativeImageFile image)
 
 -- | Returns the absolute file path for the thumbnail of the given image.
 imageThumb :: (MonadReader Config m) => Image -> m FilePath
 imageThumb image = do
-    storagePath <- Config.storagePath
-    return (storagePath </> relativeImageThumb image)
+    baseDirectory <- dataDirectory
+    return (baseDirectory </> relativeImageThumb image)
 
 -- | Returns the relative file path for the thumbnail of the given image.
 relativeImageThumb :: Image -> FilePath
-relativeImageThumb image = base </> take 2 hash </> hash <.> "jpg"
-    where base = dataPrefix </> "thumb"
-          hash = imageHash image
+relativeImageThumb image = "thumb" </> take 2 hash </> hash <.> "jpg"
+    where hash = imageHash image
 
 -- | Returns the relative file path of the given image.
 relativeImageFile :: Image -> FilePath
-relativeImageFile image = base </> take 2 hash </> hash <.> ext
-    where base = dataPrefix </> "image"
-          hash = imageHash image
+relativeImageFile image = "image" </> take 2 hash </> hash <.> ext
+    where hash = imageHash image
           ext  = imageExtension image
 
 ------------------------------------------------------------------------ Albums
@@ -64,20 +48,19 @@ relativeImageFile image = base </> take 2 hash </> hash <.> ext
 -- | Returns the absolute directory path of the album with the given ID.
 albumDirectory :: (MonadReader Config m) => ID -> m FilePath
 albumDirectory id = do
-    storagePath <- Config.storagePath
-    return (storagePath </> relativeAlbumDirectory id)
+    baseDirectory <- dataDirectory
+    return (baseDirectory </> relativeAlbumDirectory id)
 
 -- | Returns the absolute file path for the thumbnail of the album with the
 -- | given ID.
 albumThumb :: (MonadReader Config m) => ID -> m FilePath
 albumThumb id = do
-    storagePath <- Config.storagePath
-    return (storagePath </> relativeAlbumDirectory id </> "thumbnail.jpg")
+    baseDirectory <- dataDirectory
+    return (baseDirectory </> relativeAlbumDirectory id </> "thumbnail.jpg")
 
 -- | Returns the relative directory path of the album with the given ID.
 relativeAlbumDirectory :: ID -> FilePath
-relativeAlbumDirectory id = base </> show (id `mod` 100) </> show id
-    where base = dataPrefix </> "album"
+relativeAlbumDirectory id = "album" </> show (id `mod` 100) </> show id
 
 ------------------------------------------------------------------------- Pages
 
@@ -85,14 +68,12 @@ relativeAlbumDirectory id = base </> show (id `mod` 100) </> show id
 -- | the given ID.
 pageFile :: (MonadReader Config m) => ID -> Page -> m FilePath
 pageFile id Page {..} = do
-    storagePath <- Config.storagePath
-    basePath    <- albumDirectory id
-    return (basePath </> show pageNumber <.> pageExtension)
+    baseDirectory <- albumDirectory id
+    return (baseDirectory </> show pageNumber <.> pageExtension)
 
 -- | Returns the absolute file path for the thumbnail for the given page
 -- | of the album with the given ID.
 pageThumb :: (MonadReader Config m) => ID -> Page -> m FilePath
 pageThumb id Page {..} = do
-    storagePath <- Config.storagePath
-    basePath    <- albumDirectory id
-    return (basePath </> "t" ++ show pageNumber <.> "jpg")
+    baseDirectory <- albumDirectory id
+    return (baseDirectory </> "t" ++ show pageNumber <.> "jpg")
