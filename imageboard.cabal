@@ -54,6 +54,7 @@ library
       , Data.Ord.Extended
       , Data.DateTime
       , Data.Textual
+      , Data.Validation
       , Database.Engine
       , Database.Query
       , Database.Query.SQLite
