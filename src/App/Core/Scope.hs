@@ -7,12 +7,11 @@ import qualified App.Database   as DB
 import qualified App.Path       as Path
 import qualified App.Validation as Validation
 
-import App.Control           ( runDB )
-import App.Core.Types        ( Scope(..), App )
-import App.Validation        ( Error(..), Validation )
-import Control.Monad         ( void, when )
-import Data.Char             ( isAlphaNum )
-import Data.Functor.Extended ( (<$$>) )
+import App.Control    ( runDB )
+import App.Core.Types ( Scope(..), App )
+import App.Validation ( Error(..), Validation )
+import Control.Monad  ( void, when )
+import Data.Char      ( isAlphaNum )
 
 -------------------------------------------------------------------------- CRUD
 

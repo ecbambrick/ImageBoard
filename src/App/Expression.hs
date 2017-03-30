@@ -9,10 +9,10 @@ import qualified Text.Parsec as Parsec
 import App.Core.Types       ( ID )
 import Control.Applicative  ( (<|>), empty )
 import Data.Either          ( rights )
-import Data.List            ( delete, nub )
+import Data.List            ( nub )
 import Data.Textual         ( intercalate, splitOn, trim )
-import Text.Parsec          ( ParseError, anyToken, char, digit, many1, noneOf
-                            , oneOf, spaces, string, try )
+import Text.Parsec          ( ParseError, anyToken, char, digit, many1, oneOf
+                            , spaces, string, try )
 
 ------------------------------------------------------------------------- Types
 

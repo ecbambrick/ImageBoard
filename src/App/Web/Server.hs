@@ -17,7 +17,7 @@ import qualified Network.HTTP.Types            as HTTP
 import qualified Network.Wai.Middleware.Static as Middleware
 import qualified Web.Spock                     as Spock
 
-import App.Config                ( Config(..) )
+import App.Config                ( Config )
 import App.Core.Post             ( PostType(..) )
 import App.Core.Types            ( Album(..), DeletionMode(..), Image(..), Scope(..) )
 import App.Validation            ( Error(..), Validation(..) )
@@ -25,12 +25,10 @@ import Control.Monad.Trans       ( MonadIO, lift )
 import Control.Monad.Trans.Maybe ( MaybeT(..), runMaybeT )
 import Data.HashMap.Strict       ( (!) )
 import Data.Maybe                ( fromMaybe )
-import Data.Monoid               ( (<>), mconcat )
 import Data.Text                 ( Text )
 import Data.Textual              ( display, intercalate, strip, splitOn )
 import Web.PathPieces            ( PathPiece )
-import Web.Spock                 ( SpockM, delete, get, hookAny, html, post
-                                 , redirect, root )
+import Web.Spock                 ( SpockM, delete, get, html, post, redirect, root )
 
 ---------------------------------------------------------------------- Handlers
 

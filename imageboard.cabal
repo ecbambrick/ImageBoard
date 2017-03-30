@@ -49,7 +49,6 @@ library
       , App.Web.URL
       , App.Web.View
       , Data.Control.Monad.Extended
-      , Data.Functor.Extended
       , Data.List.Extended
       , Data.Ord.Extended
       , Data.DateTime

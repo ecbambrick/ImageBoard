@@ -3,14 +3,11 @@
 
 module App.Web.Route where
 
-import qualified App.Path  as Path
 import qualified Web.Spock as Spock
 
 import App.Core.Types          ( ID )
 import Web.Spock               ( (<//>), Path )
 import Web.Routing.Combinators ( PathState(..) )
-
------------------------------------------------------------------------- Routes
 
 -- | The route to an album with the given ID.
 album :: Path '[String, ID] Open

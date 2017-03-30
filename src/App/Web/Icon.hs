@@ -5,23 +5,22 @@ module App.Web.Icon where
 import Data.Text ( Text )
 
 -- | A UI icon.
-data Icon
-    = LeftArrow
-    | RightArrow
-    | UpArrow
-    | DownArrow
-    | Grid
-    | Pencil
-    | Trash
-    | Check
-    | Cross
-    | Search
-    | Stop
-    | Pause
-    | Image
-    | Book
-    | LevelDown
-    | Tags
+data Icon = LeftArrow
+          | RightArrow
+          | UpArrow
+          | DownArrow
+          | Grid
+          | Pencil
+          | Trash
+          | Check
+          | Cross
+          | Search
+          | Stop
+          | Pause
+          | Image
+          | Book
+          | LevelDown
+          | Tags
 
 -- | Renders the given icon as a CSS class.
 render :: Icon -> Text

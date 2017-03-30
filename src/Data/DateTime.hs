@@ -2,7 +2,8 @@ module Data.DateTime
     ( DateTimeFormat(..), TimeZone, DateTime
     , now, fromDate, fromSeconds, toSeconds, utcTimeZone, getCurrentTimeZone
     , addDays, dropTime
-    , format) where
+    , format
+    ) where
 
 import qualified Data.Time.Calendar as Calendar
 

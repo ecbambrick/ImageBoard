@@ -4,7 +4,6 @@
 module App.Web.Element where
 
 import qualified App.Expression  as Expression
-import qualified App.Path        as Path
 import qualified App.Web.Icon    as Icon
 import qualified App.Web.URL     as URL
 import qualified Data.DateTime   as DateTime
@@ -20,7 +19,7 @@ import App.Core.Types ( Album(..), DetailedTag(..), Image(..), Scope(..), ID )
 import App.Web.Icon   ( Icon )
 import Control.Monad  ( forM_ )
 import Data.DateTime  ( DateTimeFormat(..), TimeZone )
-import Data.Monoid    ( (<>), mempty )
+import Data.Monoid    ( (<>) )
 import Data.Text      ( Text )
 import Data.Textual   ( display, intercalate )
 import Lucid.Base     ( Html, term, toHtml )

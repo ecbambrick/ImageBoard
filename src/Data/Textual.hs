@@ -2,9 +2,9 @@
 
 module Data.Textual where
 
-import qualified Data.Char as Char
-import qualified Data.List as List
-import qualified Data.Text as Strict
+import qualified Data.Char      as Char
+import qualified Data.List      as List
+import qualified Data.Text      as Strict
 import qualified Data.Text.Lazy as Lazy
 
 import Data.Text ( unpack, pack )

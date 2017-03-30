@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE RankNTypes            #-}
 
-module App.Control where
+module App.Control
+    ( runApplication, runServer, testApplication, testServer, runDB ) where
 
 import qualified App.Core.Everything as Everything
 import qualified App.Config          as Config
@@ -13,8 +13,7 @@ import qualified System.Directory    as Dir
 import App.Config           ( Config(..) )
 import App.Core.Types       ( App )
 import Control.Monad        ( when )
-import Control.Monad.Reader ( MonadReader, ReaderT, ask, local, runReaderT )
-import Control.Monad.Trans  ( lift )
+import Control.Monad.Reader ( MonadReader, ReaderT, ask, lift, local, runReaderT )
 import Data.DateTime        ( utcTimeZone )
 import Data.Textual         ( splitOn )
 import Database.Engine      ( Transaction, execute, runDatabase )
@@ -77,6 +76,7 @@ runDB command = do
 ----------------------------------------------------------------------- Utility
 
 -- | Gets a customized version of the default Spock configuration.
+customSpockConfig :: s -> IO (SpockCfg () () s)
 customSpockConfig config = do
     spockConfig <- defaultSpockCfg () PCNoDatabase config
     return spockConfig { spc_maxRequestSize = Nothing }

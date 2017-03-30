@@ -7,10 +7,8 @@ import qualified App.Config as Config
 
 import App.Config           ( Config )
 import App.Core.Types       ( Album(..), Image(..), Page(..), ID )
-import Control.Monad.Reader ( MonadReader, liftIO, unless )
-import Data.Textual         ( replace )
-import System.Directory     ( doesDirectoryExist )
-import System.FilePath      ( (</>), (<.>), isValid )
+import Control.Monad.Reader ( MonadReader )
+import System.FilePath      ( (</>), (<.>) )
 
 ------------------------------------------------------------------- Application
 

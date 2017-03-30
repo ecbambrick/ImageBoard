@@ -7,7 +7,6 @@ module App.Web.View
 
 import qualified App.Core.Album   as Album
 import qualified App.Core.Scope   as Scope
-import qualified App.Path         as Path
 import qualified App.Web.Element  as Elem
 import qualified App.Web.Icon     as Icon
 import qualified App.Web.URL      as URL
@@ -15,18 +14,16 @@ import qualified Data.Text        as Text
 import qualified Data.Text.Lazy   as LazyText
 import qualified Text.JavaScript  as JS
 
-import App.Core.Types      ( Album(..), DetailedTag(..), Image(..), Page(..)
-                           , Scope(..) )
-import Control.Applicative ( (<|>) )
-import Control.Monad       ( forM_, when )
-import Data.List.Extended  ( groupWith )
-import Data.Char           ( isAlpha, isNumber, toUpper )
-import Data.Maybe          ( listToMaybe )
-import Data.Monoid         ( (<>) )
-import Data.Text           ( Text )
-import Data.Textual        ( display, intercalate )
-import Data.DateTime       ( TimeZone )
-import Lucid.Base          ( Html(..), renderText )
+import App.Core.Types     ( Album(..), DetailedTag(..), Image(..), Page(..), Scope(..) )
+import Control.Monad      ( forM_ )
+import Data.List.Extended ( groupWith )
+import Data.Char          ( isAlpha, isNumber, toUpper )
+import Data.Maybe         ( listToMaybe )
+import Data.Monoid        ( (<>) )
+import Data.Text          ( Text )
+import Data.Textual       ( display )
+import Data.DateTime      ( TimeZone )
+import Lucid.Base         ( Html(..), renderText )
 
 ------------------------------------------------------------------------- Views
 

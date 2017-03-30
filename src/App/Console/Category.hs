@@ -3,8 +3,7 @@
 
 module App.Console.Category where
 
-import qualified App.Core.Tag  as Tag
-import qualified Data.DateTime as DateTime
+import qualified App.Core.Tag as Tag
 
 import App.Core.Types         ( SimpleTag(..), App )
 import App.Validation         ( Validation(..) )

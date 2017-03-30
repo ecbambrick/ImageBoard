@@ -1,6 +1,5 @@
 module Graphics.FFmpeg where
 
-import qualified Data.ByteString  as ByteString
 import qualified System.Directory as Dir
 import qualified System.FilePath  as FilePath
 import qualified System.IO        as IO

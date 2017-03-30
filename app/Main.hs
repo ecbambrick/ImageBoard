@@ -9,9 +9,8 @@ import qualified App.Web.Server         as Server
 import qualified Data.DateTime          as DateTime
 import qualified System.Console.Args    as CLI
 
-import Data.Textual        ( splitOn )
-import Control.Monad       ( when )
-import Control.Monad.Trans ( liftIO )
+import Data.Textual  ( splitOn )
+import Control.Monad ( when )
 
 main = CLI.cli "Image board." $ do
     isTesting <- CLI.option "test" "Run the command in a temporary test environment."

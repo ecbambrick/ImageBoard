@@ -1,11 +1,9 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards   #-}
 
 module Database.Query.SQLite ( select, insert, update, delete ) where
 
 import Control.Monad.State ( execState )
 import Data.List           ( intercalate )
-import Data.Char           ( isSpace )
 import Text.Printf         ( printf )
 import Database.Query
 

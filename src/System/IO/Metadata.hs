@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
 
 module System.IO.Metadata
     ( MIMEType, getHash, getMIMEType, getMIMETypeFromBytes, getSize ) where

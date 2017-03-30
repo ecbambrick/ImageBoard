@@ -2,8 +2,10 @@
 {-# LANGUAGE FlexibleContexts  #-}
 
 module Database.Engine
-    ( Transaction, Simple.FromRow, delete, insert, query, runDatabase
-    , Simple.field, Simple.fromRow, single, update, execute ) where
+    ( Transaction, Simple.FromRow
+    , delete, insert, query, runDatabase, single, update, execute
+    , Simple.field, Simple.fromRow
+    ) where
 
 import qualified Database.SQLite.Simple as Simple
 import qualified Database.Query.SQLite  as SQL
