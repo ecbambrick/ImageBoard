@@ -53,7 +53,6 @@ delete PermanentlyDelete id = do
 
             runDB $ do
                 DB.deletePost id
-                DB.cleanTags
 
             liftIO $ do
                 when imageExists (removeFile imagePath)
@@ -135,7 +134,6 @@ update id title tags = do
                     DB.updateImage newImage
                     DB.detachTags (oldTags \\ newTags) id
                     DB.attachTags (newTags \\ oldTags) id
-                    DB.cleanTags
 
             return result
 

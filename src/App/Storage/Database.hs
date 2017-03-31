@@ -19,7 +19,7 @@ module App.Storage.Database
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
     , selectTagIDByName, selectDetailedTags, selectRecentUncategorizedTags
-    , selectTagCategories, attachTags, cleanTags, detachTags, attachCategories
+    , selectTagCategories, attachTags, detachTags, attachCategories
     , selectCategoryIDByName
     ) where
 
@@ -272,20 +272,6 @@ selectTagCategories tagID = do
         retrieve [c "name"]
 
     return (innerString <$> categories)
-
--- | Deletes all tags from the database that are not attached to any post.
-cleanTags :: Transaction ()
-cleanTags = do
-    orphanTags <- SQL.query $ do
-        t <- from "tag"
-        retrieve [ t "id" ]
-        wherever $ nay $ exists $ do
-            pt <- from "post_tag"
-            wherever (pt "tag_id" .= t "id")
-        :: Transaction [ID]
-
-    forM_ orphanTags $ \id ->
-        SQL.delete "tag" ("id" *= id)
 
 -- | Associates the post with the given ID with the tag with the given name.
 -- | If the tag does not exist, it is created.

@@ -51,7 +51,6 @@ delete PermanentlyDelete id = do
 
     runDB $ do
         DB.deletePost id
-        DB.cleanTags
 
 -- | Returns the page with the given number from the given album.
 getPage :: Album -> Int -> Maybe Page
@@ -127,7 +126,6 @@ update id title tags = do
                     DB.updateAlbum newAlbum
                     DB.detachTags (oldTags \\ newTags) id
                     DB.attachTags (newTags \\ oldTags) id
-                    DB.cleanTags
 
             return result
 
