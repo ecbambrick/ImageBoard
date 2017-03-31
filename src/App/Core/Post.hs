@@ -7,9 +7,8 @@ import qualified App.Core.Image     as Image
 import qualified App.Core.Album     as Album
 import qualified System.IO.Metadata as Metadata
 
-import App.Core.Types      ( App )
-import App.Validation      ( Error(..), Validation(..) )
-import Control.Monad.Trans ( liftIO )
+import App.Core.Types ( App )
+import App.Validation ( Error(..), Validation(..) )
 
 ------------------------------------------------------------------------- Types
 
@@ -23,7 +22,7 @@ data PostType = InvalidPost Validation | ImagePost | AlbumPost
 -- | on the file's MIME type. Returns the post insertion type.
 insert :: FilePath -> String -> [String] -> App PostType
 insert path title tags = do
-    mimeType <- liftIO $ Metadata.getMIMEType path
+    mimeType <- Metadata.getMIMEType path
 
     case mimeType of
         Just ("image", ext) -> imagePost <$> Image.insert path ext title tags

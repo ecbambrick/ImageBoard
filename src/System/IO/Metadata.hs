@@ -9,6 +9,7 @@ import qualified Data.ByteString.Lazy as Lazy
 import qualified System.Directory     as Dir
 import qualified System.IO            as IO
 
+import Control.Monad.Trans  ( MonadIO, liftIO )
 import Data.ByteString.Lazy ( ByteString )
 import Data.Int             ( Int64 )
 import Data.Maybe           ( catMaybes, listToMaybe )
@@ -23,14 +24,16 @@ type MIMEType = (String, String)
 ---------------------------------------------------------------------- Metadata
 
 -- | Returns the MD5 hash of the given file as a string of hexidecimals.
-getHash :: FilePath -> IO String
+getHash :: (MonadIO m) => FilePath -> m String
 getHash path =
     let toHexidecimal = concatMap (printf "%02x")
-    in toHexidecimal <$> Strict.unpack <$> MD5.hash <$> Strict.readFile path
+    in liftIO $ toHexidecimal <$> Strict.unpack
+                              <$> MD5.hash
+                              <$> Strict.readFile path
 
 -- | Returns the mime type of the given file as a string.
-getMIMEType :: FilePath -> IO (Maybe MIMEType)
-getMIMEType path = do
+getMIMEType :: (MonadIO m) => FilePath -> m (Maybe MIMEType)
+getMIMEType path = liftIO $ do
     validFile <- Dir.doesFileExist path
     if not validFile
         then return Nothing
@@ -53,8 +56,8 @@ getMIMETypeFromBytes bytes =
         , parseBytes 0  2 "\255\216" ("image", "jpeg")      bytes ]
 
 -- | Returns the size in bytes of the given file.
-getSize :: FilePath -> IO Integer
-getSize path = IO.withFile path ReadMode IO.hFileSize
+getSize :: (MonadIO m) => FilePath -> m Integer
+getSize path = liftIO $ IO.withFile path ReadMode IO.hFileSize
 
 ----------------------------------------------------------------------- Utility
 

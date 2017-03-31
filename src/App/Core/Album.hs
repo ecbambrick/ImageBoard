@@ -87,7 +87,7 @@ insert path title tagNames = do
 
             liftIO $ createDirectoryIfMissing True basePath
             mapM_ (extractFile id) entryPairs
-            liftIO $ Graphics.createThumbnail thumbSize firstPath thumbPath
+            Graphics.createThumbnail thumbSize firstPath thumbPath
 
     liftIO $ hClose file
 

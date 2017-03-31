@@ -65,8 +65,8 @@ insert :: FilePath -> String -> String -> [String] -> App Validation
 insert fromPath ext title tagNames = do
     now         <- DateTime.now
     thumbSize   <- Config.thumbnailSize
-    hash        <- liftIO $ getHash fromPath
-    size        <- liftIO $ fromIntegral <$> getSize fromPath
+    hash        <- getHash fromPath
+    size        <- fromIntegral <$> getSize fromPath
     hashExists  <- runDB  $ DB.selectHashExists hash
 
     let tags        = Tag.cleanTags tagNames
@@ -83,7 +83,7 @@ insert fromPath ext title tagNames = do
             copyFile fromPath toPath
             Graphics.createThumbnail thumbSize toPath thumbPath
 
-        (w, h) <- liftIO $ Graphics.getDimensions toPath
+        (w, h) <- Graphics.getDimensions toPath
 
         runDB $ do
             let imageWithDimensions = image { imageWidth = w, imageHeight = h }
