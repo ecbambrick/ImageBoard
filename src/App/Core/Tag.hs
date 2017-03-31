@@ -4,8 +4,8 @@
 
 module App.Core.Tag where
 
-import qualified App.Database   as DB
-import qualified App.Validation as Validation
+import qualified App.Storage.Database as DB
+import qualified App.Validation       as Validation
 
 import App.Control      ( runDB )
 import App.Core.Types   ( App, DetailedTag, SimpleTag )

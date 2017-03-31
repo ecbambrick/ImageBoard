@@ -8,11 +8,11 @@ module App.Web.URL
     , page, pageFile, pageThumb
     , tags, upload ) where
 
-import qualified App.Path       as Path
-import qualified App.Web.Route  as Route
-import qualified Data.Text      as Text
-import qualified Network.URI    as URI
-import qualified Web.Spock      as Spock
+import qualified App.Storage.Path as Path
+import qualified App.Web.Route    as Route
+import qualified Data.Text        as Text
+import qualified Network.URI      as URI
+import qualified Web.Spock        as Spock
 
 import App.Core.Types  ( Album(..), Image(..), Page(..), Scope(..), ID )
 import Data.Monoid     ( (<>) )

@@ -3,9 +3,9 @@
 
 module App.Core.Scope ( defaultScope, delete, insertOrUpdate, querySingle ) where
 
-import qualified App.Database   as DB
-import qualified App.Path       as Path
-import qualified App.Validation as Validation
+import qualified App.Storage.Database as DB
+import qualified App.Storage.Path     as Path
+import qualified App.Validation       as Validation
 
 import App.Control    ( runDB )
 import App.Core.Types ( Scope(..), App )

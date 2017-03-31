@@ -5,13 +5,13 @@
 module App.Core.Image
     ( count, delete, insert, query, querySingle, queryTriple, update ) where
 
-import qualified App.Config      as Config
-import qualified App.Database    as DB
-import qualified App.Core.Tag    as Tag
-import qualified App.Path        as Path
-import qualified App.Validation  as Validation
-import qualified Data.DateTime   as DateTime
-import qualified Graphics.FFmpeg as Graphics
+import qualified App.Config           as Config
+import qualified App.Core.Tag         as Tag
+import qualified App.Storage.Database as DB
+import qualified App.Storage.Path     as Path
+import qualified App.Validation       as Validation
+import qualified Data.DateTime        as DateTime
+import qualified Graphics.FFmpeg      as Graphics
 
 import App.Control          ( runDB )
 import App.Core.Types       ( DeletionMode(..), Image(..), App, ID )

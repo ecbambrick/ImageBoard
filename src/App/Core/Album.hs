@@ -5,15 +5,15 @@
 module App.Core.Album
     ( count, delete, getPage, insert, query, querySingle, update ) where
 
-import qualified App.Config         as Config
-import qualified App.Core.Tag       as Tag
-import qualified App.Database       as DB
-import qualified App.Path           as Path
-import qualified App.Validation     as Validation
-import qualified Data.ByteString    as ByteString
-import qualified Data.DateTime      as DateTime
-import qualified Graphics.FFmpeg    as Graphics
-import qualified System.IO.Metadata as Metadata
+import qualified App.Config           as Config
+import qualified App.Core.Tag         as Tag
+import qualified App.Storage.Database as DB
+import qualified App.Storage.Path     as Path
+import qualified App.Validation       as Validation
+import qualified Data.ByteString      as ByteString
+import qualified Data.DateTime        as DateTime
+import qualified Graphics.FFmpeg      as Graphics
+import qualified System.IO.Metadata   as Metadata
 
 import App.Control          ( runDB )
 import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), App, ID )

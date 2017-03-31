@@ -4,7 +4,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module App.Database
+module App.Storage.Database
     ( createDatabase, deleteDatabase
 
     , deletePost, markPostAsDeleted

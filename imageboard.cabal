@@ -38,9 +38,9 @@ library
       , App.Core.Types
       , App.Control
       , App.Config
-      , App.Database
       , App.Expression
-      , App.Path
+      , App.Storage.Database
+      , App.Storage.Path
       , App.Validation
       , App.Web.Element
       , App.Web.Icon

@@ -3,11 +3,11 @@
 
 module App.Core.Everything where
 
-import qualified App.Config       as Config
-import qualified App.Database     as Database
-import qualified App.Path         as Path
-import qualified System.Directory as Dir
-import qualified System.FilePath  as FilePath
+import qualified App.Config           as Config
+import qualified App.Storage.Database as Database
+import qualified App.Storage.Path     as Path
+import qualified System.Directory     as Dir
+import qualified System.FilePath      as FilePath
 
 import App.Core.Types       ( App )
 import Control.Exception    ( ErrorCall(..), throwIO )

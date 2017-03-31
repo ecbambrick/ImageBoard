@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards  #-}
 
-module App.Path where
+module App.Storage.Path where
 
 import qualified App.Config as Config
 
