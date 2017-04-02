@@ -4,13 +4,13 @@
 module App.Console.Import ( directory ) where
 
 import qualified App.Core.Post    as Post
+import qualified App.Validation   as Validation
 import qualified System.Directory as Dir
 import qualified System.FilePath  as FilePath
 import qualified Text.Parsec      as Parsec
 
 import App.Core.Types       ( App )
 import App.Core.Post        ( PostType(..) )
-import App.Validation       ( Error(..), Validation(..) )
 import Control.Exception    ( ErrorCall(..), throwIO )
 import Control.Monad.Reader ( MonadIO, filterM, forM_, liftIO, unless, void )
 import Data.Maybe           ( fromJust )
@@ -54,7 +54,7 @@ directory inPath outPath extraTags = do
             Right (title, tags) -> do
                 result <- Post.insert filePath title (tags ++ extraTags)
                 case (result, outPath) of
-                    (InvalidPost e, _) -> logError filePath (show e)
+                    (InvalidPost e, _) -> logError filePath (Validation.showErrors e)
                     (_,     Just path) -> liftIO $ Dir.renameFile filePath (path </> fileName)
                     _                  -> return ()
 

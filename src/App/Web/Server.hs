@@ -9,6 +9,7 @@ import qualified App.Core.Post                 as Post
 import qualified App.Core.Scope                as Scope
 import qualified App.Core.Tag                  as Tag
 import qualified App.Expression                as Expression
+import qualified App.Validation                as Validation
 import qualified App.Web.Route                 as Route
 import qualified App.Web.URL                   as URL
 import qualified App.Web.View                  as View
@@ -20,15 +21,18 @@ import qualified Web.Spock                     as Spock
 import App.Config                ( Config )
 import App.Core.Post             ( PostType(..) )
 import App.Core.Types            ( Album(..), DeletionMode(..), Image(..), Scope(..) )
-import App.Validation            ( Error(..), Validation(..) )
-import Control.Monad.Trans       ( MonadIO, lift )
+import App.Validation            ( Error(..), Result(..) )
+import Control.Monad.Trans       ( MonadIO, lift, liftIO )
 import Control.Monad.Trans.Maybe ( MaybeT(..), runMaybeT )
 import Data.HashMap.Strict       ( (!) )
 import Data.Maybe                ( fromMaybe )
 import Data.Text                 ( Text )
-import Data.Textual              ( display, intercalate, strip, splitOn )
+import Data.Textual              ( intercalate, strip, splitOn )
 import Web.PathPieces            ( PathPiece )
 import Web.Spock                 ( SpockM, delete, get, html, post, redirect, root )
+
+import qualified System.Directory as Dir
+import qualified System.FilePath as FP
 
 ---------------------------------------------------------------------- Handlers
 
@@ -60,13 +64,13 @@ routes = do
     -- Upload an image or album.
     post Route.upload $ \scopeName -> do
         scope        <- fromMaybe Scope.defaultScope <$> Scope.querySingle scopeName
-        (_, _, path) <- getFile "uploadedFile"
+        (x, y, path) <- getFile "uploadedFile"
         title        <- optionalParam "title" ""
         tags         <- splitOn "," <$> optionalParam "tags" ""
         result       <- Post.insert path title tags
 
         case result of
-            InvalidPost e -> requestError (display e)
+            InvalidPost e -> requestError (Validation.showErrors e)
             AlbumPost     -> redirect (URL.albums scope 1 "")
             ImagePost     -> redirect (URL.images scope 1 "")
 
@@ -129,9 +133,9 @@ routes = do
             return (URL.album scope id, result)
 
         case result of
-            Nothing           -> notFound
-            Just (url, Valid) -> redirect url
-            Just (_,       e) -> serverError (display e)
+            Nothing               -> notFound
+            Just (url, Success _) -> redirect url
+            Just (_,   Failure e) -> serverError (Validation.showErrors e)
 
     -- Deletes the album with the given id within the given scope.
     delete Route.album $ \scopeName id -> do
@@ -192,9 +196,9 @@ routes = do
             return (URL.image scope id query, result)
 
         case result of
-            Nothing           -> notFound
-            Just (url, Valid) -> redirect url
-            Just (_,       e) -> serverError (display e)
+            Nothing               -> notFound
+            Just (url, Success _) -> redirect url
+            Just (_,   Failure e) -> serverError (Validation.showErrors e)
 
     -- Deletes the image with the given id within the given scope.
     delete Route.image $ \scopeName id -> do
@@ -234,16 +238,16 @@ notFound = do
         , "</html>" ]
 
 -- Return a 400 status.
-requestError :: (MonadIO m) => Text -> Spock.ActionT m a
-requestError text = do
+requestError :: (MonadIO m) => String -> Spock.ActionT m a
+requestError message = do
     Spock.setStatus HTTP.status400
-    Spock.text text
+    Spock.text (Text.pack message)
 
 -- Return a 500 status.
-serverError :: (MonadIO m) => Text -> Spock.ActionT m a
-serverError text = do
+serverError :: (MonadIO m) => String -> Spock.ActionT m a
+serverError message = do
     Spock.setStatus HTTP.status500
-    Spock.text text
+    Spock.text (Text.pack message)
 
 -- | Get the uploaded file with the given input field name.
 getFile :: (MonadIO m) => Text -> Spock.ActionT m (String, String, String)

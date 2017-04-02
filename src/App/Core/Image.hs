@@ -1,97 +1,33 @@
-{-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
-module App.Core.Image
-    ( count, delete, insert, query, querySingle, queryTriple, update ) where
+module App.Core.Image where
 
-import qualified App.Config           as Config
-import qualified App.Core.Tag         as Tag
-import qualified App.Storage.Database as DB
-import qualified App.Storage.Path     as Path
-import qualified App.Validation       as Validation
-import qualified Data.DateTime        as DateTime
-import qualified Graphics.FFmpeg      as Graphics
+import qualified App.Config             as Config
+import qualified App.Core.Tag           as Tag
+import qualified App.Core.Title         as Title
+import qualified App.Storage.Database   as DB
+import qualified App.Storage.FileSystem as FileSystem
+import qualified App.Validation         as Validation
+import qualified Data.DateTime          as DateTime
+import qualified Graphics.FFmpeg        as Graphics
+import qualified System.IO.Metadata     as Metadata
 
 import App.Control          ( runDB )
 import App.Core.Types       ( DeletionMode(..), Image(..), App, ID )
 import App.Expression       ( Expression )
 import App.Validation       ( Error(..), Validation )
-import Control.Monad        ( when )
-import Control.Monad.Trans  ( liftIO )
+import Control.Monad        ( void )
 import Data.List            ( (\\) )
-import Data.Monoid          ( (<>) )
-import Data.Textual         ( trim )
-import System.Directory     ( copyFile, createDirectoryIfMissing, doesFileExist
-                            , removeFile )
-import System.FilePath      ( takeDirectory )
-import System.IO.Metadata   ( getHash, getSize )
+import Data.Maybe           ( fromJust, isJust )
 
--------------------------------------------------------------------------- CRUD
+----------------------------------------------------------------------- Queries
 
 -- | Returns the total number of images satisfying the given expression.
 count :: Expression -> App Int
 count = runDB . DB.selectImagesCount
 
--- | Deletes the image with the given ID. If the delete is permanent, it is
--- | removed from the database/file system; otherwise, it is just marked as
--- | deleted.
-delete :: DeletionMode -> ID -> App ()
-delete MarkAsDeleted id = runDB (DB.markPostAsDeleted id)
-delete PermanentlyDelete id = do
-    image <- querySingle id
-
-    case image of
-        Nothing -> do
-            return ()
-
-        Just image -> do
-            imagePath   <- Path.imageFile image
-            thumbPath   <- Path.imageThumb image
-            imageExists <- liftIO $ doesFileExist imagePath
-            thumbExists <- liftIO $ doesFileExist thumbPath
-
-            runDB $ do
-                DB.deletePost id
-
-            liftIO $ do
-                when imageExists (removeFile imagePath)
-                when thumbExists (removeFile thumbPath)
-
--- | Inserts a new image into the database/filesystem based on the given file
--- | path, extension, title and tags. Returns valid if the insertion was
--- | sucessful; otherwise invalid.
-insert :: FilePath -> String -> String -> [String] -> App Validation
-insert fromPath ext title tagNames = do
-    now         <- DateTime.now
-    thumbSize   <- Config.thumbnailSize
-    hash        <- getHash fromPath
-    size        <- fromIntegral <$> getSize fromPath
-    hashExists  <- runDB  $ DB.selectHashExists hash
-
-    let tags        = Tag.cleanTags tagNames
-        image       = Image 0 (trim title) False hash ext 0 0 now now size tags
-        isDuplicate = Validation.verify (not hashExists) (DuplicateHash hash)
-        results     = validate image <> isDuplicate
-
-    when (Validation.isValid results) $ do
-        toPath    <- Path.imageFile image
-        thumbPath <- Path.imageThumb image
-
-        liftIO $ do
-            createDirectoryIfMissing True $ takeDirectory toPath
-            copyFile fromPath toPath
-            Graphics.createThumbnail thumbSize toPath thumbPath
-
-        (w, h) <- Graphics.getDimensions toPath
-
-        runDB $ do
-            let imageWithDimensions = image { imageWidth = w, imageHeight = h }
-            DB.insertImage imageWithDimensions >>= DB.attachTags tags
-
-    return results
-
--- | Returns a page of images based on the given page number and filter.
+-- | Returns a page of images satisfying the given expression.
 query :: Expression -> Int -> App [Image]
 query expression page = do
     size <- Config.pageSize
@@ -101,8 +37,8 @@ query expression page = do
 querySingle :: ID -> App (Maybe Image)
 querySingle = runDB . DB.selectImage
 
--- | Returns the image with the given ID along with the two adjacent images
--- | based on the given filter.
+-- | Returns the image with the given ID along with the two adjacent images,
+-- | all of which must satisfy the given expression.
 queryTriple :: Expression -> ID -> App (Maybe (Image, Image, Image))
 queryTriple expression id = runDB $ do
     main <- DB.selectImage id
@@ -111,41 +47,81 @@ queryTriple expression id = runDB $ do
 
     return $ (,,) <$> prev <*> main <*> next
 
+---------------------------------------------------------------------- Commands
+
+-- | Deletes the image with the given ID. If the delete is permanent, it is
+-- | removed from the database/file system; otherwise, it is just marked as
+-- | deleted.
+delete :: DeletionMode -> ID -> App ()
+delete mode imageID = do
+    image <- querySingle imageID
+
+    case (image, mode) of
+        (Just _, MarkAsDeleted) -> do
+            runDB $ DB.markPostAsDeleted imageID
+
+        (Just image, PermanentlyDelete) -> do
+            runDB $ DB.deletePost imageID
+            FileSystem.deleteImage image
+
+        _ -> do
+            return ()
+
+-- | Inserts a new image into the database/filesystem based on the given file
+-- | path, extension, title and tags. Returns valid if the insertion was
+-- | sucessful; otherwise invalid.
+insert :: FilePath -> String -> String -> [String] -> App (Validation ())
+insert path ext title tags = do
+    now        <- DateTime.now
+    thumbSize  <- Config.thumbnailSize
+    hash       <- Metadata.getHash path
+    size       <- Metadata.getSize path
+    (w, h)     <- Graphics.getDimensions path
+    hashExists <- runDB $ DB.selectHashExists hash
+
+    let result = Image <$> pure 0
+                       <*> Title.validate title
+                       <*> pure False
+                       <*> pure hash
+                       <*> pure ext
+                       <*> pure w
+                       <*> pure h
+                       <*> pure now
+                       <*> pure now
+                       <*> pure (fromIntegral size)
+                       <*> Tag.validateNames tags
+                       <*  Validation.reject hashExists [DuplicateHash hash]
+
+    Validation.whenSuccess result $ \image -> do
+        FileSystem.addImage image path
+        runDB $ do
+            imageID <- DB.insertImage image
+            DB.attachTags (imageTags image) imageID
+
+    return (void result)
+
 -- | Updates the given image in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.
-update :: ID -> String -> [String] -> App Validation
-update id title tags = do
+update :: ID -> String -> [String] -> App (Validation ())
+update imageID title tags = do
     now      <- DateTime.now
-    previous <- runDB $ DB.selectImage id
+    existing <- runDB $ DB.selectImage imageID
 
-    case previous of
-        Just previousImage -> do
-            let result   = validate newImage
-                newImage = previousImage
-                    { imageTags = Tag.cleanTags tags
-                    , imageTitle    = trim title
-                    , imageModified = now }
+    let result = (,) <$> Title.validate title
+                     <*> Tag.validateNames tags
+                     <*  Validation.assert (isJust existing) [IDNotFound imageID]
 
-            when (Validation.isValid result) $
-                runDB $ do
-                    let newTags = imageTags newImage
-                        oldTags = imageTags previousImage
+    Validation.whenSuccess result $ \(title, tags) -> do
+        let newTags  = imageTags newImage
+            oldTags  = imageTags oldImage
+            oldImage = fromJust existing
+            newImage = oldImage { imageTags     = tags
+                                , imageTitle    = title
+                                , imageModified = now }
 
-                    DB.updateImage newImage
-                    DB.detachTags (oldTags \\ newTags) id
-                    DB.attachTags (newTags \\ oldTags) id
+        runDB $ do
+            DB.updateImage newImage
+            DB.detachTags (oldTags \\ newTags) imageID
+            DB.attachTags (newTags \\ oldTags) imageID
 
-            return result
-
-        Nothing -> do
-            return (Validation.invalidate (IDNotFound id))
-
------------------------------------------------------------------------ Utility
-
--- | Returns valid if all fields of the given image are valid; otherwise
--- | invalid.
-validate :: Image -> Validation
-validate Image {..} =
-    Validation.validate
-        [ Tag.validateMany $ imageTags
-        , Validation.verify (imageFileSize > 0) (InvalidFileSize imageFileSize) ]
+    return (void result)

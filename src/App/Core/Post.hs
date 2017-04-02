@@ -8,14 +8,15 @@ import qualified App.Core.Album     as Album
 import qualified System.IO.Metadata as Metadata
 
 import App.Core.Types ( App )
-import App.Validation ( Error(..), Validation(..) )
+import App.Validation ( Error(..), Result(..), Validation )
+import Data.Textual   ( trim )
 
 ------------------------------------------------------------------------- Types
 
 -- | The type of post insertion.
-data PostType = InvalidPost Validation | ImagePost | AlbumPost
+data PostType = InvalidPost [Error] | ImagePost | AlbumPost
 
--------------------------------------------------------------------------- CRUD
+---------------------------------------------------------------------- Commands
 
 -- | Inserts a new post into the database/filesystem based on the given file
 -- | path, title and tags. Whether the post is an image or album is dependent
@@ -33,15 +34,15 @@ insert path title tags = do
 ----------------------------------------------------------------------- Utility
 
 -- Converts the given validation to an invalid post or image post.
-imagePost :: Validation -> PostType
-imagePost Valid = ImagePost
-imagePost e     = InvalidPost e
+imagePost :: Validation () -> PostType
+imagePost (Success _) = ImagePost
+imagePost (Failure e) = InvalidPost e
 
 -- Converts the given validation to an invalid post or album post.
-albumPost :: Validation -> PostType
-albumPost Valid = AlbumPost
-albumPost e     = InvalidPost e
+albumPost :: Validation () -> PostType
+albumPost (Success _) = AlbumPost
+albumPost (Failure e) = InvalidPost e
 
 -- Converts the given error to an invalid post.
 badPost :: Error -> PostType
-badPost e = InvalidPost (Invalid [e])
+badPost e = InvalidPost [e]

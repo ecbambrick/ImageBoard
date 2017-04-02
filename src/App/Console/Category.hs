@@ -3,10 +3,11 @@
 
 module App.Console.Category where
 
-import qualified App.Core.Tag as Tag
+import qualified App.Core.Tag   as Tag
+import qualified App.Validation as Validation
 
 import App.Core.Types         ( SimpleTag(..), App )
-import App.Validation         ( Validation(..) )
+import App.Validation         ( Result(..) )
 import Control.Monad          ( unless )
 import Control.Monad.Trans    ( liftIO )
 import Control.Monad.Extended ( recurseOn )
@@ -22,7 +23,7 @@ categorizeUnassignedTags dateTime = do
         unless (null tags) $ do
             let (x:xs) = tags
 
-            liftIO $ putStr (tagName x ++ ": ")
+            liftIO $ putStrLn (tagName x ++ ": ")
             response <- liftIO $ getLine
 
             case response of
@@ -31,5 +32,7 @@ categorizeUnassignedTags dateTime = do
                 name -> do
                     result <- Tag.categorize (tagName x) (words name)
                     case result of
-                        Valid     -> recurse xs
-                        Invalid _ -> liftIO (print result) >> recurse (x:xs)
+                        Success _ -> recurse xs
+                        Failure e -> do
+                            Validation.printErrors e
+                            recurse (x:xs)

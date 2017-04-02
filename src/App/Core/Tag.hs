@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
@@ -10,17 +9,18 @@ import qualified App.Validation       as Validation
 import App.Control      ( runDB )
 import App.Core.Types   ( App, DetailedTag, SimpleTag )
 import App.Expression   ( Expression )
-import App.Validation   ( Error(..), Validation(..) )
-import Control.Monad    ( forM )
+import App.Validation   ( Error(..), Validation )
+import Control.Monad    ( forM, void )
 import Data.Char        ( isAlphaNum, isSpace )
 import Data.DateTime    ( DateTime )
 import Data.Either      ( lefts, rights )
 import Data.List        ( nub )
+import Data.Maybe       ( fromJust, isJust )
 import Data.Textual     ( trim, toLower )
 
--------------------------------------------------------------------------- CRUD
+----------------------------------------------------------------------- Queries
 
--- | Returns the list of all tag entities.
+-- | Returns a detailed list of all tags that match the given expression.
 queryDetailed :: Expression -> App [DetailedTag]
 queryDetailed = runDB . DB.selectDetailedTags
 
@@ -29,44 +29,47 @@ queryDetailed = runDB . DB.selectDetailedTags
 queryRecentUncategorized :: DateTime -> App [SimpleTag]
 queryRecentUncategorized = runDB . DB.selectRecentUncategorizedTags
 
+---------------------------------------------------------------------- Commands
+
 -- | Attach the categories specified by the given list of category names to the
 -- | tag with the given name. Returns valid if the the tag and categories each
 -- | exist; otherwise invalid.
-categorize :: String -> [String] -> App Validation
+categorize :: String -> [String] -> App (Validation ())
 categorize tagName categoryNames = runDB $ do
     tagID <- DB.selectTagIDByName tagName
 
     categoryIDs <- forM categoryNames $ \categoryName -> do
         categoryID <- DB.selectCategoryIDByName categoryName
-        case categoryID of
-            Just id -> return (Right id)
-            Nothing -> return (Left categoryName)
+        return $ case categoryID of
+            Just id -> Right id
+            Nothing -> Left categoryName
 
     let found   = rights categoryIDs
         missing = lefts  categoryIDs
+        result  = Validation.assert (isJust tagID) [TagNotFound tagName]
+               *> Validation.assert (null missing) [CategoriesNotFound missing]
 
-    case (tagID, found, missing) of
-        (Just tid, cids, []) -> DB.attachCategories tid cids >> return Valid
-        (Nothing,  _,     _) -> return $ Invalid [TagNotFound tagName]
-        (_,        _,    xs) -> return $ Invalid [CategoriesNotFound xs]
+    Validation.whenSuccess result $ \_ -> do
+        DB.attachCategories (fromJust tagID) found
 
------------------------------------------------------------------------ Utility
+    return (void result)
 
--- | Sanitizes the given list of tag names.
-cleanTags :: [String] -> [String]
-cleanTags = filter (not . null) . nub . map (toLower . trim)
+-------------------------------------------------------------------- Validation
 
--- | Returns valid if all of the given tags are valid; otherwise, invalid.
-validateMany :: [String] -> Validation
-validateMany = Validation.validate . map validate
-
--- | Returns valid if all fields of the given tag are valid; otherwise invalid.
-validate :: String -> Validation
-validate name =
+-- | If the given string is a valid tag name, a trimmed version is returned;
+-- | otherwise, a failure is returned.
+validateName :: String -> Validation String
+validateName tag = do
     let isValidStartChar []    = False
         isValidStartChar (x:_) = not (elem x "-:")
         isValidChar x          = isAlphaNum x || isSpace x || elem x "'.-'@!☆?"
 
-    in Validation.validateSingle
-        [ Validation.verify (isValidStartChar name) $ InvalidTagName name
-        , Validation.verify (all isValidChar name)  $ InvalidTagName name ]
+    Validation.assert (isValidStartChar tag) [InvalidTagName tag]
+    Validation.assert (all isValidChar  tag) [InvalidTagName tag]
+
+    return $ toLower $ trim tag
+
+-- | If each of the given strings are a valid tag name, a trimmed version of
+-- | each is returned; otherwise, a filure is returned.
+validateNames :: [String] -> Validation [String]
+validateNames = sequence . map validateName . nub . filter (not . null)

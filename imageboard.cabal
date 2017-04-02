@@ -35,6 +35,7 @@ library
       , App.Core.Post
       , App.Core.Scope
       , App.Core.Tag
+      , App.Core.Title
       , App.Core.Types
       , App.Control
       , App.Config
@@ -49,7 +50,7 @@ library
       , App.Web.Server
       , App.Web.URL
       , App.Web.View
-      , Data.Control.Monad.Extended
+      , Control.Monad.Extended
       , Data.List.Extended
       , Data.Ord.Extended
       , Data.DateTime

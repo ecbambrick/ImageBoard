@@ -1,14 +1,17 @@
-module App.Validation where
+module App.Validation
+    ( Error(..), Result(..), Validation, printErrors, showErrors
+    , assert, reject, whenSuccess, whenFailure
+    ) where
 
-import Data.Char    ( isAlphaNum, isSpace )
-import Data.Int     ( Int64 )
-import Data.List    ( intercalate )
-import Data.Monoid  ( Monoid, mempty, mappend )
+import App.Core.Types      ( ID )
+import Control.Monad.Trans ( MonadIO, liftIO )
+import Data.Validation     ( Result(..), assert, reject, whenSuccess, whenFailure )
 
-------------------------------------------------------------------------- Types
+-- | The result of validating.
+type Validation = Result [Error]
 
--- | The list of possible errors.
-data Error = IDNotFound Int64
+-- | The list of possible application errors.
+data Error = IDNotFound ID
            | TagNotFound String
            | CategoriesNotFound [String]
            | InvalidTagName String
@@ -17,60 +20,30 @@ data Error = IDNotFound Int64
            | DuplicateHash String
            | InvalidFileSize Int
            | UnrecognizedFile
+           | EmptyAlbum
 
--- | The results of a validation. When invalid, it contains a list of errors.
-data Validation = Valid | Invalid [Error]
+-- | Returns a human-readable error message for the given error.
+showError :: Error -> String
+showError (IDNotFound              x) = "No post with ID " ++ show x ++ " was found"
+showError (TagNotFound             x) = "No tag with the name \"" ++ x ++ "\" was found"
+showError (CategoriesNotFound      x) = "No categories with the names " ++ show x ++ " were found"
+showError (InvalidTagName         []) = "Tag name cannot be empty"
+showError (InvalidTagName          x) = "Invalid tag name: " ++ x
+showError (InvalidScopeName       []) = "Scope name cannot be empty"
+showError (InvalidScopeName        x) = "Invalid scope name: " ++ x
+showError (InvalidScopeExpression []) = "Scope expression cannot be empty"
+showError (InvalidScopeExpression  x) = "Invalid scope expression: " ++ x
+showError (DuplicateHash           x) = "Duplicate hash: " ++ x
+showError (InvalidFileSize         x) = "File size must be greater than zero: " ++ show x
+showError (UnrecognizedFile         ) = "File is not a recognized format"
+showError (EmptyAlbum               ) = "Album cannot be empty"
 
-instance Show Error where
-    show (IDNotFound              x) = "No post with ID " ++ show x ++ " was found"
-    show (TagNotFound             x) = "No tag with the name \"" ++ x ++ "\" was found"
-    show (CategoriesNotFound      x) = "No categories with the names " ++ show x ++ " were found"
-    show (InvalidTagName         []) = "Tag name cannot be empty"
-    show (InvalidTagName          x) = "Invalid tag name: " ++ x
-    show (InvalidScopeName       []) = "Scope name cannot be empty"
-    show (InvalidScopeName        x) = "Invalid scope name: " ++ x
-    show (InvalidScopeExpression []) = "Scope expression cannot be empty"
-    show (InvalidScopeExpression  x) = "Invalid scope expression: " ++ x
-    show (DuplicateHash           x) = "Duplicate hash: " ++ x
-    show (InvalidFileSize         x) = "File size must be greater than zero: " ++ show x
-    show (UnrecognizedFile         ) = "File is not a recognized format"
+-- | Returns a human-readable error message for the given list of errors.
+showErrors :: [Error] -> String
+showErrors [ ] = "No Errors"
+showErrors [e] = "Error: " ++ showError e
+showErrors  es = "Errors:" ++ concatMap (("\n* " ++) . showError) es
 
-instance Show Validation where
-    show Valid         = "Valid"
-    show (Invalid [e]) = "Error: " ++ show e
-    show (Invalid es)  = "Errors:" ++ concatMap (\x -> "\n* " ++ show x) es
-
-instance Monoid Validation where
-    mempty                          = Valid
-    mappend Valid b                 = b
-    mappend a Valid                 = a
-    mappend (Invalid a) (Invalid b) = Invalid (a ++ b)
-
--------------------------------------------------------------------- Validation
-
--- | Returns whether or not the given validation result is valid.
-isValid :: Validation -> Bool
-isValid Valid       = True
-isValid (Invalid _) = False
-
--- | Concatonates the given list of validation results. Returns valid if all
--- | elements are valid; otherwise, returns invalid with the list of all errors.
-validate :: [Validation] -> Validation
-validate = mconcat
-
--- | Concatonates the given list of validation results. Returns valid if all
--- | elements are valid; otherwise, returns invalid with only the first error.
-validateSingle :: [Validation] -> Validation
-validateSingle []            = Valid
-validateSingle (Invalid x:_) = Invalid x
-validateSingle (Valid:xs)    = validateSingle xs
-
--- | Returns valid if the given value is true; otherwise, returns invalid with
--- | the given error.
-verify :: Bool -> Error -> Validation
-verify True  _   = Valid
-verify False err = Invalid [err]
-
--- | Returns invalid with the given error.
-invalidate :: Error -> Validation
-invalidate err = Invalid [err]
+-- | Prints a human-readable error message for the given list of errors.
+printErrors :: MonadIO m => [Error] -> m ()
+printErrors = liftIO . putStrLn . showErrors
