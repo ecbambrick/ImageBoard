@@ -40,6 +40,7 @@ library
       , App.Config
       , App.Expression
       , App.Storage.Database
+      , App.Storage.FileSystem
       , App.Storage.Path
       , App.Validation
       , App.Web.Element
