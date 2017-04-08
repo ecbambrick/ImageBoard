@@ -18,4 +18,26 @@ const Session = {
     set doubleView(x) {
         sessionStorage.setItem("double-view", x);
     },
+
+    // The maximum height per row of a gallery.
+    get maxRowHeight() {
+        let x = sessionStorage.getItem("max-row-height");
+        let isNumber = x !== null && x !== undefined && !isNaN(x);
+
+        return isNumber ? x : 256;
+    },
+    set maxRowHeight(x) {
+        sessionStorage.setItem("max-row-height", x);
+    },
+
+    // The maximum height per row of an album page gallery.
+    get maxAlbumRowHeight() {
+        let x = sessionStorage.getItem("max-album-row-height");
+        let isNumber = x !== null && x !== undefined && !isNaN(x);
+
+        return isNumber ? x : 512;
+    },
+    set maxAlbumRowHeight(x) {
+        sessionStorage.setItem("max-album-row-height", x);
+    },
 }

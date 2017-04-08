@@ -152,7 +152,7 @@ const AlbumViewModel = {
             Kefir.fromEvents(dom.editTags, 'keyup')
                  .map(x => x.target.value)
                  .sampledBy(editSubmitted)
-                 .map(x => x.split(",").map(String.trim).filter(x => x != ""))                 
+                 .map(x => x.split(",").map(String.trim).filter(x => x != ""))
                  .ignoreErrors()
                  .toProperty(() => album.tags);
 
@@ -237,7 +237,10 @@ const AlbumViewModel = {
 
         // Redraw the gallery.
         windowResize.onValue(() => {
-            Gallery.register(dom.gallery, { maxHeight: 700, padding: 10 });
+            Gallery.register(dom.gallery, {
+                maxHeight: Session.maxAlbumRowHeight,
+                padding: 10
+            });
         });
 
         // Simple DOM bindings.

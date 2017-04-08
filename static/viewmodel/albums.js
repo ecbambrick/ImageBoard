@@ -72,9 +72,12 @@ const AlbumsViewModel = {
 
         // Redraw the gallery.
         windowResize.onValue(() => {
-            Gallery.register(dom.gallery, { maxHeight: 500, padding: 10 });
+            Gallery.register(dom.gallery, {
+                maxHeight: Session.maxRowHeight,
+                padding: 10
+            });
         });
-
+        
         // Actions.
         goToNextPage      .onValue(_ => Utility.goTo(Url.albums(scope, page + 1, query)));
         goToPreviousPage  .onValue(_ => Utility.goTo(Url.albums(scope, page - 1, query)));
