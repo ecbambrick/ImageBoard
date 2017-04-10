@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE MultiWayIf        #-}
 
 module App.Web.Element where
 
@@ -15,14 +16,16 @@ import qualified Text.JavaScript as JS
 -- Bug in firefox prevents default menuitem_ from working.
 import Lucid.Html5 hiding ( menuitem_ )
 
-import App.Core.Types ( Album(..), DetailedTag(..), Image(..), Scope(..), ID )
-import App.Web.Icon   ( Icon )
-import Control.Monad  ( forM_ )
-import Data.DateTime  ( DateTimeFormat(..), TimeZone )
-import Data.Monoid    ( (<>) )
-import Data.Text      ( Text )
-import Data.Textual   ( display, intercalate )
-import Lucid.Base     ( Html, term, toHtml )
+import App.Core.Types     ( Album(..), DetailedTag(..), Image(..), Scope(..), ID )
+import App.Web.Icon       ( Icon )
+import Control.Monad      ( forM_ )
+import Data.Char          ( isAlpha, isNumber, toUpper )
+import Data.DateTime      ( DateTimeFormat(..), TimeZone )
+import Data.List.Extended ( bundle, groupWith, sortWith )
+import Data.Monoid        ( (<>) )
+import Data.Text          ( Text )
+import Data.Textual       ( display, intercalate )
+import Lucid.Base         ( Html, term, toHtml )
 
 ------------------------------------------------------------------------- Types
 
@@ -72,27 +75,36 @@ actions = div_ [id_ "actions"]
 actionGroup :: Html a -> Html a
 actionGroup = div_
 
+-- | Returns an HTML element containing a group of actions, displayed
+-- | vertically.
+verticalActionGroup :: Html a -> Html a
+verticalActionGroup = div_ [class_ "vertical-actions"]
+
 -- | Returns an HTML link with the given icon and ID.
 action :: Icon -> Text -> Html ()
 action icon id =
     let classes = "action fa " <> Icon.render icon
     in a_ [id_ id, href_ "#", class_ classes] mempty
 
--- Returns an a HTML link with the given icon and URL.
+-- | Returns an a HTML link with the given icon and URL.
 actionLink :: Icon -> Text -> Html ()
 actionLink icon link =
     let classes = "action fa " <> Icon.render icon
     in a_ [href_ link, class_ classes] mempty
 
--- Returns an a HTML link with the given icon and URL.
+-- | Returns an a HTML link with the given icon and URL.
 disabledAction :: Icon -> Html ()
 disabledAction icon =
     let classes = "disabled action fa " <> Icon.render icon
     in a_ [href_ "#", class_ classes] mempty
 
+-- | Returns an HTML link with the given label and URL.
+textLink :: Text -> Text -> Html ()
+textLink text link = a_ [href_ link, class_ "text-link"] (toHtml text)
+
 ----------------------------------------------------------------- Context Menus
 
--- Returns an HTML context menu with the given ID and list of tag/link pairs.
+-- | Returns an HTML context menu with the given ID and list of tag/link pairs.
 thumbnailMenu :: (String -> Text) -> String -> ID -> [String] -> Html ()
 thumbnailMenu buildURL query postID tags =
     let menuitem_   = flip (term "menuitem") mempty
@@ -240,6 +252,55 @@ formButton button id text icon =
 
 -------------------------------------------------------------------------- Tags
 
+-- | Returns an HTML element containing a detailed list of tags sorted by name.
+tagsByName :: Scope -> String -> [DetailedTag] -> Html ()
+tagsByName scope query tags =
+    let groups             = groupWith getGroupHeader tags
+        getGroupHeader tag = let char = head (detailedTagName tag)
+                             in if | isNumber char -> "#"
+                                   | isAlpha  char -> [toUpper char]
+                                   | otherwise     -> "Symbol"
+    in tagList $ do
+        forM_ groups $ \group -> do
+            tagHeader (getGroupHeader (head group))
+            forM_ group $ \tag -> do
+                tagDetail scope query tag
+
+-- | Returns an HTML element containing a detailed list of tags sorted by
+-- | category.
+tagsByCategory :: Scope -> String -> [DetailedTag] -> Html ()
+tagsByCategory scope query tags =
+    let groups = bundle $ do
+                    tag <- tags
+                    category <- detailedTagCategories tag
+                    return (category, tag)
+
+    in tagList $ do
+        forM_ groups $ \(header, group) -> do
+            tagHeader header
+            forM_ group $ \tag -> do
+                tagDetail scope query tag
+
+-- | Returns an HTML element containing a detailed list of uncategorized tags.
+uncategorizedTags :: Scope -> String -> [DetailedTag] -> Html ()
+uncategorizedTags scope query tags =
+    let uncategorizedTags = filter (null.detailedTagCategories) tags
+
+    in tagList $ do
+        tagHeader "Uncategorized"
+        forM_ uncategorizedTags $ \tag -> do
+            tagDetail scope query tag
+
+-- | Returns an HTML element containing a detailed list of the most recent tags.
+recentTags :: Scope -> String -> [DetailedTag] -> Html ()
+recentTags scope query tags =
+    let recentTags = take 100 $ reverse $ sortWith detailedTagCreated tags
+
+    in tagList $ do
+        tagHeader "Recent"
+        forM_ recentTags $ \tag -> do
+            tagDetail scope query tag
+
 -- | Returns an HTML element containing a detailed list of tags.
 tagList :: Html () -> Html ()
 tagList = div_ [id_ "tag-list"]
@@ -271,10 +332,12 @@ tagDetail scope query DetailedTag {..} = do
 
         imageCount = case detailedTagImageCount of
             0 -> span_ [class_ "disabled"] "0 images"
+            1 -> "1 image"
             x -> toHtml (show x ++ " images")
 
         albumCount = case detailedTagAlbumCount of
             0 -> span_ [class_ "disabled"] "0 albums"
+            1 -> "1 album"
             x -> toHtml (show x ++ " albums")
 
     div_ [class_ "tag-item"] $ do

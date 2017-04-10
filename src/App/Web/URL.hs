@@ -2,7 +2,8 @@
 {-# LANGUAGE RecordWildCards  #-}
 
 module App.Web.URL
-    ( dataPrefix, staticPrefix
+    ( TagGrouping(..)
+    , dataPrefix, staticPrefix
     , image, images, imageFile, imageThumb
     , album, albums, albumThumb
     , page, pageFile, pageThumb
@@ -13,12 +14,32 @@ import qualified App.Web.Route    as Route
 import qualified Data.Text        as Text
 import qualified Network.URI      as URI
 import qualified Web.Spock        as Spock
+import qualified Web.PathPieces   as PathPieces
 
 import App.Core.Types  ( Album(..), Image(..), Page(..), Scope(..), ID )
 import Data.Monoid     ( (<>) )
 import Data.Text       ( Text )
-import Data.Textual    ( replace )
+import Data.Textual    ( replace, toLower )
 import System.FilePath ( (</>), (<.>) )
+import Web.PathPieces  ( PathPiece(..) )
+
+------------------------------------------------------------------------- Types
+
+-- The method by which tags are grouped/sorted by.
+data TagGrouping = ByName
+                 | ByCategory
+                 | Uncategorized
+                 | Recent
+                 deriving (Show)
+
+instance PathPiece TagGrouping where
+    toPathPiece = Text.pack . show
+    fromPathPiece x
+        | toLower x == "byname"         = Just ByName
+        | toLower x == "bycategory"     = Just ByCategory
+        | toLower x == "uncategorized"  = Just Uncategorized
+        | toLower x == "recent"         = Just Recent
+        | otherwise                     = Nothing
 
 ---------------------------------------------------------------------- Prefixes
 
@@ -99,10 +120,12 @@ pageThumb id Page {..} = pathToURL path
 -------------------------------------------------------------------- Misc. URLs
 
 -- | Returns the route to the list of tags with the given scope.
-tags :: Scope -> String -> Text
-tags scope query =
+tags :: Scope -> String -> Maybe TagGrouping -> Text
+tags scope query groupBy =
     let route  = Spock.renderRoute Route.tags (scopeName scope)
-        params = [("q", query)]
+        group  = Text.unpack $ maybe "" PathPieces.toPathPiece groupBy
+        params = [ ("q",        query)
+                 , ("grouping", group) ]
 
     in route `withParameters` params
 

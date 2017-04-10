@@ -3,8 +3,22 @@ a {
     text-decoration: none;
 }
 
+div.vertical-actions {
+    display: flex;
+    flex-direction: column;
+}
+
 a.action {
     padding: 5px 8px;
+}
+
+a.text-link {
+    text-align: center;
+    padding: 10px;
+}
+
+a.text-link:first-child {
+    margin-top: 30px;
 }
 
 a#edit-cancel {

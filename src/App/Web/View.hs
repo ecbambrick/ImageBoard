@@ -1,9 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE MultiWayIf        #-}
 
 module App.Web.View
-    ( albumView, albumsView, imageView, imagesView, pageView, tagsView ) where
+    ( albumView, albumsView, imageView, imagesView, pageView, tagsView) where
 
 import qualified App.Core.Album   as Album
 import qualified App.Core.Scope   as Scope
@@ -15,15 +14,15 @@ import qualified Data.Text.Lazy   as LazyText
 import qualified Text.JavaScript  as JS
 
 import App.Core.Types     ( Album(..), DetailedTag(..), Image(..), Page(..), Scope(..) )
+import App.Web.URL        ( TagGrouping(..) )
 import Control.Monad      ( forM_ )
-import Data.List.Extended ( groupWith )
-import Data.Char          ( isAlpha, isNumber, toUpper )
 import Data.Maybe         ( listToMaybe )
 import Data.Monoid        ( (<>) )
 import Data.Text          ( Text )
 import Data.Textual       ( display )
 import Data.DateTime      ( TimeZone )
 import Lucid.Base         ( Html(..), renderText )
+import Web.PathPieces     ( PathPiece(..) )
 
 ------------------------------------------------------------------------- Views
 
@@ -78,7 +77,7 @@ albumsView scope query page total pageSize albums = render $ do
         canPrevious = page > 1
         canNext     = page * pageSize < total
 
-        tagsURL         = URL.tags   scope query
+        tagsURL         = URL.tags   scope query Nothing
         previousPageURL = URL.albums scope (page - 1) query
         firstPageURL    = URL.albums scope 1          query
         nextPageURL     = URL.albums scope (page + 1) query
@@ -185,7 +184,7 @@ imagesView scope query page total pageSize images = render $ do
         canPrevious = page > 1
         canNext     = page * pageSize < total
 
-        tagsURL         = URL.tags   scope query
+        tagsURL         = URL.tags   scope query Nothing
         previousPageURL = URL.images scope (page - 1) query
         firstPageURL    = URL.images scope 1          query
         nextPageURL     = URL.images scope (page + 1) query
@@ -273,8 +272,8 @@ pageView scope album @ Album {..} curr = render $ do
         Elem.canvas source1 source2
 
 -- | Renders a view for the list of tags as text containing HTML.
-tagsView :: Scope -> String -> [DetailedTag] -> Text
-tagsView scope query tags = render $ do
+tagsView :: Scope -> String -> TagGrouping -> [DetailedTag] -> Text
+tagsView scope query grouping tags = render $ do
     let title  = "Tags"
         onload = JS.functionCall "TagsViewModel.register" args
         args   = [ JS.toJSON (scopeName scope)
@@ -283,12 +282,6 @@ tagsView scope query tags = render $ do
         albumsURL = URL.albums scope 1 query
         imagesURL = URL.images scope 1 query
         tagsURL   = URL.tags   scope   query
-
-        groups             = groupWith getGroupHeader tags
-        getGroupHeader tag = let char = head (detailedTagName tag)
-                             in if | isNumber char -> "#"
-                                   | isAlpha  char -> [toUpper char]
-                                   | otherwise     -> "Symbol"
 
     Elem.document title onload $ do
         Elem.sideBar $ do
@@ -300,12 +293,17 @@ tagsView scope query tags = render $ do
                     Elem.actionGroup $ do
                         Elem.actionLink Icon.Book  albumsURL
                         Elem.actionLink Icon.Image imagesURL
-                Elem.searchBox tagsURL query
-        Elem.tagList $ do
-            forM_ groups $ \group -> do
-                Elem.tagHeader (getGroupHeader (head group))
-                forM_ group $ \tag -> do
-                    Elem.tagDetail scope query tag
+                Elem.searchBox (tagsURL Nothing) query
+                Elem.verticalActionGroup $ do
+                    Elem.textLink "By Name"       $ tagsURL (Just ByName)
+                    Elem.textLink "By Category"   $ tagsURL (Just ByCategory)
+                    Elem.textLink "Uncategorized" $ tagsURL (Just Uncategorized)
+                    Elem.textLink "Recent"        $ tagsURL (Just Recent)
+        case grouping of
+            ByName        -> Elem.tagsByName        scope query tags
+            ByCategory    -> Elem.tagsByCategory    scope query tags
+            Uncategorized -> Elem.uncategorizedTags scope query tags
+            Recent        -> Elem.recentTags        scope query tags
 
 ----------------------------------------------------------------------- Utility
 

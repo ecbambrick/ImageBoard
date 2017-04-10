@@ -21,6 +21,7 @@ import qualified Web.Spock                     as Spock
 import App.Config                ( Config )
 import App.Core.Post             ( PostType(..) )
 import App.Core.Types            ( Album(..), DeletionMode(..), Image(..), Scope(..) )
+import App.Web.URL               ( TagGrouping(..) )
 import App.Validation            ( Error(..), Result(..) )
 import Control.Monad.Trans       ( MonadIO, lift, liftIO )
 import Control.Monad.Trans.Maybe ( MaybeT(..), runMaybeT )
@@ -213,13 +214,13 @@ routes = do
     -- Renders the tag index page which lists all tags.
     get Route.tags $ \scopeName -> do
         result <- runMaybeT $ do
-            scope <- MaybeT $ Scope.querySingle scopeName
-            query <- lift   $ optionalParam "q" ""
+            scope    <- MaybeT $ Scope.querySingle scopeName
+            query    <- lift   $ optionalParam "q" ""
+            grouping <- lift   $ optionalParam "grouping" ByName
+            tags     <- lift   $ Tag.queryDetailed $ Expression.parseMany
+                                    [query, scopeExpression scope]
 
-            let fullQuery = Expression.parseMany [query, scopeExpression scope]
-
-            tags <- lift $ Tag.queryDetailed fullQuery
-            return (View.tagsView scope query tags)
+            return (View.tagsView scope query grouping tags)
 
         case result of
             Nothing   -> notFound
