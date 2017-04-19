@@ -35,19 +35,16 @@ a:hover {
 }
 
 aside {
-    flex: 0 0 340px;
+    flex: 0 0 320px;
     position: relative;
 }
 
 #info-panel, #edit-panel, #delete-panel {
-    border-right: 1px solid #3e3e3e;
     display: flex;
     flex: 1;
     flex-direction: column;
     height: calc(100vh - 40px);
     margin: 0 auto;
-    margin-right: 20px;
-    padding-right: 20px;
     position: fixed;
     width: 300px;
 }
@@ -352,9 +349,6 @@ hr {
 #side-bar {
     display: flex;
     flex-direction: column;
-    margin-right: 20px;
-    border-right: 1px solid #3e3e3e;
-    padding-right: 20px;
 }
 
 #gallery2 {
