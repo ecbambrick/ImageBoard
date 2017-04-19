@@ -13,7 +13,9 @@ import App.Core.Types       ( App )
 import App.Core.Post        ( PostType(..) )
 import Control.Exception    ( ErrorCall(..), throwIO )
 import Control.Monad.Reader ( MonadIO, filterM, forM_, liftIO, unless, void )
+import Data.List            ( sortBy )
 import Data.Maybe           ( fromJust )
+import Data.Ord.Extended    ( comparingAlphaNum )
 import Data.Textual         ( splitOn )
 import System.FilePath      ( (</>) )
 import Text.Parsec          ( ParseError, (<|>), anyChar, between, char, choice
@@ -35,12 +37,11 @@ directory inPath outPath extraTags = do
         unless isInPathValid  $ throwIO (ErrorCall $ "Invalid path: " ++ inPath)
         unless isOutPathValid $ throwIO (ErrorCall $ "Invalid path: " ++ fromJust outPath)
 
-    liftIO $ do
-        putStrLn $ replicate 80 '-'
-        putStrLn $ "Importing files from " ++ inPath
-        putStrLn $ case outPath of
-            Nothing   -> "Successfully imported files will not be moved"
-            Just path -> "Successfully imported files will be moved to " ++ path
+    logInfo $ replicate 80 '-'
+    logInfo $ "Importing files from " ++ inPath
+    logInfo $ case outPath of
+        Nothing   -> "Successfully imported files will not be moved"
+        Just path -> "Successfully imported files will be moved to " ++ path
 
     files <- getDirectoryFiles inPath
     forM_ files $ \fileName ->
@@ -58,21 +59,27 @@ directory inPath outPath extraTags = do
                     (_,     Just path) -> liftIO $ Dir.renameFile filePath (path </> fileName)
                     _                  -> return ()
 
-    liftIO $ do
-        putStrLn $ replicate 80 '-'
+    logInfo $ replicate 80 '-'
 
 ----------------------------------------------------------------------- Utility
 
+-- | Gets the list of files from the given directory in alphanumeric order.
 getDirectoryFiles :: (MonadIO m) => FilePath -> m [String]
-getDirectoryFiles path = liftIO $ do
-    contents <- Dir.getDirectoryContents path
-    filterM (Dir.doesFileExist . (path </>)) contents
+getDirectoryFiles path = do
+    contents <- liftIO $ Dir.listDirectory path
+    files    <- liftIO $ filterM (Dir.doesFileExist . (path </>)) contents
+
+    return $ sortBy (comparingAlphaNum id) files
 
 -- | Logs an import error message to the console.
 logError :: (MonadIO m) => FilePath -> String -> m ()
 logError path message = liftIO $ do
     let fileName = FilePath.takeFileName path
     putStrLn $ "Failed to import \"" ++ fileName ++ "\": " ++ message
+
+-- | Logs an information message to the console.
+logInfo :: (MonadIO m) => String -> m ()
+logInfo = liftIO . putStrLn
 
 -- | Parse the given string and return the extracted title and list of tags.
 parseFileName :: String -> Either ParseError (String, [String])
