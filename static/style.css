@@ -347,8 +347,17 @@ hr {
 }
 
 #side-bar {
+    flex: 0 0 50px;
+    position: relative;
+}
+
+#side-bar-content {
     display: flex;
+    flex: 1;
     flex-direction: column;
+    height: calc(100vh - 40px);
+    margin: 0 auto;
+    position: fixed;
 }
 
 #gallery2 {

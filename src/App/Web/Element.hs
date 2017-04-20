@@ -147,7 +147,7 @@ separator = hr_ mempty
 
 -- | Returns an HTML element representing a side bar.
 sideBar :: Html a -> Html a
-sideBar = div_ [id_ "side-bar", class_ "hidden"]
+sideBar = div_ [id_ "side-bar", class_ "hidden"] . div_ [id_ "side-bar-content"]
 
 -- | Returns an HTML element representing a panel for displaying data.
 infoPanel :: Html a -> Html a
