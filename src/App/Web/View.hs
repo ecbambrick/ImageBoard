@@ -295,15 +295,15 @@ tagsView scope query grouping tags = render $ do
                         Elem.actionLink Icon.Image imagesURL
                 Elem.searchBox (tagsURL Nothing) query
                 Elem.verticalActionGroup $ do
-                    Elem.textLink "By Name"       $ tagsURL (Just ByName)
-                    Elem.textLink "By Category"   $ tagsURL (Just ByCategory)
+                    Elem.textLink "By Name"       $ tagsURL (Just (ByName Nothing))
+                    Elem.textLink "By Category"   $ tagsURL (Just (ByCategory Nothing))
                     Elem.textLink "Uncategorized" $ tagsURL (Just Uncategorized)
                     Elem.textLink "Recent"        $ tagsURL (Just Recent)
         case grouping of
-            ByName        -> Elem.tagsByName        scope query tags
-            ByCategory    -> Elem.tagsByCategory    scope query tags
-            Uncategorized -> Elem.uncategorizedTags scope query tags
-            Recent        -> Elem.recentTags        scope query tags
+            ByName     group -> Elem.tagsByName        scope query tags group
+            ByCategory group -> Elem.tagsByCategory    scope query tags group
+            Uncategorized    -> Elem.uncategorizedTags scope query tags
+            Recent           -> Elem.recentTags        scope query tags
 
 ----------------------------------------------------------------------- Utility
 

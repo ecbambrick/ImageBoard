@@ -19,27 +19,40 @@ import qualified Web.PathPieces   as PathPieces
 import App.Core.Types  ( Album(..), Image(..), Page(..), Scope(..), ID )
 import Data.Monoid     ( (<>) )
 import Data.Text       ( Text )
-import Data.Textual    ( replace, toLower )
+import Data.Textual    ( replace, splitOn, toLower )
 import System.FilePath ( (</>), (<.>) )
 import Web.PathPieces  ( PathPiece(..) )
 
 ------------------------------------------------------------------------- Types
 
 -- The method by which tags are grouped/sorted by.
-data TagGrouping = ByName
-                 | ByCategory
+data TagGrouping = ByName (Maybe String)
+                 | ByCategory (Maybe String)
                  | Uncategorized
                  | Recent
-                 deriving (Show)
 
 instance PathPiece TagGrouping where
-    toPathPiece = Text.pack . show
-    fromPathPiece x
-        | toLower x == "byname"         = Just ByName
-        | toLower x == "bycategory"     = Just ByCategory
-        | toLower x == "uncategorized"  = Just Uncategorized
-        | toLower x == "recent"         = Just Recent
-        | otherwise                     = Nothing
+    toPathPiece x = case x of
+        Uncategorized           -> "uncategorized"
+        Recent                  -> "recent"
+        ByName          Nothing -> "by-name"
+        ByCategory      Nothing -> "by-category"
+        ByName     (Just group) -> "by-name-"     <> Text.pack group
+        ByCategory (Just group) -> "by-category-" <> Text.pack group
+
+    fromPathPiece x = case x' of
+        "uncategorized"            -> Just Uncategorized
+        "recent"                   -> Just Recent
+        "by-name"                  -> Just (ByName Nothing)
+        "by-category"              -> Just (ByCategory Nothing)
+        _ | hasGroup "by-name"     -> Just (ByName (Just group))
+        _ | hasGroup "by-category" -> Just (ByCategory (Just group))
+        _                          -> Nothing
+        where
+            x'         = toLower x
+            group      = Text.unpack $ last $ splitOn "-" x'
+            hasGroup y = and [ Text.length x' > Text.length y + 1
+                             , (y <> "-") `Text.isPrefixOf` x' ]
 
 ---------------------------------------------------------------------- Prefixes
 

@@ -24,7 +24,7 @@ import Data.DateTime      ( DateTimeFormat(..), TimeZone )
 import Data.List.Extended ( bundle, groupWith, sortWith )
 import Data.Monoid        ( (<>) )
 import Data.Text          ( Text )
-import Data.Textual       ( display, intercalate )
+import Data.Textual       ( display, intercalate, toLower )
 import Lucid.Base         ( Html, term, toHtml )
 
 ------------------------------------------------------------------------- Types
@@ -253,33 +253,45 @@ formButton button id text icon =
 -------------------------------------------------------------------------- Tags
 
 -- | Returns an HTML element containing a detailed list of tags sorted by name.
-tagsByName :: Scope -> String -> [DetailedTag] -> Html ()
-tagsByName scope query tags =
-    let groups             = groupWith getGroupHeader tags
-        getGroupHeader tag = let char = head (detailedTagName tag)
+tagsByName :: Scope -> String -> [DetailedTag] -> Maybe String -> Html ()
+tagsByName scope query tags filterGroup =
+    let getGroupHeader tag = let char = head (detailedTagName tag)
                              in if | isNumber char -> "#"
                                    | isAlpha  char -> [toUpper char]
                                    | otherwise     -> "Symbol"
-    in tagList $ do
-        forM_ groups $ \group -> do
-            tagHeader (getGroupHeader (head group))
-            forM_ group $ \tag -> do
-                tagDetail scope query tag
+
+        groups = bundle $ do
+                    tag   <- tags
+                    group <- [getGroupHeader tag]
+                    return (group, tag)
+
+    in groupedTags scope query groups filterGroup
 
 -- | Returns an HTML element containing a detailed list of tags sorted by
 -- | category.
-tagsByCategory :: Scope -> String -> [DetailedTag] -> Html ()
-tagsByCategory scope query tags =
+tagsByCategory :: Scope -> String -> [DetailedTag] -> Maybe String -> Html ()
+tagsByCategory scope query tags filterGroup =
     let groups = bundle $ do
-                    tag <- tags
-                    category <- detailedTagCategories tag
-                    return (category, tag)
+                    tag   <- tags
+                    group <- detailedTagCategories tag
+                    return (group, tag)
+
+     in groupedTags scope query groups filterGroup
+
+-- | Returns an HTML element containing a detailed list of tags where the tags
+-- | are organized into named groups.
+groupedTags :: Scope -> String -> [(String, [DetailedTag])] -> Maybe String -> Html ()
+groupedTags scope query groups filterGroup =
+    let filteredGroups = filter (\(x,_) -> maybe True (== toLower x) filterGroup) groups
 
     in tagList $ do
-        forM_ groups $ \(header, group) -> do
-            tagHeader header
-            forM_ group $ \tag -> do
-                tagDetail scope query tag
+        case filteredGroups of
+            [(_, tags)] -> do
+                mapM_ (tagDetail scope query) tags
+
+            groups -> forM_ groups $ \(header, tags) -> do
+                tagHeader header
+                mapM_ (tagDetail scope query) tags
 
 -- | Returns an HTML element containing a detailed list of uncategorized tags.
 uncategorizedTags :: Scope -> String -> [DetailedTag] -> Html ()
@@ -287,7 +299,6 @@ uncategorizedTags scope query tags =
     let uncategorizedTags = filter (null.detailedTagCategories) tags
 
     in tagList $ do
-        tagHeader "Uncategorized"
         forM_ uncategorizedTags $ \tag -> do
             tagDetail scope query tag
 
@@ -297,7 +308,6 @@ recentTags scope query tags =
     let recentTags = take 100 $ reverse $ sortWith detailedTagCreated tags
 
     in tagList $ do
-        tagHeader "Recent"
         forM_ recentTags $ \tag -> do
             tagDetail scope query tag
 

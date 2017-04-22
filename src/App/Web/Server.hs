@@ -216,7 +216,7 @@ routes = do
         result <- runMaybeT $ do
             scope    <- MaybeT $ Scope.querySingle scopeName
             query    <- lift   $ optionalParam "q" ""
-            grouping <- lift   $ optionalParam "grouping" ByName
+            grouping <- lift   $ optionalParam "grouping" (ByName Nothing)
             tags     <- lift   $ Tag.queryDetailed $ Expression.parseMany
                                     [query, scopeExpression scope]
 
