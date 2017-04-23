@@ -326,7 +326,7 @@ tagDetail scope query DetailedTag {..} = do
 
         sampleLink = case detailedTagSample of
             Left  (Image {..}) -> URL.image scope imageID fullQuery
-            Right (Album {..}) -> URL.album scope albumID
+            Right (Album {..}) -> URL.album scope albumID fullQuery
 
         sampleThumbnail = case detailedTagSample of
             Left  image -> URL.imageThumb image
@@ -470,7 +470,7 @@ albumGallery :: Scope -> String -> [Album] -> Html ()
 albumGallery scope query albums =
     div_ [id_ "gallery2"] $
         forM_ albums $ \album @ Album {..} -> do
-            let url      = URL.album scope albumID
+            let url      = URL.album scope albumID query
                 thumb    = URL.albumThumb album
                 buildURL = URL.albums scope 0
 

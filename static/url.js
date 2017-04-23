@@ -4,8 +4,12 @@
 const Url = {
 
     // Returns the URL for the album with the given scope and ID.
-    album: (scope, id) => {
-        return "/" + scope + "/album/" + id;
+    album: (scope, id, query = "") => {
+        let params = {
+            q: query.length === 0 ? null : query
+        };
+
+        return "/" + scope + "/album/" + id + Utility.parameterize(params);
     },
 
     // Returns the URL for the album index using the given scope, page, and query.
@@ -22,7 +26,7 @@ const Url = {
     image: (scope, id, query = "") => {
         let params = {
             q: query.length === 0 ? null : query
-        }
+        };
 
         return "/" + scope + "/image/" + id + Utility.parameterize(params);
     },
@@ -43,7 +47,11 @@ const Url = {
     },
 
     // Returns the URL for the page with the given scope, album ID, and page number.
-    page: (scope, albumId, page) => {
-        return "/" + scope + "/album/" + albumId + "/" + page;
+    page: (scope, albumId, page = 1, query = "") => {
+        let params = {
+            q: query.length === 0 ? null : query
+        };
+
+        return "/" + scope + "/album/" + albumId + "/" + page + Utility.parameterize(params);
     }
 }

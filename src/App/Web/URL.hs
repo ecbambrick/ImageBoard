@@ -70,8 +70,8 @@ staticPrefix = "static"
 -- | query and scope.
 image :: Scope -> ID -> String -> Text
 image scope id query =
-    let route     = Spock.renderRoute Route.image (scopeName scope) id
-        params    = [("q", query)]
+    let route  = Spock.renderRoute Route.image (scopeName scope) id
+        params = [("q", query)]
 
     in withParameters route params
 
@@ -79,8 +79,9 @@ image scope id query =
 -- | query and scope.
 images :: Scope -> Int -> String -> Text
 images scope page query =
-    let route     = Spock.renderRoute Route.images (scopeName scope)
-        params    = [("page", if page <= 1 then "" else show page), ("q", query)]
+    let route  = Spock.renderRoute Route.images (scopeName scope)
+        params = [ ("page", if page <= 1 then "" else show page)
+                 , ("q", query) ]
 
     in route `withParameters` params
 
@@ -95,17 +96,23 @@ imageThumb image = pathToURL (Path.relativeImageThumb image)
 -------------------------------------------------------------------- Album URLs
 
 -- | Returns the route to an album with the given ID, query, and scope.
-album :: Scope -> ID -> Text
-album scope id = Spock.renderRoute Route.album (scopeName scope) id
+album :: Scope -> ID -> String -> Text
+album scope id query =
+    let route  = Spock.renderRoute Route.album (scopeName scope) id
+        params = [("q", query)]
+
+    in route `withParameters` params
+
 
 -- | Returns the route to the list of albums on the given page with the given
 -- | query and scope.
 albums :: Scope -> Int -> String -> Text
 albums scope page query =
-    let route     = Spock.renderRoute Route.albums (scopeName scope)
-        params    = [("page", if page <= 1 then "" else show page), ("q", query)]
+    let route  = Spock.renderRoute Route.albums (scopeName scope)
+        params = [ ("page", if page <= 1 then "" else show page)
+                 , ("q", query) ]
 
-    in withParameters route params
+    in route `withParameters` params
 
 -- | Returns the route for the thumbnail of the given album.
 albumThumb :: Album -> Text
@@ -115,8 +122,12 @@ albumThumb Album {..} = pathToURL (Path.relativeAlbumDirectory albumID </> "thum
 
 -- | Returns the route to the given page number from the album with the given
 -- | ID and scope.
-page :: Scope -> ID -> Int -> Text
-page scope = Spock.renderRoute Route.page (scopeName scope)
+page :: Scope -> ID -> Int -> String -> Text
+page scope id page query =
+    let route  = Spock.renderRoute Route.page (scopeName scope) id page
+        params = [("q", query)]
+
+    in route `withParameters` params
 
 -- | Returns the route for the file for the given page of the album with the
 -- | given ID.

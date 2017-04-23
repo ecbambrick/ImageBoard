@@ -114,8 +114,9 @@ routes = do
         result <- runMaybeT $ do
             scope <- MaybeT $ Scope.querySingle scopeName
             album <- MaybeT $ Album.querySingle id
+            query <- lift   $ strip <$> optionalParam "q" ""
 
-            return (View.pageView scope album number)
+            return (View.pageView scope album number query)
 
         case result of
             Nothing   -> notFound
@@ -131,7 +132,7 @@ routes = do
             tags   <- lift $ optionalParam "tags" (intercalate "," (albumTags album))
             result <- lift $ Album.update id title (splitOn "," tags)
 
-            return (URL.album scope id, result)
+            return (URL.album scope id "", result)
 
         case result of
             Nothing               -> notFound

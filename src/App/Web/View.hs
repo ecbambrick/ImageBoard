@@ -35,8 +35,8 @@ albumView scope query timeZone album @ Album {..} = render $ do
                    , JS.toJSON query
                    , JS.toJSON album ]
 
-    let indexURL = URL.albums scope 1 query
-        albumURL = URL.album scope albumID
+    let indexURL = URL.albums scope 1       query
+        albumURL = URL.album  scope albumID query
 
     Elem.document title onload $ do
         Elem.sideBar $ do
@@ -59,7 +59,7 @@ albumView scope query timeZone album @ Album {..} = render $ do
             Elem.deletePanel albumURL
         Elem.gallery2 $
             flip map albumPages $ \page @ Page {..} ->
-                ( URL.page scope albumID pageNumber
+                ( URL.page scope albumID pageNumber query
                 , URL.pageThumb albumID page)
 
 -- | Renders an index view for albums as text containing HTML.
@@ -82,7 +82,7 @@ albumsView scope query page total pageSize albums = render $ do
         firstPageURL    = URL.albums scope 1          query
         nextPageURL     = URL.albums scope (page + 1) query
         imagesURL       = URL.images scope 1          query
-        firstResultURL  = URL.album  scope <$> firstID
+        firstResultURL  = URL.album  scope <$> firstID <*> pure query
 
         previousPageAction icon =
             if canPrevious
@@ -232,22 +232,23 @@ imagesView scope query page total pageSize images = render $ do
 
 -- | Renders a view for the given page of the given album as text containing
 -- | HTML.
-pageView :: Scope -> Album -> Int -> Text
-pageView scope album @ Album {..} curr = render $ do
+pageView :: Scope -> Album -> Int -> String -> Text
+pageView scope album @ Album {..} curr query = render $ do
     let title  = Text.pack (albumTitle ++ " (" ++ show curr ++ "/" ++ show pages ++ ")")
         onload = JS.functionCall "PageViewModel.register" args
         args   = [ JS.toJSON (scopeName scope)
                  , JS.toJSON albumID
                  , JS.toJSON prev
-                 , JS.toJSON next ]
+                 , JS.toJSON next
+                 , JS.toJSON query ]
 
         pages = length albumPages
         prev  = curr - 1 `rollOver` length albumPages
         next  = curr + 1 `rollOver` length albumPages
 
-        indexURL    = URL.album scope albumID
-        prevPageURL = URL.page  scope albumID prev
-        nextPageURL = URL.page  scope albumID next
+        indexURL    = URL.album scope albumID      query
+        prevPageURL = URL.page  scope albumID prev query
+        nextPageURL = URL.page  scope albumID next query
 
         source1  = maybe "" (URL.pageFile albumID) (Album.getPage album curr)
         source2  = maybe "" (URL.pageFile albumID) (Album.getPage album next)

@@ -4,7 +4,7 @@
 const PageViewModel = {
 
     // Registers event handlers for the current document.
-    register: (scope, albumId, previousPage, nextPage) => {
+    register: (scope, albumId, previousPage, nextPage, query) => {
 
         // DOM shortcuts.
         const dom = {
@@ -20,9 +20,9 @@ const PageViewModel = {
 
         // URL shortcuts.
         const url = {
-            previousPage: Url.page(scope, albumId, previousPage),
-            nextPage:     Url.page(scope, albumId, nextPage),
-            index:        Url.album(scope, albumId),
+            previousPage: Url.page(scope, albumId, previousPage, query),
+            nextPage:     Url.page(scope, albumId, nextPage, query),
+            index:        Url.album(scope, albumId, query),
         };
 
         // -------------------------------------------------------------
