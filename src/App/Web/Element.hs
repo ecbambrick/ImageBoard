@@ -325,7 +325,7 @@ tagDetail scope query DetailedTag {..} = do
     let fullQuery = Expression.combine [detailedTagName, query]
 
         sampleLink = case detailedTagSample of
-            Left  (Image {..}) -> URL.image scope imageID query
+            Left  (Image {..}) -> URL.image scope imageID fullQuery
             Right (Album {..}) -> URL.album scope albumID
 
         sampleThumbnail = case detailedTagSample of
