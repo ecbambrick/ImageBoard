@@ -232,21 +232,21 @@ imagesView scope query page total pageSize images = render $ do
 
 -- | Renders a view for the given page of the given album as text containing
 -- | HTML.
-pageView :: Scope -> Album -> Int -> String -> Text
-pageView scope album @ Album {..} curr query = render $ do
+pageView :: Scope -> Album -> TimeZone -> Int -> String -> Text
+pageView scope album @ Album {..} timeZone curr query = render $ do
     let title  = Text.pack (albumTitle ++ " (" ++ show curr ++ "/" ++ show pages ++ ")")
         onload = JS.functionCall "PageViewModel.register" args
         args   = [ JS.toJSON (scopeName scope)
-                 , JS.toJSON albumID
+                 , JS.toJSON query
+                 , JS.toJSON album
                  , JS.toJSON prev
-                 , JS.toJSON next
-                 , JS.toJSON query ]
+                 , JS.toJSON next]
 
         pages = length albumPages
         prev  = curr - 1 `rollOver` length albumPages
         next  = curr + 1 `rollOver` length albumPages
 
-        indexURL    = URL.album scope albumID      query
+        albumURL    = URL.album scope albumID      query
         prevPageURL = URL.page  scope albumID prev query
         nextPageURL = URL.page  scope albumID next query
 
@@ -256,7 +256,7 @@ pageView scope album @ Album {..} curr query = render $ do
     Elem.document title onload $ do
         Elem.sideBar $ do
             Elem.actionLink Icon.UpArrow   prevPageURL
-            Elem.actionLink Icon.Grid      indexURL
+            Elem.actionLink Icon.Grid      albumURL
             Elem.actionLink Icon.DownArrow nextPageURL
             Elem.separator
             Elem.action Icon.Pause "toggle-double-compact"
@@ -265,11 +265,20 @@ pageView scope album @ Album {..} curr query = render $ do
                 Elem.actions $ do
                     Elem.actionGroup $ do
                         Elem.actionLink Icon.LeftArrow  prevPageURL
-                        Elem.actionLink Icon.Grid       indexURL
+                        Elem.actionLink Icon.Grid       albumURL
                         Elem.actionLink Icon.RightArrow nextPageURL
                     Elem.actionGroup $ do
-                        Elem.action Icon.Pause "toggle-double"
-                Elem.pageDetails album curr
+                        Elem.action Icon.Trash  "delete-show"
+                        Elem.action Icon.Pencil "edit-show"
+                        Elem.action Icon.Pause  "toggle-double"
+                Elem.searchBox (URL.albums scope 1 "") query
+                Elem.pageDetails album curr timeZone
+                Elem.spacer
+                Elem.albumTags scope albumTags
+            Elem.editPanel albumURL $ do
+                Elem.textBoxField  "Title" "title" "edit-title"
+                Elem.textAreaField "Tags"  "tags"  "edit-tags"
+            Elem.deletePanel albumURL
         Elem.canvas source1 source2
 
 -- | Renders a view for the list of tags as text containing HTML.

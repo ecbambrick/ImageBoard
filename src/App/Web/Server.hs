@@ -116,7 +116,7 @@ routes = do
             album <- MaybeT $ Album.querySingle id
             query <- lift   $ strip <$> optionalParam "q" ""
 
-            return (View.pageView scope album number query)
+            return (View.pageView scope album timeZone number query)
 
         case result of
             Nothing   -> notFound

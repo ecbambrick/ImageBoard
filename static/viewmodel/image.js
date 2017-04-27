@@ -183,7 +183,7 @@ const ImageViewModel = {
             Kefir.combine([currentTags, nextTags], Array.concat)
                  .map(Utility.sortAndRemoveDuplicates)
                  .map(x => x.map(y => `<a class='tag' href='${url.tag(y)}'>${y}</a>`)
-                            .join("\n"));
+                            .join(""));
 
         const defaultTagsString =
             currentTags.sampledBy(isEditing)

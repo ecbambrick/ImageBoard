@@ -372,11 +372,11 @@ albumDetails Album {..} timeZone =
         div_ [id_ "title", class_ "title"] $ do
             toHtml albumTitle
         div_ [class_ "meta"] $ do
-            toHtml $ intercalate " | "
-                [ show (length albumPages) ++ " pages"
-                , formatSize albumFileSize ]
+            toHtml $ formatSize albumFileSize
             br_ []
             toHtml ("uploaded " ++ DateTime.format ShortDate timeZone albumCreated)
+            br_ []
+            toHtml $ show (length albumPages) ++ " pages"
 
 -- | Returns an HTML element for displaying image meta data.
 imageDetails :: Image -> TimeZone -> ImageType -> Html ()
@@ -405,13 +405,17 @@ imageDetails Image {..} timeZone imageType =
             toHtml ("uploaded " ++ DateTime.format ShortDate timeZone imageCreated)
 
 -- | Returns an HTML element for displaying page meta data.
-pageDetails :: Album -> Int -> Html ()
-pageDetails Album {..} page =
+pageDetails :: Album -> Int -> TimeZone -> Html ()
+pageDetails Album {..} page timeZone =
     div_ [class_ "details"] $ do
-        div_ [class_ "title"] $ do
+        div_ [id_ "title", class_ "title"] $ do
             toHtml albumTitle
         div_ [class_ "meta"] $ do
-            toHtml $ show page ++ " / " ++ show (length albumPages)
+            toHtml $ formatSize albumFileSize
+            br_ []
+            toHtml ("uploaded " ++ DateTime.format ShortDate timeZone albumCreated)
+            br_ []
+            toHtml $ "page " ++ show page ++ " / " ++ show (length albumPages)
 
 -- | Returns an HTML element containing the given list of album tag names.
 albumTags :: Scope -> [String] -> Html ()

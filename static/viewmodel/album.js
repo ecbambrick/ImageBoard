@@ -159,7 +159,7 @@ const AlbumViewModel = {
         const visibleTags =
             tags.map(Utility.sortAndRemoveDuplicates)
                 .map(x => x.map(y => `<a class='tag' href='${url.tag(y)}'>${y}</a>`)
-                           .join("\n"));
+                           .join(""));
 
         const defaultTagsString =
             tags.sampledBy(isEditing)
