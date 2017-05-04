@@ -35,17 +35,16 @@ addAlbum albumID pages = do
     albumthumbPath <- Path.albumThumb albumID
     thumbSize      <- Config.thumbnailSize
 
-    id $! do
-        liftIO $ Directory.createDirectoryIfMissing True directory
+    liftIO $ Directory.createDirectoryIfMissing True directory
 
-        forM_ pages $ \(page, content) -> do
-            pagePath      <- Path.pageFile  albumID page
-            pageThumbPath <- Path.pageThumb albumID page
+    forM_ pages $ \(page, content) -> do
+        pagePath      <- Path.pageFile  albumID page
+        pageThumbPath <- Path.pageThumb albumID page
 
-            liftIO $ ByteString.writeFile pagePath content
-            Graphics.createThumbnail thumbSize pagePath pageThumbPath
+        liftIO $! ByteString.writeFile pagePath content
+        Graphics.createThumbnail thumbSize pagePath pageThumbPath
 
-        Graphics.createThumbnail thumbSize firstPagePath albumthumbPath
+    Graphics.createThumbnail thumbSize firstPagePath albumthumbPath
 
 ------------------------------------------------------------------------ Images
 
