@@ -21,6 +21,7 @@ data Error = IDNotFound ID
            | InvalidFileSize Int
            | UnrecognizedFile
            | EmptyAlbum
+           deriving (Eq)
 
 -- | Returns a human-readable error message for the given error.
 showError :: Error -> String
