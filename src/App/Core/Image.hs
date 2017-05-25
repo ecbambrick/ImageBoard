@@ -61,7 +61,9 @@ delete mode imageID = do
             runDB $ DB.markPostAsDeleted imageID
 
         (Just image, PermanentlyDelete) -> do
-            runDB $ DB.deletePost imageID
+            runDB $ do
+                DB.deletePost imageID
+                DB.cleanTags
             FileSystem.deleteImage image
 
         _ -> do
@@ -123,5 +125,6 @@ update imageID title tags = do
             DB.updateImage newImage
             DB.detachTags (oldTags \\ newTags) imageID
             DB.attachTags (newTags \\ oldTags) imageID
+            DB.cleanTags
 
     return (void result)

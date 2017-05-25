@@ -63,7 +63,9 @@ delete mode albumID =
             runDB $ DB.markPostAsDeleted albumID
 
         PermanentlyDelete -> do
-            runDB $ DB.deletePost albumID
+            runDB $ do
+                DB.deletePost albumID
+                DB.cleanTags
             FileSystem.deleteAlbum albumID
 
 -- | Inserts a new album into the database/filesystem based on the given file
@@ -125,6 +127,7 @@ update albumID title tags = do
             DB.updateAlbum newAlbum
             DB.detachTags (oldTags \\ newTags) albumID
             DB.attachTags (newTags \\ oldTags) albumID
+            DB.cleanTags
 
     return (void result)
 

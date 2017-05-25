@@ -19,7 +19,7 @@ module App.Storage.Database
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
     , selectTagIDByName, selectDetailedTags, selectRecentUncategorizedTags
-    , selectTagCategories, attachTags, detachTags, attachCategories
+    , selectTagCategories, attachTags, detachTags, cleanTags, attachCategories
     , selectCategoryIDByName
     ) where
 
@@ -309,6 +309,20 @@ detachTag postID tagName = do
 -- | given list of names. If any tag is not already attached, it is ignored.
 detachTags :: [String] -> ID -> Transaction ()
 detachTags tagNames postID = mapM_ (detachTag postID) tagNames
+
+-- | Deletes all tags from the database that are not attached to any post.
+cleanTags :: Transaction ()
+cleanTags = do
+    orphanTags <- SQL.query $ do
+        t <- from "tag"
+        retrieve [ t "id" ]
+        wherever $ nay $ exists $ do
+            pt <- from "post_tag"
+            wherever (pt "tag_id" .= t "id")
+        :: Transaction [ID]
+
+    forM_ orphanTags $ \id ->
+        SQL.delete "tag" ("id" *= id)
 
 -- | Associates the tag with the given ID with all the categories with the given
 -- | IDs.
