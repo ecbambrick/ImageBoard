@@ -29,11 +29,16 @@ main = CLI.cli "Image board." $ do
         autoYes <- CLI.option ('y', "auto-yes") "Automatically answer yes to prompts."
         runApplication $ Console.Everything.delete autoYes
 
+    -- Preview details before importing.
+    CLI.command "import-preview" $ do
+        path <- CLI.argument "path"
+        runApplication $ Console.Import.previewDirectory path
+
     -- Import all relevant files from the given directory.
     CLI.command "import" $ do
         inPath     <- CLI.argument "path"
         categorize <- CLI.option ('c', "categorize") "Categorize new tags after importing."
-        moveFiles  <- CLI.option ('o', "out") "Move files to the given output directory after being imported."
+        moveFiles  <- CLI.option ('o', "out") "Move files to the given directory after importing."
         tagString  <- CLI.option ('t', "tags") "Include tags for each imported file."
 
         let outPath = if isTesting then Nothing else moveFiles

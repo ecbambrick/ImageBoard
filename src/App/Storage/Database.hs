@@ -19,8 +19,9 @@ module App.Storage.Database
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
     , selectTagIDByName, selectDetailedTags, selectRecentUncategorizedTags
-    , selectTagCategories, attachTags, detachTags, cleanTags, attachCategories
-    , selectCategoryIDByName
+    , selectTagCategories, selectTagNames, attachTags, detachTags, cleanTags
+
+    , attachCategories, selectCategoryIDByName
     ) where
 
 import qualified App.Config       as Config
@@ -272,6 +273,15 @@ selectTagCategories tagID = do
         retrieve [c "name"]
 
     return (innerString <$> categories)
+
+-- | Returns the list of all tag names.
+selectTagNames :: Transaction [String]
+selectTagNames = do
+    results <- SQL.query $ do
+        t <- from "tag"
+        retrieve [t "name"]
+
+    return (map innerString results)
 
 -- | Associates the post with the given ID with the tag with the given name.
 -- | If the tag does not exist, it is created.

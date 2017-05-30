@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
-module App.Console.Import ( directory ) where
+module App.Console.Import ( directory, previewDirectory ) where
 
 import qualified App.Core.Post    as Post
+import qualified App.Core.Tag     as Tag
 import qualified App.Validation   as Validation
 import qualified System.Directory as Dir
 import qualified System.FilePath  as FilePath
@@ -13,10 +14,11 @@ import App.Core.Types       ( App )
 import App.Core.Post        ( PostType(..) )
 import Control.Exception    ( ErrorCall(..), throwIO )
 import Control.Monad.Reader ( MonadIO, filterM, forM_, liftIO, unless, void )
-import Data.List            ( sortBy )
+import Data.Either          ( rights )
+import Data.List            ( (\\), nub, sortBy )
 import Data.Maybe           ( fromJust )
 import Data.Ord.Extended    ( comparingAlphaNum )
-import Data.Textual         ( splitOn )
+import Data.Textual         ( splitOn, toLower, trim )
 import System.FilePath      ( (</>) )
 import Text.Parsec          ( ParseError, (<|>), anyChar, between, char, choice
                             , eof, lookAhead, many, manyTill, noneOf, option
@@ -24,18 +26,34 @@ import Text.Parsec          ( ParseError, (<|>), anyChar, between, char, choice
 
 --------------------------------------------------------------------- Importing
 
+-- | Preview the list of tags that would be created by importing the given
+-- | directory.
+previewDirectory :: FilePath -> App ()
+previewDirectory path = do
+    validatePath (Just path)
+
+    existingTags <- Tag.queryNames
+    pendingTags  <- nub <$> filter (not . null)
+                        <$> map (toLower . trim)
+                        <$> concat
+                        <$> map snd
+                        <$> rights
+                        <$> map parseFileName
+                        <$> getDirectoryFiles path
+
+    logInfo $ "New tags: "
+
+    forM_ (pendingTags \\ existingTags) $ \tag -> do
+        logInfo (" * " ++ tag)
+
 -- | Import each valid file in the given directory into the database. If an
 -- | optional output directory is provided, each imported file will be moved
 -- | to that directory. The given list of tags will be added to each imported
 -- | file.
 directory :: FilePath -> Maybe FilePath -> [String] -> App ()
 directory inPath outPath extraTags = do
-    liftIO $ do
-        isInPathValid  <- Dir.doesDirectoryExist inPath
-        isOutPathValid <- maybe (return True) Dir.doesDirectoryExist outPath
-
-        unless isInPathValid  $ throwIO (ErrorCall $ "Invalid path: " ++ inPath)
-        unless isOutPathValid $ throwIO (ErrorCall $ "Invalid path: " ++ fromJust outPath)
+    validatePath (Just inPath)
+    validatePath outPath
 
     logInfo $ replicate 80 '-'
     logInfo $ "Importing files from " ++ inPath
@@ -45,7 +63,7 @@ directory inPath outPath extraTags = do
 
     files <- getDirectoryFiles inPath
     forM_ files $ \fileName ->
-        let parseResults = parseFileName (FilePath.dropExtension fileName)
+        let parseResults = parseFileName fileName
             filePath     = inPath </> fileName
 
         in case parseResults of
@@ -62,6 +80,14 @@ directory inPath outPath extraTags = do
     logInfo $ replicate 80 '-'
 
 ----------------------------------------------------------------------- Utility
+
+-- | ...
+validatePath :: (MonadIO m) => Maybe String -> m ()
+validatePath path = liftIO $ do
+    exists <- maybe (return True) Dir.doesDirectoryExist path
+
+    unless exists $ do
+        throwIO (ErrorCall $ "Invalid path: " ++ fromJust path)
 
 -- | Gets the list of files from the given directory in alphanumeric order.
 getDirectoryFiles :: (MonadIO m) => FilePath -> m [String]
@@ -107,4 +133,4 @@ parseFileName fileName =
 
             return (title, concatMap (splitOn ",") [tags1, tags2, tags3, tags4])
 
-    in Parsec.parse pattern "" fileName
+    in Parsec.parse pattern "" (FilePath.dropExtension fileName)
