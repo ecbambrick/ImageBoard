@@ -9,8 +9,8 @@ import qualified App.Web.Icon    as Icon
 import qualified App.Web.URL     as URL
 import qualified Data.DateTime   as DateTime
 import qualified Data.Text       as Text
-import qualified Numeric         as Numeric
 import qualified System.FilePath as FilePath
+import qualified Text.Format     as Format
 import qualified Text.JavaScript as JS
 
 -- Bug in firefox prevents default menuitem_ from working.
@@ -372,7 +372,7 @@ albumDetails Album {..} timeZone =
         div_ [id_ "title", class_ "title"] $ do
             toHtml albumTitle
         div_ [class_ "meta"] $ do
-            toHtml $ formatSize albumFileSize
+            toHtml $ Format.fileSize albumFileSize
             br_ []
             toHtml ("uploaded " ++ DateTime.format ShortDate timeZone albumCreated)
             br_ []
@@ -397,7 +397,7 @@ imageDetails Image {..} timeZone imageType =
         div_ [class_ "meta"] $ do
             toHtml $ intercalate " | "
                 [ show imageWidth ++ "x" ++ show imageHeight
-                , formatSize imageFileSize
+                , Format.fileSize imageFileSize
                 , imageExtension ]
             br_ []
             toHtml imageHash
@@ -411,7 +411,7 @@ pageDetails Album {..} page timeZone =
         div_ [id_ "title", class_ "title"] $ do
             toHtml albumTitle
         div_ [class_ "meta"] $ do
-            toHtml $ formatSize albumFileSize
+            toHtml $ Format.fileSize albumFileSize
             br_ []
             toHtml ("uploaded " ++ DateTime.format ShortDate timeZone albumCreated)
             br_ []
@@ -491,13 +491,6 @@ gallery2 items =
                 img_ [src_ thumbnail]
 
 ----------------------------------------------------------------------- Utility
-
--- | Formats the given integral value as a file size.
-formatSize :: (Integral a) => a -> String
-formatSize value
-    | value <= 10^3 = "1kb"
-    | value >= 10^6 = Numeric.showFFloat (Just 1) (fromIntegral value / 1000000) "mb"
-    | otherwise     = Numeric.showFFloat (Just 0) (fromIntegral value / 1000)    "kb"
 
 -- | Converts the given post ID to a context menu ID
 getMenuID :: ID -> Text

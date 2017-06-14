@@ -61,6 +61,7 @@ library
       , Database.Query.SQLite
       , Graphics.FFmpeg
       , System.IO.Metadata
+      , Text.Format
       , Text.JavaScript
 
     build-depends:

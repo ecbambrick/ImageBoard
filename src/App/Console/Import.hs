@@ -3,12 +3,14 @@
 
 module App.Console.Import ( directory, previewDirectory ) where
 
-import qualified App.Core.Post    as Post
-import qualified App.Core.Tag     as Tag
-import qualified App.Validation   as Validation
-import qualified System.Directory as Dir
-import qualified System.FilePath  as FilePath
-import qualified Text.Parsec      as Parsec
+import qualified App.Core.Post      as Post
+import qualified App.Core.Tag       as Tag
+import qualified App.Validation     as Validation
+import qualified System.Directory   as Dir
+import qualified System.FilePath    as FilePath
+import qualified System.IO.Metadata as Metadata
+import qualified Text.Format        as Format
+import qualified Text.Parsec        as Parsec
 
 import App.Core.Types       ( App )
 import App.Core.Post        ( PostType(..) )
@@ -33,6 +35,7 @@ previewDirectory path = do
     validatePath (Just path)
 
     existingTags <- Tag.queryNames
+    fileSizes    <- mapM Metadata.getSize =<< map (path </>) <$> getDirectoryFiles path
     pendingTags  <- nub <$> filter (not . null)
                         <$> map (toLower . trim)
                         <$> concat
@@ -41,10 +44,13 @@ previewDirectory path = do
                         <$> map parseFileName
                         <$> getDirectoryFiles path
 
-    logInfo $ "New tags: "
+    unless (null fileSizes) $ do
+        logInfo $ "File size:\n    " ++ Format.fileSize (sum fileSizes)
 
-    forM_ (pendingTags \\ existingTags) $ \tag -> do
-        logInfo (" * " ++ tag)
+    unless (null pendingTags) $ do
+        logInfo $ "New tags: "
+        forM_ (pendingTags \\ existingTags) $ \tag -> do
+            logInfo ("    " ++ tag)
 
 -- | Import each valid file in the given directory into the database. If an
 -- | optional output directory is provided, each imported file will be moved
