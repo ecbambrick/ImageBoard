@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
-module App.Core.Post ( PostType(..), insert ) where
+module App.Core.Post ( PostType(..), canInsert, insert ) where
 
 import qualified App.Core.Image     as Image
 import qualified App.Core.Album     as Album
@@ -17,6 +17,18 @@ import Data.Textual   ( trim )
 data PostType = InvalidPost [Error] | ImagePost | AlbumPost
 
 ---------------------------------------------------------------------- Commands
+
+-- | Returns whether or not the file with the given path can be inserted based
+-- | on the file type.
+canInsert :: FilePath -> App Bool
+canInsert path = do
+    mimeType <- Metadata.getMIMEType path
+
+    case mimeType of
+        Just ("image", _) -> return True
+        Just ("video", _) -> return True
+        Just (_,   "zip") -> return True
+        _                 -> return False
 
 -- | Inserts a new post into the database/filesystem based on the given file
 -- | path, title and tags. Whether the post is an image or album is dependent

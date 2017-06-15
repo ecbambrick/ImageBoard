@@ -16,8 +16,8 @@ import App.Core.Types       ( App )
 import App.Core.Post        ( PostType(..) )
 import Control.Exception    ( ErrorCall(..), throwIO )
 import Control.Monad.Reader ( MonadIO, filterM, forM_, liftIO, unless, void )
-import Data.Either          ( rights )
-import Data.List            ( (\\), nub, sortBy )
+import Data.Either          ( rights, isRight )
+import Data.List            ( (\\), nub, partition, sortBy )
 import Data.Maybe           ( fromJust )
 import Data.Ord.Extended    ( comparingAlphaNum )
 import Data.Textual         ( splitOn, toLower, trim )
@@ -34,18 +34,20 @@ previewDirectory :: FilePath -> App ()
 previewDirectory path = do
     validatePath (Just path)
 
-    existingTags <- Tag.queryNames
-    fileSizes    <- mapM Metadata.getSize =<< map (path </>) <$> getDirectoryFiles path
-    pendingTags  <- nub <$> filter (not . null)
-                        <$> map (toLower . trim)
-                        <$> concat
-                        <$> map snd
-                        <$> rights
-                        <$> map parseFileName
-                        <$> getDirectoryFiles path
+    existingTags               <- Tag.queryNames
+    (validFiles, invalidFiles) <- partition (isRight . parseFileName) <$> getFiles path
+    totalFileSize              <- sum <$> mapM Metadata.getSize validFiles
 
-    unless (null fileSizes) $ do
-        logInfo $ "File size:\n    " ++ Format.fileSize (sum fileSizes)
+    let pendingTags = nub $ filter (not . null)
+                          $ map (toLower . trim)
+                          $ concat
+                          $ map snd
+                          $ rights
+                          $ map parseFileName
+                          $ validFiles
+
+    unless (totalFileSize == 0) $ do
+        logInfo $ "File size:\n    " ++ Format.fileSize totalFileSize
 
     unless (null pendingTags) $ do
         logInfo $ "New tags: "
@@ -67,10 +69,10 @@ directory inPath outPath extraTags = do
         Nothing   -> "Successfully imported files will not be moved"
         Just path -> "Successfully imported files will be moved to " ++ path
 
-    files <- getDirectoryFiles inPath
-    forM_ files $ \fileName ->
-        let parseResults = parseFileName fileName
-            filePath     = inPath </> fileName
+    files <- getFiles inPath
+    forM_ files $ \filePath ->
+        let parseResults = parseFileName filePath
+            fileName     = FilePath.takeFileName filePath
 
         in case parseResults of
             Left _ -> do
@@ -87,7 +89,7 @@ directory inPath outPath extraTags = do
 
 ----------------------------------------------------------------------- Utility
 
--- | ...
+-- | Fails the import if the given path is not valid
 validatePath :: (MonadIO m) => Maybe String -> m ()
 validatePath path = liftIO $ do
     exists <- maybe (return True) Dir.doesDirectoryExist path
@@ -95,13 +97,15 @@ validatePath path = liftIO $ do
     unless exists $ do
         throwIO (ErrorCall $ "Invalid path: " ++ fromJust path)
 
--- | Gets the list of files from the given directory in alphanumeric order.
-getDirectoryFiles :: (MonadIO m) => FilePath -> m [String]
-getDirectoryFiles path = do
-    contents <- liftIO $ Dir.listDirectory path
-    files    <- liftIO $ filterM (Dir.doesFileExist . (path </>)) contents
+-- | Gets the list of valid files (based on file type) from the given directory
+-- | in alphanumeric order.
+getFiles :: FilePath -> App [String]
+getFiles path = do
+    allFiles      <- liftIO $ map (path </>) <$> Dir.listDirectory path
+    existingFiles <- liftIO $ filterM Dir.doesFileExist allFiles
+    validFiles    <- filterM Post.canInsert existingFiles
 
-    return $ sortBy (comparingAlphaNum id) files
+    return $ sortBy (comparingAlphaNum id) validFiles
 
 -- | Logs an import error message to the console.
 logError :: (MonadIO m) => FilePath -> String -> m ()
@@ -139,4 +143,4 @@ parseFileName fileName =
 
             return (title, concatMap (splitOn ",") [tags1, tags2, tags3, tags4])
 
-    in Parsec.parse pattern "" (FilePath.dropExtension fileName)
+    in Parsec.parse pattern "" (FilePath.takeBaseName fileName)
