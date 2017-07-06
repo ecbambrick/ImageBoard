@@ -29,25 +29,25 @@ main = CLI.cli "Image board." $ do
         autoYes <- CLI.option ('y', "auto-yes") "Automatically answer yes to prompts."
         runApplication $ Console.Everything.delete autoYes
 
-    -- Preview details before importing.
-    CLI.command "import-preview" $ do
-        path <- CLI.argument "path"
-        runApplication $ Console.Import.previewDirectory path
-
     -- Import all relevant files from the given directory.
     CLI.command "import" $ do
         inPath     <- CLI.argument "path"
-        categorize <- CLI.option ('c', "categorize") "Categorize new tags after importing."
+        extraTags  <- CLI.option ('t', "tags") "Include tags for each imported file."
         moveFiles  <- CLI.option ('o', "out") "Move files to the given directory after importing."
-        tagString  <- CLI.option ('t', "tags") "Include tags for each imported file."
+        categorize <- CLI.option ('c', "categorize") "Categorize new tags after importing."
+        preview    <- CLI.option ('p', "preview") "Preview import details instead of importing."
 
         let outPath = if isTesting then Nothing else moveFiles
-            tags    = maybe [] (splitOn ",") tagString
+            tags    = maybe [] (splitOn ",") extraTags
 
         runApplication $ do
-            now <- DateTime.now
-            Console.Import.directory inPath outPath tags
-            when categorize $ Console.Category.categorizeUnassignedTags now
+            if preview
+                then do
+                    Console.Import.previewDirectory inPath
+                else do
+                    now <- DateTime.now
+                    Console.Import.directory inPath outPath tags
+                    when categorize $ Console.Category.categorizeUnassignedTags now
 
     -- | Manage scopes.
     CLI.command "scope" $ do
