@@ -17,10 +17,11 @@ import App.Core.Post        ( PostType(..) )
 import Control.Exception    ( ErrorCall(..), throwIO )
 import Control.Monad.Reader ( MonadIO, filterM, forM_, liftIO, unless, void )
 import Data.Either          ( rights, isRight )
-import Data.List            ( (\\), nub, partition, sortBy )
+import Data.List            ( (\\), nub, partition, sortBy, union )
 import Data.Maybe           ( fromJust )
 import Data.Ord.Extended    ( comparingAlphaNum )
 import Data.Textual         ( splitOn, toLower, trim )
+import Data.Validation      ( Result(..) )
 import System.FilePath      ( (</>) )
 import Text.Parsec          ( ParseError, (<|>), anyChar, between, char, choice
                             , eof, lookAhead, many, manyTill, noneOf, option
@@ -30,29 +31,42 @@ import Text.Parsec          ( ParseError, (<|>), anyChar, between, char, choice
 
 -- | Preview the list of tags that would be created by importing the given
 -- | directory.
-previewDirectory :: FilePath -> App ()
-previewDirectory path = do
+previewDirectory :: FilePath -> [String] -> App ()
+previewDirectory path extraTags = do
     validatePath (Just path)
 
     existingTags               <- Tag.queryNames
     (validFiles, invalidFiles) <- partition (isRight . parseFileName) <$> getFiles path
     totalFileSize              <- sum <$> mapM Metadata.getSize validFiles
 
-    let pendingTags = nub $ filter (not . null)
+    let extraTagsResult = Tag.validateNames extraTags
+        validExtraTags = case extraTagsResult of
+            Success tags -> tags
+            Failure _    -> []
+        extraTagsErrors = case extraTagsResult of
+            Success _ -> []
+            Failure e -> e
+        pendingTags = nub $ filter (not . null)
                           $ map (toLower . trim)
                           $ concat
                           $ map snd
                           $ rights
                           $ map parseFileName
                           $ validFiles
+        newTags = (pendingTags `union` validExtraTags) \\ existingTags
 
     unless (totalFileSize == 0) $ do
         logInfo $ "File size:\n    " ++ Format.fileSize totalFileSize
 
-    unless (null pendingTags) $ do
-        logInfo $ "New tags: "
-        forM_ (pendingTags \\ existingTags) $ \tag -> do
-            logInfo ("    " ++ tag)
+    unless (null newTags) $ do
+        logInfo $ "New tags:"
+        forM_ newTags $ \tag -> do
+            logInfo $ "    " ++ tag
+
+    unless (null extraTagsErrors) $ do
+        logInfo $ "Errors:"
+        forM_ extraTagsErrors $ \err -> do
+            logInfo $ "    " ++ Validation.showError err
 
 -- | Import each valid file in the given directory into the database. If an
 -- | optional output directory is provided, each imported file will be moved

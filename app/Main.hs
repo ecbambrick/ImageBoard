@@ -43,7 +43,7 @@ main = CLI.cli "Image board." $ do
         runApplication $ do
             if preview
                 then do
-                    Console.Import.previewDirectory inPath
+                    Console.Import.previewDirectory inPath tags
                 else do
                     now <- DateTime.now
                     Console.Import.directory inPath outPath tags

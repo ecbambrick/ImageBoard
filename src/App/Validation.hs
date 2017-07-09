@@ -1,5 +1,5 @@
 module App.Validation
-    ( Error(..), Result(..), Validation, printErrors, showErrors
+    ( Error(..), Result(..), Validation, printErrors, showError, showErrors
     , assert, reject, whenSuccess, whenFailure
     ) where
 

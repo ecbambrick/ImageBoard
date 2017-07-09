@@ -29,6 +29,7 @@ library
       , App.Console.Everything
       , App.Console.Import
       , App.Console.Scope
+      , App.Console.Tag
       , App.Core.Album
       , App.Core.Everything
       , App.Core.Image
