@@ -35,7 +35,7 @@ previewDirectory :: FilePath -> [String] -> App ()
 previewDirectory path extraTags = do
     validatePath (Just path)
 
-    existingTags               <- Tag.queryNames
+    existingTags               <- Tag.queryNames Nothing
     (validFiles, invalidFiles) <- partition (isRight . parseFileName) <$> getFiles path
     totalFileSize              <- sum <$> mapM Metadata.getSize validFiles
 

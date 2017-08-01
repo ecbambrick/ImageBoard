@@ -38,7 +38,7 @@ import Control.Applicative   ( (<|>) )
 import Control.Monad.Reader  ( forM, liftIO, forM_, void, unless )
 import Data.DateTime         ( DateTime )
 import Data.Int              ( Int64 )
-import Data.Maybe            ( isJust, listToMaybe, fromMaybe )
+import Data.Maybe            ( isJust, listToMaybe )
 import Data.Text             ( Text )
 import Data.Textual          ( replace, splitOn, toLower, trim )
 import Database.Engine       ( Transaction(..), FromRow, fromRow, field )
@@ -275,11 +275,14 @@ selectTagCategories tagID = do
     return (innerString <$> categories)
 
 -- | Returns the list of all tag names.
-selectTagNames :: Transaction [String]
-selectTagNames = do
+selectTagNames :: Maybe String -> Transaction [String]
+selectTagNames pattern = do
     results <- SQL.query $ do
         t <- from "tag"
         retrieve [t "name"]
+        case pattern of
+            Nothing -> return ()
+            Just  p -> wherever (t "name" ~% p)
 
     return (map innerString results)
 

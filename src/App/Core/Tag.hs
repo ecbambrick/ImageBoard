@@ -20,9 +20,10 @@ import Data.Textual     ( trim, toLower )
 
 ----------------------------------------------------------------------- Queries
 
--- | Returns the list of all tag names.
-queryNames :: App [String]
-queryNames = runDB $ DB.selectTagNames
+-- | Returns the list of all tag names. If a string is given, the list is
+-- | filtered by all tags that begin with the given string.
+queryNames :: Maybe String -> App [String]
+queryNames = runDB . DB.selectTagNames
 
 -- | Returns a detailed list of all tags that match the given expression.
 queryDetailed :: Expression -> App [DetailedTag]
