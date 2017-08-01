@@ -4,6 +4,7 @@ import qualified App.Console.Category   as Console.Category
 import qualified App.Console.Everything as Console.Everything
 import qualified App.Console.Import     as Console.Import
 import qualified App.Console.Scope      as Console.Scope
+import qualified App.Console.Tag        as Console.Tag
 import qualified App.Control            as App
 import qualified App.Web.Server         as Server
 import qualified Data.DateTime          as DateTime
@@ -48,6 +49,13 @@ main = CLI.cli "Image board." $ do
                     now <- DateTime.now
                     Console.Import.directory inPath outPath tags
                     when categorize $ Console.Category.categorizeUnassignedTags now
+
+    -- | Manage tags.
+    CLI.command "tag" $ do
+
+        CLI.command "list" $ do
+        query <- CLI.option ('q', "query") "A query to filter tag names."
+        runApplication $ Console.Tag.list query
 
     -- | Manage scopes.
     CLI.command "scope" $ do
