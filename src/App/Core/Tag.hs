@@ -71,10 +71,11 @@ validateName tag = do
 
     Validation.assert (isValidStartChar tag) [InvalidTagName tag]
     Validation.assert (all isValidChar  tag) [InvalidTagName tag]
+    Validation.reject (all isSpace      tag) [InvalidTagName tag]
 
     return $ toLower $ trim tag
 
 -- | If each of the given strings are a valid tag name, a trimmed version of
 -- | each is returned; otherwise, a filure is returned.
 validateNames :: [String] -> Validation [String]
-validateNames = sequence . nub . map validateName . filter (not . null)
+validateNames = sequence . nub . map validateName . filter (not . all isSpace)

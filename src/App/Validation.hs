@@ -26,14 +26,14 @@ data Error = IDNotFound ID
 -- | Returns a human-readable error message for the given error.
 showError :: Error -> String
 showError (IDNotFound              x) = "No post with ID " ++ show x ++ " was found"
-showError (TagNotFound             x) = "No tag with the name \"" ++ x ++ "\" was found"
+showError (TagNotFound             x) = "No tag with the name \"" ++ quote x ++ "\" was found"
 showError (CategoriesNotFound      x) = "No categories with the names " ++ show x ++ " were found"
 showError (InvalidTagName         []) = "Tag name cannot be empty"
-showError (InvalidTagName          x) = "Invalid tag name: " ++ x
+showError (InvalidTagName          x) = "Invalid tag name: " ++ quote x
 showError (InvalidScopeName       []) = "Scope name cannot be empty"
-showError (InvalidScopeName        x) = "Invalid scope name: " ++ x
+showError (InvalidScopeName        x) = "Invalid scope name: " ++ quote x
 showError (InvalidScopeExpression []) = "Scope expression cannot be empty"
-showError (InvalidScopeExpression  x) = "Invalid scope expression: " ++ x
+showError (InvalidScopeExpression  x) = "Invalid scope expression: " ++ quote x
 showError (DuplicateHash           x) = "Duplicate hash: " ++ x
 showError (InvalidFileSize         x) = "File size must be greater than zero: " ++ show x
 showError (UnrecognizedFile         ) = "File is not a recognized format"
@@ -48,3 +48,7 @@ showErrors  es = "Errors:" ++ concatMap (("\n* " ++) . showError) es
 -- | Prints a human-readable error message for the given list of errors.
 printErrors :: MonadIO m => [Error] -> m ()
 printErrors = liftIO . putStrLn . showErrors
+
+-- | Adds double-quotes around the given string.
+quote :: String -> String
+quote s = "\"" ++ s ++ "\""
