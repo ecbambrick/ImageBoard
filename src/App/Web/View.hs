@@ -22,7 +22,6 @@ import Data.Text          ( Text )
 import Data.Textual       ( display )
 import Data.DateTime      ( TimeZone )
 import Lucid.Base         ( Html(..), renderText )
-import Web.PathPieces     ( PathPiece(..) )
 
 ------------------------------------------------------------------------- Views
 

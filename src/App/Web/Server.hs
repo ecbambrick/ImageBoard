@@ -29,7 +29,7 @@ import Data.HashMap.Strict       ( (!) )
 import Data.Maybe                ( fromMaybe )
 import Data.Text                 ( Text )
 import Data.Textual              ( intercalate, strip, splitOn )
-import Web.PathPieces            ( PathPiece )
+import Web.HttpApiData           ( FromHttpApiData )
 import Web.Spock                 ( SpockM, delete, get, html, post, redirect, root )
 
 import qualified System.Directory as Dir
@@ -263,5 +263,5 @@ getFile key = do
     return (name, contentType, location)
 
 -- | Returns a request param or a default value if one it could not be found.
-optionalParam :: (PathPiece p, MonadIO m) => Text -> p -> Spock.ActionT m p
+optionalParam :: (FromHttpApiData p, MonadIO m) => Text -> p -> Spock.ActionT m p
 optionalParam name defaultValue = fromMaybe defaultValue <$> Spock.param name

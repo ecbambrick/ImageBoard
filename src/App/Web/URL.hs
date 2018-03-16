@@ -14,14 +14,13 @@ import qualified App.Web.Route    as Route
 import qualified Data.Text        as Text
 import qualified Network.URI      as URI
 import qualified Web.Spock        as Spock
-import qualified Web.PathPieces   as PathPieces
 
 import App.Core.Types  ( Album(..), Image(..), Page(..), Scope(..), ID )
 import Data.Monoid     ( (<>) )
 import Data.Text       ( Text )
-import Data.Textual    ( replace, splitOn, toLower )
+import Data.Textual    ( display, replace, splitOn, toLower )
 import System.FilePath ( (</>), (<.>) )
-import Web.PathPieces  ( PathPiece(..) )
+import Web.HttpApiData ( FromHttpApiData(..) )
 
 ------------------------------------------------------------------------- Types
 
@@ -30,29 +29,29 @@ data TagGrouping = ByName (Maybe String)
                  | ByCategory (Maybe String)
                  | Uncategorized
                  | Recent
+                 
+instance FromHttpApiData TagGrouping where
+    parseUrlPiece x = case toLower x of
+        "uncategorized"          -> Right Uncategorized
+        "recent"                 -> Right Recent
+        "by-name"                -> Right (ByName Nothing)
+        "by-category"            -> Right (ByCategory Nothing)
+        _ | groupedBy "name"     -> Right (ByName (Just value))
+        _ | groupedBy "category" -> Right (ByCategory (Just value))
+        _                        -> Left ("could not parse: '" <> x <> "'")
 
-instance PathPiece TagGrouping where
-    toPathPiece x = case x of
+        where
+            value       = Text.unpack $ last $ splitOn "-" $ toLower x
+            groupedBy y = ("by-" <> y <> "-") `Text.isPrefixOf` toLower x
+            
+instance Show TagGrouping where
+    show x = case x of
         Uncategorized           -> "uncategorized"
         Recent                  -> "recent"
         ByName          Nothing -> "by-name"
         ByCategory      Nothing -> "by-category"
-        ByName     (Just group) -> "by-name-"     <> Text.pack group
-        ByCategory (Just group) -> "by-category-" <> Text.pack group
-
-    fromPathPiece x = case x' of
-        "uncategorized"            -> Just Uncategorized
-        "recent"                   -> Just Recent
-        "by-name"                  -> Just (ByName Nothing)
-        "by-category"              -> Just (ByCategory Nothing)
-        _ | hasGroup "by-name"     -> Just (ByName (Just group))
-        _ | hasGroup "by-category" -> Just (ByCategory (Just group))
-        _                          -> Nothing
-        where
-            x'         = toLower x
-            group      = Text.unpack $ last $ splitOn "-" x'
-            hasGroup y = and [ Text.length x' > Text.length y + 1
-                             , (y <> "-") `Text.isPrefixOf` x' ]
+        ByName     (Just group) -> "by-name-"     ++ group
+        ByCategory (Just group) -> "by-category-" ++ group
 
 ---------------------------------------------------------------------- Prefixes
 
@@ -145,9 +144,9 @@ pageThumb id Page {..} = pathToURL path
 
 -- | Returns the route to the list of tags with the given scope.
 tags :: Scope -> String -> Maybe TagGrouping -> Text
-tags scope query groupBy =
+tags scope query grouping =
     let route  = Spock.renderRoute Route.tags (scopeName scope)
-        group  = Text.unpack $ maybe "" PathPieces.toPathPiece groupBy
+        group  = Text.unpack $ maybe "" display grouping
         params = [ ("q",        query)
                  , ("grouping", group) ]
 
