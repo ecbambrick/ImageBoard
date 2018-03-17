@@ -115,7 +115,7 @@ albums scope page query =
 
 -- | Returns the route for the thumbnail of the given album.
 albumThumb :: Album -> Text
-albumThumb Album {..} = pathToURL (Path.relativeAlbumDirectory albumID </> "thumbnail.jpg")
+albumThumb Album {..} = pathToURL $ Path.relativeAlbumThumb albumID
 
 --------------------------------------------------------------------- Page URLs
 
@@ -131,14 +131,12 @@ page scope id page query =
 -- | Returns the route for the file for the given page of the album with the
 -- | given ID.
 pageFile :: ID -> Page -> Text
-pageFile id Page {..} = pathToURL path
-    where path = Path.relativeAlbumDirectory id </> show pageNumber <.> pageExtension
+pageFile id page = pathToURL $ Path.relativePageFile id page
 
 -- | Returns the route for the thumbnail for the given page of the album with
 -- | the given ID.
 pageThumb :: ID -> Page -> Text
-pageThumb id Page {..} = pathToURL path
-    where path = Path.relativeAlbumDirectory id </> "t" ++ show pageNumber <.> "jpg"
+pageThumb id page = pathToURL $ Path.relativePageThumb id page
 
 -------------------------------------------------------------------- Misc. URLs
 
