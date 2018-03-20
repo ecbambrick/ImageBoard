@@ -5,6 +5,7 @@ module App.Validation
 
 import App.Core.Types      ( ID )
 import Control.Monad.Trans ( MonadIO, liftIO )
+import Data.List           ( intercalate )
 import Data.Validation     ( Result(..), assert, reject, whenSuccess, whenFailure )
 
 -- | The result of validating.
@@ -27,7 +28,7 @@ data Error = IDNotFound ID
 showError :: Error -> String
 showError (IDNotFound              x) = "No post with ID " ++ show x ++ " was found"
 showError (TagNotFound             x) = "No tag with the name \"" ++ quote x ++ "\" was found"
-showError (CategoriesNotFound      x) = "No categories with the names " ++ show x ++ " were found"
+showError (CategoriesNotFound      x) = "No categories with the names " ++ quotes x ++ " were found"
 showError (InvalidTagName         []) = "Tag name cannot be empty"
 showError (InvalidTagName          x) = "Invalid tag name: " ++ quote x
 showError (InvalidScopeName       []) = "Scope name cannot be empty"
@@ -52,3 +53,7 @@ printErrors = liftIO . putStrLn . showErrors
 -- | Adds double-quotes around the given string.
 quote :: String -> String
 quote s = "\"" ++ s ++ "\""
+
+-- | Returns the list as a comma-separated string where each item is quoted.
+quotes :: [String] -> String
+quotes = intercalate ", " . map quote
