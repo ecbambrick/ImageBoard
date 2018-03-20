@@ -76,6 +76,6 @@ validateName tag = do
     return $ toLower $ trim tag
 
 -- | If each of the given strings are a valid tag name, a trimmed version of
--- | each is returned; otherwise, a filure is returned.
+-- | each is returned; otherwise, a failure is returned.
 validateNames :: [String] -> Validation [String]
 validateNames = sequence . nub . map validateName . filter (not . all isSpace)
