@@ -3,7 +3,7 @@
 
 module Database.Engine
     ( Transaction, Simple.FromRow
-    , delete, insert, query, runDatabase, single, update, execute
+    , delete, insert, query, runDatabase, single, update, execute, exists
     , Simple.field, Simple.fromRow
     ) where
 
@@ -13,9 +13,9 @@ import qualified Database.Query.SQLite  as SQL
 import Control.Monad.Reader ( ReaderT, ask, runReaderT )
 import Control.Monad.Trans  ( MonadIO, lift, liftIO )
 import Data.Int             ( Int64 )
-import Data.Maybe           ( listToMaybe )
+import Data.Maybe           ( listToMaybe, fromMaybe )
 import Data.Text            ( pack )
-import Database.Query       ( Filter, Mapping, Query, Table, limit )
+import Database.Query       ( Filter, Mapping, Query, Table, count, limit, retrieve)
 
 ------------------------------------------------------------------------- Types
 
@@ -44,6 +44,21 @@ single f = do
     conn    <- ask
     results <- lift $ Simple.query_ conn $ toQuery $ SQL.select (f >> limit 1)
     return (listToMaybe results)
+
+-- | Peforms a SELECT query that returns whether or not any results could be
+-- | found.
+exists :: Query a -> Transaction Bool
+exists f = do
+    conn    <- ask
+    results <- lift $ Simple.query_ conn $ toQuery $ SQL.select $ do
+        f
+        limit 1
+        retrieve [count True]
+        :: Transaction [Simple.Only Int]
+
+    let amount = maybe 0 Simple.fromOnly (listToMaybe results)
+
+    return (amount > 0)
 
 -- | Performs an INSERT query on the given table with the give values and
 -- | returns the newly inserted ID.

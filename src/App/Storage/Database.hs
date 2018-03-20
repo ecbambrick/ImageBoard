@@ -193,14 +193,10 @@ updateImage Image {..} = SQL.update "post" ("id" *= imageID)
 
 -- | Returns whether or not an image already exists with the given hash.
 selectHashExists :: String -> Transaction Bool
-selectHashExists hash = do
-    results <- SQL.single $ do
+selectHashExists hash =
+    SQL.exists $ do
         i <- from "image"
         wherever (i "hash" .= hash)
-        retrieve [i "id"]
-        :: Transaction (Maybe Int)
-
-    return (isJust results)
 
 -- | Returns the total number of images that satisfy the given expression.
 selectImagesCount :: Expression -> Transaction Int
@@ -342,14 +338,12 @@ cleanTags = do
 attachCategories :: ID -> [ID] -> Transaction ()
 attachCategories tagID categoryIDs =
     forM_ categoryIDs $ \categoryID -> do
-        exists <- SQL.single $ do
+        exists <- SQL.exists $ do
             tc <- from "tag_category"
             wherever (tc "tag_id" .= tagID)
             wherever (tc "category_id" .= categoryID)
-            retrieve [tc "tag_id"]
-            :: Transaction (Maybe Int)
 
-        unless (isJust exists) $ do
+        unless exists $ do
             void $ SQL.insert "tag_category"
                 [ "tag_id"      << tagID
                 , "category_id" << categoryID ]
