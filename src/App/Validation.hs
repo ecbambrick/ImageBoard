@@ -20,6 +20,7 @@ data Error = IDNotFound ID
            | InvalidScopeExpression String
            | DuplicateHash String
            | InvalidFileSize Int
+           | InvalidSourceURL String
            | UnrecognizedFile
            | EmptyAlbum
            deriving (Eq)
@@ -37,6 +38,7 @@ showError (InvalidScopeExpression []) = "Scope expression cannot be empty"
 showError (InvalidScopeExpression  x) = "Invalid scope expression: " ++ quote x
 showError (DuplicateHash           x) = "Duplicate hash: " ++ x
 showError (InvalidFileSize         x) = "File size must be greater than zero: " ++ show x
+showError (InvalidSourceURL        x) = "Invalid source URL: " ++ quote x
 showError (UnrecognizedFile         ) = "File is not a recognized format"
 showError (EmptyAlbum               ) = "Album cannot be empty"
 

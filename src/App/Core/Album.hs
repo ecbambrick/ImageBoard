@@ -9,6 +9,7 @@ module App.Core.Album
     ) where
 
 import qualified App.Config             as Config
+import qualified App.Core.Source        as Source
 import qualified App.Core.Tag           as Tag
 import qualified App.Core.Title         as Title
 import qualified App.Storage.Database   as DB
@@ -22,7 +23,8 @@ import qualified System.IO              as IO
 import qualified System.IO.Metadata     as Metadata
 
 import App.Control          ( runDB )
-import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), App, ID )
+import App.Core.Types       ( Album(..), DeletionMode(..), Page(..), App, ID
+                            , URL )
 import App.Expression       ( Expression )
 import App.Validation       ( Error(..), Validation )
 import Codec.Archive.Zip    ( Archive(..), Entry(..), toArchive, fromEntry )
@@ -69,10 +71,10 @@ delete mode albumID =
             FileSystem.deleteAlbum albumID
 
 -- | Inserts a new album into the database/filesystem based on the given file
--- | path, title and tags. Returns valid if the insertion was sucessful;
--- | otherwise, invalid.
-insert :: FilePath -> String -> [String] -> App (Validation ())
-insert path title tags = do
+-- | path, title, sources and tags. Returns valid if the insertion was
+-- | sucessful; otherwise, invalid.
+insert :: FilePath -> String -> [URL] -> [String] -> App (Validation ())
+insert path title urls tags = do
     file    <- liftIO $ IO.openFile path ReadMode
     entries <- liftIO $ getImages file
     now     <- DateTime.now
@@ -87,6 +89,7 @@ insert path title tags = do
                        <*> pure now
                        <*> pure size
                        <*> pure pages
+                       <*> Source.validateURLs urls
                        <*> Tag.validateNames tags
                        <*  Validation.reject (null entries) [EmptyAlbum]
 
@@ -96,8 +99,10 @@ insert path title tags = do
 
         albumID <- runDB $ do
             albumID <- DB.insertAlbum album
-            DB.attachTags (albumTags album) albumID
+            DB.attachTags    (albumTags    album) albumID
+            DB.attachSources (albumSources album) albumID
             return albumID
+
         FileSystem.addAlbum albumID pageData
 
     liftIO $ IO.hClose file
@@ -106,27 +111,33 @@ insert path title tags = do
 
 -- | Updates the given album in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.
-update :: ID -> String -> [String] -> App (Validation ())
-update albumID title tags = do
+update :: ID -> String -> [URL] -> [String] -> App (Validation ())
+update albumID title urls tags = do
     now      <- DateTime.now
     existing <- runDB $ DB.selectAlbum albumID
 
-    let result = (,) <$> Title.validate title
-                     <*> Tag.validateNames tags
-                     <*  Validation.assert (isJust existing) [IDNotFound albumID]
+    let result = (,,) <$> Title.validate title
+                      <*> Source.validateURLs urls
+                      <*> Tag.validateNames tags
+                      <*  Validation.assert (isJust existing) [IDNotFound albumID]
 
-    Validation.whenSuccess result $ \(title, tags) -> do
-        let newTags  = albumTags newAlbum
-            oldTags  = albumTags oldAlbum
-            oldAlbum = fromJust existing
-            newAlbum = oldAlbum { albumTags     = tags
-                                , albumTitle    = title
-                                , albumModified = now }
+    Validation.whenSuccess result $ \(title, urls, tags) -> do
+        let newTags    = albumTags newAlbum
+            oldTags    = albumTags oldAlbum
+            newSources = albumSources newAlbum
+            oldSources = albumSources oldAlbum
+            oldAlbum   = fromJust existing
+            newAlbum   = oldAlbum { albumTags     = tags
+                                  , albumSources  = urls
+                                  , albumTitle    = title
+                                  , albumModified = now }
 
         runDB $ do
             DB.updateAlbum newAlbum
-            DB.detachTags (oldTags \\ newTags) albumID
-            DB.attachTags (newTags \\ oldTags) albumID
+            DB.detachTags    (oldTags    \\ newTags)    albumID
+            DB.attachTags    (newTags    \\ oldTags)    albumID
+            DB.detachSources (oldSources \\ newSources) albumID
+            DB.attachSources (newSources \\ oldSources) albumID
             DB.cleanTags
 
     return (void result)

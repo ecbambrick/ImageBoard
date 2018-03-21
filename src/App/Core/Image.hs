@@ -4,6 +4,7 @@
 module App.Core.Image where
 
 import qualified App.Config             as Config
+import qualified App.Core.Source        as Source
 import qualified App.Core.Tag           as Tag
 import qualified App.Core.Title         as Title
 import qualified App.Storage.Database   as DB
@@ -14,7 +15,7 @@ import qualified Graphics.FFmpeg        as Graphics
 import qualified System.IO.Metadata     as Metadata
 
 import App.Control          ( runDB )
-import App.Core.Types       ( DeletionMode(..), Image(..), App, ID )
+import App.Core.Types       ( DeletionMode(..), Image(..), App, ID, URL )
 import App.Expression       ( Expression )
 import App.Validation       ( Error(..), Validation )
 import Control.Monad        ( void )
@@ -70,10 +71,10 @@ delete mode imageID = do
             return ()
 
 -- | Inserts a new image into the database/filesystem based on the given file
--- | path, extension, title and tags. Returns valid if the insertion was
--- | sucessful; otherwise invalid.
-insert :: FilePath -> String -> String -> [String] -> App (Validation ())
-insert path ext title tags = do
+-- | path, extension, title, sources and tags. Returns valid if the insertion
+-- | was sucessful; otherwise invalid.
+insert :: FilePath -> String -> String -> [URL] -> [String] -> App (Validation ())
+insert path ext title urls tags = do
     now        <- DateTime.now
     thumbSize  <- Config.thumbnailSize
     hash       <- Metadata.getHash path
@@ -91,6 +92,7 @@ insert path ext title tags = do
                        <*> pure now
                        <*> pure now
                        <*> pure (fromIntegral size)
+                       <*> Source.validateURLs urls
                        <*> Tag.validateNames tags
                        <*  Validation.reject hashExists [DuplicateHash hash]
 
@@ -98,33 +100,40 @@ insert path ext title tags = do
         FileSystem.addImage image path
         runDB $ do
             imageID <- DB.insertImage image
-            DB.attachTags (imageTags image) imageID
+            DB.attachTags    (imageTags image)    imageID
+            DB.attachSources (imageSources image) imageID
 
     return (void result)
 
 -- | Updates the given image in the database. Returns valid if the update was
 -- | successful; otherwise, invalid.
-update :: ID -> String -> [String] -> App (Validation ())
-update imageID title tags = do
+update :: ID -> String -> [URL] -> [String] -> App (Validation ())
+update imageID title urls tags = do
     now      <- DateTime.now
     existing <- runDB $ DB.selectImage imageID
 
-    let result = (,) <$> Title.validate title
-                     <*> Tag.validateNames tags
-                     <*  Validation.assert (isJust existing) [IDNotFound imageID]
+    let result = (,,) <$> Title.validate title
+                      <*> Tag.validateNames tags
+                      <*> Source.validateURLs urls
+                      <*  Validation.assert (isJust existing) [IDNotFound imageID]
 
-    Validation.whenSuccess result $ \(title, tags) -> do
-        let newTags  = imageTags newImage
-            oldTags  = imageTags oldImage
-            oldImage = fromJust existing
-            newImage = oldImage { imageTags     = tags
-                                , imageTitle    = title
-                                , imageModified = now }
+    Validation.whenSuccess result $ \(title, tags, urls) -> do
+        let newTags    = imageTags newImage
+            oldTags    = imageTags oldImage
+            newSources = imageSources newImage
+            oldSources = imageSources oldImage
+            oldImage   = fromJust existing
+            newImage   = oldImage { imageTags     = tags
+                                  , imageTitle    = title
+                                  , imageSources  = urls
+                                  , imageModified = now }
 
         runDB $ do
             DB.updateImage newImage
-            DB.detachTags (oldTags \\ newTags) imageID
-            DB.attachTags (newTags \\ oldTags) imageID
+            DB.detachTags    (oldTags    \\ newTags)    imageID
+            DB.attachTags    (newTags    \\ oldTags)    imageID
+            DB.detachSources (oldSources \\ newSources) imageID
+            DB.attachSources (newSources \\ oldSources) imageID
             DB.cleanTags
 
     return (void result)

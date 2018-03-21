@@ -1,3 +1,5 @@
+------------------------------------------------------------------------- Posts
+
 DROP TABLE IF EXISTS post;
 CREATE TABLE post (
     id              INTEGER     PRIMARY KEY AUTOINCREMENT,
@@ -52,6 +54,8 @@ CREATE TABLE page (
 
 CREATE UNIQUE INDEX page_position_index ON page (album_id, number);
 
+-------------------------------------------------------------------------- Tags
+
 DROP TABLE IF EXISTS category;
 CREATE TABLE category (
     id          INTEGER     PRIMARY KEY AUTOINCREMENT,
@@ -98,6 +102,21 @@ CREATE TABLE tag_category (
         ON UPDATE CASCADE
         ON DELETE CASCADE
 );
+
+----------------------------------------------------------------------- Sources
+
+DROP TABLE IF EXISTS post_source;
+CREATE TABLE post_source (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    url     TEXT    NOT NULL,
+    
+    FOREIGN KEY(post_id) REFERENCES post(id)
+    	ON UPDATE CASCADE
+    	ON DELETE CASCADE
+);
+
+------------------------------------------------------------------------ Scopes
 
 DROP TABLE IF EXISTS scope;
 CREATE TABLE scope (

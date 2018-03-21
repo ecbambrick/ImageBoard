@@ -93,7 +93,7 @@ directory inPath outPath extraTags = do
                 logError filePath "Invalid file name pattern"
 
             Right (title, tags) -> do
-                result <- Post.insert filePath title (tags ++ extraTags)
+                result <- Post.insert filePath title [] (tags ++ extraTags)
                 case (result, outPath) of
                     (InvalidPost e, _) -> logError filePath (Validation.showErrors e)
                     (_,     Just path) -> liftIO $ Dir.renameFile filePath (path </> fileName)

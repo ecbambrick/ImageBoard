@@ -7,7 +7,7 @@ import qualified App.Core.Image     as Image
 import qualified App.Core.Album     as Album
 import qualified System.IO.Metadata as Metadata
 
-import App.Core.Types ( App )
+import App.Core.Types ( App, URL )
 import App.Validation ( Error(..), Result(..), Validation )
 import Data.Textual   ( trim )
 
@@ -31,16 +31,16 @@ canInsert path = do
         _                 -> return False
 
 -- | Inserts a new post into the database/filesystem based on the given file
--- | path, title and tags. Whether the post is an image or album is dependent
--- | on the file's MIME type. Returns the post insertion type.
-insert :: FilePath -> String -> [String] -> App PostType
-insert path title tags = do
+-- | path, title, sources and tags. Whether the post is an image or album is
+-- | dependent on the file's MIME type. Returns the post insertion type.
+insert :: FilePath -> String -> [URL] -> [String] -> App PostType
+insert path title urls tags = do
     mimeType <- Metadata.getMIMEType path
 
     case mimeType of
-        Just ("image", ext) -> imagePost <$> Image.insert path ext title tags
-        Just ("video", ext) -> imagePost <$> Image.insert path ext title tags
-        Just (_,     "zip") -> albumPost <$> Album.insert path title tags
+        Just ("image", ext) -> imagePost <$> Image.insert path ext title urls tags
+        Just ("video", ext) -> imagePost <$> Image.insert path ext title urls tags
+        Just (_,     "zip") -> albumPost <$> Album.insert path     title urls tags
         _                   -> badPost   <$> return UnrecognizedFile
 
 ----------------------------------------------------------------------- Utility

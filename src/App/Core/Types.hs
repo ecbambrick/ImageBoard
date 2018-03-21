@@ -23,6 +23,9 @@ type App a = forall m . (MonadIO m, MonadReader Config m) => m a
 -- | The ID of a persisted entity.
 type ID = Int64
 
+-- | A source URL.
+type URL = String
+
 -- | The method with which to delete a post. Posts that are marked as deleted
 -- | will remain in the database and file system until they are permanently
 -- | deleted.
@@ -38,6 +41,7 @@ data Album = Album
     , albumModified    :: DateTime
     , albumFileSize    :: Int
     , albumPages       :: [Page]
+    , albumSources     :: [URL]
     , albumTags        :: [String]
     } deriving (Eq, Show)
 
@@ -53,6 +57,7 @@ data Image = Image
     , imageCreated     :: DateTime
     , imageModified    :: DateTime
     , imageFileSize    :: Int
+    , imageSources     :: [URL]
     , imageTags        :: [String]
     } deriving (Eq, Show)
 
@@ -101,6 +106,7 @@ instance ToJSON Image where
         , "created"     .= imageCreated
         , "modified"    .= imageModified
         , "fileSize"    .= imageFileSize
+        , "sources"     .= map Text.pack imageSources
         , "tags"        .= map Text.pack imageTags ]
 
 instance ToJSON Album where
@@ -111,6 +117,7 @@ instance ToJSON Album where
         , "created"     .= albumCreated
         , "modified"    .= albumModified
         , "fileSize"    .= albumFileSize
+        , "sources"     .= map Text.pack albumSources
         , "tags"        .= map Text.pack albumTags
         , "pages"       .= map toJSON albumPages ]
 

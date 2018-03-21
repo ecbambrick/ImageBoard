@@ -67,8 +67,9 @@ routes = do
         scope        <- fromMaybe Scope.defaultScope <$> Scope.querySingle scopeName
         (x, y, path) <- getFile "uploadedFile"
         title        <- optionalParam "title" ""
-        tags         <- splitOn "," <$> optionalParam "tags" ""
-        result       <- Post.insert path title tags
+        tags         <- uncomma <$> optionalParam "tags" ""
+        urls         <- uncomma <$> optionalParam "urls" ""
+        result       <- Post.insert path title urls tags
 
         case result of
             InvalidPost e -> requestError (Validation.showErrors e)
@@ -129,8 +130,9 @@ routes = do
             scope  <- MaybeT $ Scope.querySingle scopeName
             album  <- MaybeT $ Album.querySingle id
             title  <- lift $ optionalParam "title" (albumTitle album)
-            tags   <- lift $ optionalParam "tags" (intercalate "," (albumTags album))
-            result <- lift $ Album.update id title (splitOn "," tags)
+            tags   <- lift $ optionalParam "tags"  (comma (albumTags    album))
+            urls   <- lift $ optionalParam "urls"  (comma (albumSources album))
+            result <- lift $ Album.update id title (uncomma urls) (uncomma tags)
 
             return (URL.album scope id "", result)
 
@@ -192,8 +194,9 @@ routes = do
             image  <- MaybeT $ Image.querySingle id
             query  <- lift $ optionalParam "q" ""
             title  <- lift $ optionalParam "title" (imageTitle image)
-            tags   <- lift $ optionalParam "tags" (intercalate "," (imageTags image))
-            result <- lift $ Image.update id title (splitOn "," tags)
+            tags   <- lift $ optionalParam "tags" (comma (imageTags image))
+            urls   <- lift $ optionalParam "urls" (comma (imageSources image))
+            result <- Image.update id title (uncomma  urls) (uncomma  tags)
 
             return (URL.image scope id query, result)
 
@@ -228,6 +231,12 @@ routes = do
             Just view -> html view
 
 ----------------------------------------------------------------------- Utility
+
+-- | Returns a comma-separated string of the elements in the given list.
+comma   = intercalate ","
+
+-- | Returns a list of the elements of the given comma-separated string.
+uncomma = splitOn ","
 
 -- Return a 404 status.
 notFound :: (MonadIO m) => Spock.ActionT m a

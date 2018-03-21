@@ -18,6 +18,8 @@ module App.Storage.Database
 
     , deleteScope, insertScope, selectScope, selectScopeID, updateScope
 
+    , attachSources, detachSources
+
     , selectTagIDByName, selectDetailedTags, selectRecentUncategorizedTags
     , selectTagCategories, selectTagNames, attachTags, detachTags, cleanTags
 
@@ -32,7 +34,7 @@ import qualified Data.Traversable as Traversable
 
 import App.Config            ( Config(..) )
 import App.Core.Types        ( Album(..), DetailedTag(..), Image(..), Page(..)
-                             , Scope(..), SimpleTag(..), App, ID )
+                             , Scope(..), SimpleTag(..), App, ID, URL )
 import App.Expression        ( Match(..), Token(..), Expression )
 import Control.Applicative   ( (<|>) )
 import Control.Monad.Reader  ( forM, liftIO, forM_, void, unless )
@@ -69,11 +71,12 @@ instance FromRow WrappedString where
 instance FromRow Album where
     fromRow = Album <$> field      <*> field <*> bool field <*> time field
                     <*> time field <*> field <*> pure []    <*> pure []
+                    <*> pure []
 
 instance FromRow Image where
     fromRow = Image  <$> field      <*> field <*> bool field <*> field
                      <*> field      <*> field <*> field      <*> time field
-                     <*> time field <*> field <*> pure []
+                     <*> time field <*> field <*> pure []    <*> pure []
 
 instance FromRow Page where
     fromRow = Page <$> field <*> field <*> field
@@ -146,7 +149,7 @@ selectImage :: ID -> Transaction (Maybe Image)
 selectImage id = do
     results <- SQL.single (images >>= wherever . ("id" *= id))
 
-    Traversable.sequence (withImageTags <$> results)
+    Traversable.sequence (withImageData <$> results)
 
 -- | Gets a list of images from the database. If a non-empty expression is
 -- | passed in, only images that satisfy the expression will be returned.
@@ -155,7 +158,7 @@ selectImages expression from count = do
     now     <- DateTime.now
     results <- SQL.query (images >>= paginated expression now from count)
 
-    Traversable.sequence (withImageTags <$> results)
+    Traversable.sequence (withImageData <$> results)
 
 -- | Returns the image from the database ordered after the image with the
 -- | given ID. If no image exists, nothing is returned.
@@ -182,7 +185,7 @@ selectRandomImages expression count = do
         paginated expression now 0 count i
         randomOrder
 
-    Traversable.sequence (withImageTags <$> results)
+    Traversable.sequence (withImageData <$> results)
 
 -- | Updates the image in the database.
 updateImage :: Image -> Transaction ()
@@ -201,6 +204,48 @@ selectHashExists hash =
 -- | Returns the total number of images that satisfy the given expression.
 selectImagesCount :: Expression -> Transaction Int
 selectImagesCount = selectCount "image"
+
+----------------------------------------------------------------------- Sources
+
+-- | Returns a list of all sources attached to the post with the given ID.
+selectSourcesByPost :: ID -> Transaction [URL]
+selectSourcesByPost postID = do
+    results <- SQL.query $ do
+        ps <- from "post_source"
+        wherever (ps "post_id" .= postID)
+        retrieve [ps "url"]
+
+    return (innerString <$> results)
+
+-- | Associates the post with the given ID with the source with the given URL.
+-- | If the source does not exist, it is created.
+attachSource :: ID -> String -> Transaction ()
+attachSource postID url = do
+    exists <- SQL.exists $ do
+        s <- from "post_source"
+        wherever (s "post_id" .= postID)
+        wherever (s "url"     .= url)
+
+    unless exists $ do
+        void $ SQL.insert "post_source" [ "post_id" << postID
+                                        , "url"     << url ]
+
+-- | Associates the post with the given ID with all sources that map to the
+-- | given list of URLs. If any source does not exists, it is created.
+attachSources :: [URL] -> ID -> Transaction ()
+attachSources urls postID = mapM_ (attachSource postID) urls
+
+-- | Disassociates the post with the given ID with the source with the given
+-- | URL. If the source does not exist, it is created.
+detachSource :: ID -> URL -> Transaction ()
+detachSource postID url =
+    SQL.delete "post_source" $ \ps -> ps "post_id" .= postID
+                                   .& ps "url"     .= url
+
+-- | Disassociates the post with the given ID with all sources that map to the
+-- | given list of URLs. If any source does not exists, it is ignored
+detachSources :: [URL] -> ID -> Transaction ()
+detachSources urls postID = mapM_ (detachSource postID) urls
 
 -------------------------------------------------------------------------- Tags
 
@@ -392,22 +437,18 @@ insertAlbum Album {..} = do
 -- | nothing is returned.
 selectAlbum :: ID -> Transaction (Maybe Album)
 selectAlbum id = do
-    results          <- SQL.single (albums >>= wherever . ("id" *= id))
-    withPages        <- Traversable.sequence (withPages     <$> results)
-    withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
+    results <- SQL.single (albums >>= wherever . ("id" *= id))
 
-    return withPagesAndTags
+    Traversable.sequence (withAlbumData <$> results)
 
 -- | Gets a list of albums from the database. If a non-empty expression is
 -- | passed in, only albums that satisfy the expression will be returned.
 selectAlbums :: Expression -> Int -> Int -> Transaction [Album]
 selectAlbums expression from count = do
-    now              <- DateTime.now
-    results          <- SQL.query (albums >>= paginated expression now from count)
-    withPages        <- Traversable.sequence (withPages <$> results)
-    withPagesAndTags <- Traversable.sequence (withAlbumTags <$> withPages)
+    now     <- DateTime.now
+    results <- SQL.query (albums >>= paginated expression now from count)
 
-    return withPagesAndTags
+    Traversable.sequence (withAlbumData <$> results)
 
 -- | Returns the total number of albums that satisfy the given expression.
 selectAlbumsCount :: Expression -> Transaction Int
@@ -537,23 +578,25 @@ paginated expression now from count table = do
 
 --------------------------------------------------------------------- Modifiers
 
--- | Adds the list of pages to the given album entity.
-withPages :: Album -> Transaction Album
-withPages album @ Album {..} = do
-    pages <- selectPagesByAlbum albumID
-    return album { albumPages = pages }
+-- | Adds the list of tag names to the given image entity.
+withImageData :: Image -> Transaction Image
+withImageData image @ Image {..} = do
+    tagNames <- selectTagsByPost    imageID
+    sources  <- selectSourcesByPost imageID
+    return image
+        { imageTags    = tagNames
+        , imageSources = sources }
 
 -- | Adds the list of tag names to the given image entity.
-withImageTags :: Image -> Transaction Image
-withImageTags image @ Image {..} = do
-    tagNames <- selectTagsByPost imageID
-    return image { imageTags = tagNames }
-
--- | Adds the list of tag names to the given image entity.
-withAlbumTags :: Album -> Transaction Album
-withAlbumTags album @ Album {..} = do
-    tagNames <- selectTagsByPost albumID
-    return album { albumTags = tagNames }
+withAlbumData :: Album -> Transaction Album
+withAlbumData album @ Album {..} = do
+    tagNames <- selectTagsByPost    albumID
+    sources  <- selectSourcesByPost albumID
+    pages    <- selectPagesByAlbum  albumID
+    return album
+        { albumTags    = tagNames
+        , albumSources = sources
+        , albumPages   = pages }
 
 ----------------------------------------------------------------------- Utility
 
@@ -595,8 +638,8 @@ selectAdjacentImage dir id expression = do
             ordering (p "id")
 
     case (nextImage, firstImage) of
-        (Just image, _) -> Just <$> withImageTags image
-        (_, Just image) -> Just <$> withImageTags image
+        (Just image, _) -> Just <$> withImageData image
+        (_, Just image) -> Just <$> withImageData image
         (_, _         ) -> return Nothing
 
 -- | Returns the total number of rows from the table with the given name that

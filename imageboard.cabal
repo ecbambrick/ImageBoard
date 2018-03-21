@@ -35,6 +35,7 @@ library
       , App.Core.Image
       , App.Core.Post
       , App.Core.Scope
+      , App.Core.Sources
       , App.Core.Tag
       , App.Core.Title
       , App.Core.Types
