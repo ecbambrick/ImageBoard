@@ -219,7 +219,7 @@ textAreaField :: Text -> Text -> Text -> Html ()
 textAreaField label name id =
     div_ [class_ "edit-pair"] $ do
         span_ (toHtml label)
-        textarea_ [id_ id, name_ name, rows_ "5"] mempty
+        textarea_ [id_ id, name_ name, rows_ "10"] mempty
 
 -- | Returns an HTML element for modifying a post property using a text area.
 textBoxField :: Text -> Text -> Text -> Html ()

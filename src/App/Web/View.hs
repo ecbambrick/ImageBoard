@@ -53,8 +53,9 @@ albumView scope query timeZone album @ Album {..} = render $ do
                 Elem.spacer
                 Elem.albumTags scope albumTags
             Elem.editPanel albumURL $ do
-                Elem.textBoxField  "Title" "title" "edit-title"
-                Elem.textAreaField "Tags"  "tags"  "edit-tags"
+                Elem.textBoxField  "Title"   "title"   "edit-title"
+                Elem.textAreaField "Tags"    "tags"    "edit-tags"
+                Elem.textAreaField "Sources" "sources" "edit-sources"
             Elem.deletePanel albumURL
         Elem.gallery2 $
             flip map albumPages $ \page @ Page {..} ->
@@ -163,8 +164,9 @@ imageView scope query timeZone prevImage currImage nextImage = render $ do
                 Elem.spacer
                 Elem.imageTags scope (imageTags currImage)
             Elem.editPanel (URL.image scope curr query) $ do
-                Elem.textBoxField  "Title" "title" "edit-title"
-                Elem.textAreaField "Tags"  "tags"  "edit-tags"
+                Elem.textBoxField  "Title"   "title"   "edit-title"
+                Elem.textAreaField "Tags"    "tags"    "edit-tags"
+                Elem.textAreaField "Sources" "sources" "edit-sources"
             Elem.deletePanel (URL.image scope curr query)
         Elem.canvas source1 source2
 
@@ -275,8 +277,9 @@ pageView scope album @ Album {..} timeZone curr query = render $ do
                 Elem.spacer
                 Elem.albumTags scope albumTags
             Elem.editPanel albumURL $ do
-                Elem.textBoxField  "Title" "title" "edit-title"
-                Elem.textAreaField "Tags"  "tags"  "edit-tags"
+                Elem.textBoxField  "Title"   "title"   "edit-title"
+                Elem.textAreaField "Tags"    "tags"    "edit-tags"
+                Elem.textAreaField "Sources" "sources" "edit-sources"
             Elem.deletePanel albumURL
         Elem.canvas source1 source2
 

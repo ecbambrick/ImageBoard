@@ -27,6 +27,7 @@ const PageViewModel = {
             editSubmit:         document.getElementById("edit-submit"),
             editTitle:          document.getElementById("edit-title"),
             editTags:           document.getElementById("edit-tags"),
+            editSources:        document.getElementById("edit-sources"),
             deletePanel:        document.getElementById("delete-panel"),
             deleteButton:       document.getElementById("delete-show"),
             deleteCancel:       document.getElementById("delete-cancel"),
@@ -55,6 +56,7 @@ const PageViewModel = {
                 const data = {
                     title: dom.editTitle.value,
                     tags:  dom.editTags.value,
+                    urls:  dom.editSources.value.replace(/\s+/g, ","),
                 }
                 return Kefir.fromPromise(Request.post(url.album, data));
             });
@@ -192,6 +194,18 @@ const PageViewModel = {
         const defaultTitle =
             title.sampledBy(isEditing);
 
+        const sources =
+            Kefir.fromEvents(dom.editSources, 'keyup')
+                 .map(x => x.target.value)
+                 .sampledBy(editSubmitted)
+                 .map(x => x.split(/\s+/).map(String.trim).filter(x => x != ""))
+                 .ignoreErrors()
+                 .toProperty(() => album.sources);
+
+        const defaultSourcesString =
+            sources.sampledBy(isEditing)
+                   .map(x => x.join("\n\n"));
+
         // -------------------------------------------------------------
         // Miscellaneous streams.
         // -------------------------------------------------------------
@@ -274,10 +288,11 @@ const PageViewModel = {
         })
 
         // Simple DOM bindings.
-        visibleTags       .onValue(x => dom.infoTags.innerHTML  = x);
-        title             .onValue(x => dom.infoTitle.innerHTML = x);
-        defaultTitle      .onValue(x => dom.editTitle.value     = x);
-        defaultTagsString .onValue(x => dom.editTags.value      = x);
+        visibleTags          .onValue(x => dom.infoTags.innerHTML  = x);
+        title                .onValue(x => dom.infoTitle.innerHTML = x);
+        defaultTitle         .onValue(x => dom.editTitle.value     = x);
+        defaultTagsString    .onValue(x => dom.editTags.value      = x);
+        defaultSourcesString .onValue(x => dom.editSources.value   = x);
 
         // Actions.
         deleteSubmitted   .onValue(_ => Utility.goTo(url.index));
