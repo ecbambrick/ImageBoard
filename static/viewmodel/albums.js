@@ -77,11 +77,11 @@ const AlbumsViewModel = {
                 padding: 10
             });
         });
-        
+
         // Actions.
         goToNextPage      .onValue(_ => Utility.goTo(Url.albums(scope, page + 1, query)));
         goToPreviousPage  .onValue(_ => Utility.goTo(Url.albums(scope, page - 1, query)));
-        goToAlbums        .onValue(_ => Utility.goTo(Url.images(scope, 1,        query)));
+        goToImages        .onValue(_ => Utility.goTo(Url.images(scope, 1,        query)));
         focusOnSearch     .onValue(_ => dom.search.select());
         freeFocus         .onValue(_ => document.activeElement.blur());
     }
