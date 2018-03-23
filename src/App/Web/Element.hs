@@ -9,6 +9,7 @@ import qualified App.Web.Icon    as Icon
 import qualified App.Web.URL     as URL
 import qualified Data.DateTime   as DateTime
 import qualified Data.Text       as Text
+import qualified Network.URI     as URI
 import qualified System.FilePath as FilePath
 import qualified Text.Format     as Format
 import qualified Text.JavaScript as JS
@@ -16,15 +17,18 @@ import qualified Text.JavaScript as JS
 -- Bug in firefox prevents default menuitem_ from working.
 import Lucid.Html5 hiding ( menuitem_ )
 
-import App.Core.Types     ( Album(..), DetailedTag(..), Image(..), Scope(..), ID )
+import App.Core.Types     ( Album(..), DetailedTag(..), Image(..), Scope(..)
+                          , ID, URL )
 import App.Web.Icon       ( Icon )
 import Control.Monad      ( forM_ )
 import Data.Char          ( isAlpha, isNumber, toUpper )
 import Data.DateTime      ( DateTimeFormat(..), TimeZone )
-import Data.List.Extended ( bundle, groupWith, sortWith )
+import Data.List          ( intersperse, isPrefixOf )
+import Data.List.Extended ( bundle, foreach, groupWith, sortWith )
+import Data.Maybe         ( fromMaybe )
 import Data.Monoid        ( (<>) )
 import Data.Text          ( Text )
-import Data.Textual       ( display, intercalate, toLower )
+import Data.Textual       ( display, intercalate, splitOn, toLower )
 import Lucid.Base         ( Html, term, toHtml )
 
 ------------------------------------------------------------------------- Types
@@ -377,6 +381,8 @@ albumDetails Album {..} timeZone =
             toHtml ("uploaded " ++ DateTime.format ShortDate timeZone albumCreated)
             br_ []
             toHtml $ show (length albumPages) ++ " pages"
+            br_ []
+            sourceLinks albumSources
 
 -- | Returns an HTML element for displaying image meta data.
 imageDetails :: Image -> TimeZone -> ImageType -> Html ()
@@ -403,6 +409,8 @@ imageDetails Image {..} timeZone imageType =
             toHtml imageHash
             br_ []
             toHtml ("uploaded " ++ DateTime.format ShortDate timeZone imageCreated)
+            br_ []
+            sourceLinks imageSources
 
 -- | Returns an HTML element for displaying page meta data.
 pageDetails :: Album -> Int -> TimeZone -> Html ()
@@ -416,6 +424,8 @@ pageDetails Album {..} page timeZone =
             toHtml ("uploaded " ++ DateTime.format ShortDate timeZone albumCreated)
             br_ []
             toHtml $ "page " ++ show page ++ " / " ++ show (length albumPages)
+            br_ []
+            sourceLinks albumSources
 
 -- | Returns an HTML element containing the given list of album tag names.
 albumTags :: Scope -> [String] -> Html ()
@@ -491,6 +501,37 @@ gallery2 items =
                 img_ [src_ thumbnail]
 
 ----------------------------------------------------------------------- Utility
+
+-- | Converts the given list of URLs to HTML links. The text of each link is
+-- | based on the domain of the URL and each link is separated by a "|".
+sourceLinks :: [URL] -> Html ()
+sourceLinks urls =
+    let titles   = map getDomain urls
+        textURLs = map Text.pack urls
+        pairs    = zip titles textURLs
+        links    = foreach pairs $ \(title, url) ->
+                       a_ [href_ url, class_ "source-link"] (toHtml title)
+
+    in sequence_ $ intersperse " | " links
+
+-- | Gets the domain (excluding leading "www") of the given URL.
+getDomain :: URL -> Text
+getDomain url =
+    let domain = do
+            scheme    <- URI.parseURI url
+            authority <- URI.uriAuthority scheme
+            stripWWW $ URI.uriRegName authority
+
+    in Text.pack $ fromMaybe url domain
+
+-- | Strips the leading "www" portion of a URL if it exists. If the URL consists
+-- | only of "www" then nothing is returned.
+stripWWW :: String -> Maybe URL
+stripWWW domain =
+    case splitOn "." domain of
+        "www":[] -> Nothing
+        "www":xs -> Just $ intercalate "." xs
+        xs       -> Just $ intercalate "." xs
 
 -- | Converts the given post ID to a context menu ID
 getMenuID :: ID -> Text

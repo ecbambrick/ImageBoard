@@ -21,6 +21,10 @@ a.text-link:first-child {
     margin-top: 30px;
 }
 
+a.source-link {
+    text-decoration: underline;
+}
+
 a#edit-cancel {
     color: #d31e00;
 }

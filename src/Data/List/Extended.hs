@@ -11,6 +11,9 @@ bundle = Map.toList
        . Map.fromListWith (\x y -> y ++ x)
        . map (\(x, y) -> (x, [y]))
 
+-- | Same as map but with arguments reversed.
+foreach = flip map
+
 -- | Groups the given list using the given project function to sort the list
 -- | and then form groups by equality on these projected elements.
 groupWith :: (Ord b) => (a -> b) -> [a] -> [[a]]
