@@ -59,6 +59,8 @@ data Direction = Next | Prev
 -- | Wrapper around string to create a FromRow instance.
 data WrappedString = WrappedString { innerString :: String }
 
+------------------------------------------------------------- FromRow Instances
+
 instance FromRow Int64 where
     fromRow = field
 
@@ -204,6 +206,89 @@ selectHashExists hash =
 -- | Returns the total number of images that satisfy the given expression.
 selectImagesCount :: Expression -> Transaction Int
 selectImagesCount = selectCount "image"
+
+-- | Adds additional related data to the given image entity.
+withImageData :: Image -> Transaction Image
+withImageData image @ Image {..} = do
+    tagNames <- selectTagsByPost    imageID
+    sources  <- selectSourcesByPost imageID
+    return image
+        { imageTags    = tagNames
+        , imageSources = sources }
+
+------------------------------------------------------------------------ Albums
+
+-- | Inserts a new album into the database and returns its ID.
+insertAlbum :: Album -> Transaction ID
+insertAlbum Album {..} = do
+    postID <- SQL.insert "post"
+        [ "title"        << albumTitle
+        , "created"      << DateTime.toSeconds albumCreated
+        , "modified"     << DateTime.toSeconds albumModified
+        , "is_favourite" << fromBool albumIsFavourite
+        , "is_deleted"   << fromBool False ]
+
+    albumID <- SQL.insert "album"
+        [ "post_id"      << postID
+        , "file_size"    << albumFileSize ]
+
+    forM_ albumPages $ \Page {..} -> SQL.insert "page"
+        [ "album_id"     << albumID
+        , "title"        << pageTitle
+        , "number"       << pageNumber
+        , "extension"    << pageExtension ]
+
+    return postID
+
+-- | Returns the album from the database with the given ID. If no album exists,
+-- | nothing is returned.
+selectAlbum :: ID -> Transaction (Maybe Album)
+selectAlbum id = do
+    results <- SQL.single (albums >>= wherever . ("id" *= id))
+
+    Traversable.sequence (withAlbumData <$> results)
+
+-- | Gets a list of albums from the database. If a non-empty expression is
+-- | passed in, only albums that satisfy the expression will be returned.
+selectAlbums :: Expression -> Int -> Int -> Transaction [Album]
+selectAlbums expression from count = do
+    now     <- DateTime.now
+    results <- SQL.query (albums >>= paginated expression now from count)
+
+    Traversable.sequence (withAlbumData <$> results)
+
+-- | Returns the total number of albums that satisfy the given expression.
+selectAlbumsCount :: Expression -> Transaction Int
+selectAlbumsCount = selectCount "album"
+
+-- | Updates the album in the database.
+updateAlbum :: Album -> Transaction ()
+updateAlbum Album {..} = SQL.update "post" ("id" *= albumID)
+    [ "title"        << albumTitle
+    , "is_favourite" << albumIsFavourite
+    , "modified"     << DateTime.toSeconds albumModified ]
+
+-- | Adds additional related data to the given album entity.
+withAlbumData :: Album -> Transaction Album
+withAlbumData album @ Album {..} = do
+    tagNames <- selectTagsByPost    albumID
+    sources  <- selectSourcesByPost albumID
+    pages    <- selectPagesByAlbum  albumID
+    return album
+        { albumTags    = tagNames
+        , albumSources = sources
+        , albumPages   = pages }
+
+------------------------------------------------------------------------- Pages
+
+-- | Returns the list of all pages owned by the album with the given ID.
+selectPagesByAlbum :: ID -> Transaction [Page]
+selectPagesByAlbum postID = SQL.query $ do
+    a <- from "album"
+    p <- from "page" `on` ("album_id" *= a "id")
+    wherever (a "post_id" .= postID)
+    retrieve [ p "number", p "title", p "extension" ]
+    asc (p "number")
 
 ----------------------------------------------------------------------- Sources
 
@@ -409,69 +494,6 @@ selectCategoryIDByName categoryName = SQL.single $ do
     wherever (t "name" .= categoryName)
     retrieve [t "id"]
 
------------------------------------------------------------------------- Albums
-
--- | Inserts a new album into the database and returns its ID.
-insertAlbum :: Album -> Transaction ID
-insertAlbum Album {..} = do
-    postID <- SQL.insert "post"
-        [ "title"        << albumTitle
-        , "created"      << DateTime.toSeconds albumCreated
-        , "modified"     << DateTime.toSeconds albumModified
-        , "is_favourite" << fromBool albumIsFavourite
-        , "is_deleted"   << fromBool False ]
-
-    albumID <- SQL.insert "album"
-        [ "post_id"      << postID
-        , "file_size"    << albumFileSize ]
-
-    forM_ albumPages $ \Page {..} -> SQL.insert "page"
-        [ "album_id"     << albumID
-        , "title"        << pageTitle
-        , "number"       << pageNumber
-        , "extension"    << pageExtension ]
-
-    return postID
-
--- | Returns the album from the database with the given ID. If no album exists,
--- | nothing is returned.
-selectAlbum :: ID -> Transaction (Maybe Album)
-selectAlbum id = do
-    results <- SQL.single (albums >>= wherever . ("id" *= id))
-
-    Traversable.sequence (withAlbumData <$> results)
-
--- | Gets a list of albums from the database. If a non-empty expression is
--- | passed in, only albums that satisfy the expression will be returned.
-selectAlbums :: Expression -> Int -> Int -> Transaction [Album]
-selectAlbums expression from count = do
-    now     <- DateTime.now
-    results <- SQL.query (albums >>= paginated expression now from count)
-
-    Traversable.sequence (withAlbumData <$> results)
-
--- | Returns the total number of albums that satisfy the given expression.
-selectAlbumsCount :: Expression -> Transaction Int
-selectAlbumsCount = selectCount "album"
-
--- | Updates the album in the database.
-updateAlbum :: Album -> Transaction ()
-updateAlbum Album {..} = SQL.update "post" ("id" *= albumID)
-    [ "title"        << albumTitle
-    , "is_favourite" << albumIsFavourite
-    , "modified"     << DateTime.toSeconds albumModified ]
-
-------------------------------------------------------------------------- Pages
-
--- | Returns the list of all pages owned by the album with the given ID.
-selectPagesByAlbum :: ID -> Transaction [Page]
-selectPagesByAlbum postID = SQL.query $ do
-    a <- from "album"
-    p <- from "page" `on` ("album_id" *= a "id")
-    wherever (a "post_id" .= postID)
-    retrieve [ p "number", p "title", p "extension" ]
-    asc (p "number")
-
 ------------------------------------------------------------------------ Scopes
 
 -- | Deletes the scope with the given name.
@@ -575,28 +597,6 @@ paginated expression now from count table = do
     satisfying expression now table
     offset from
     limit count
-
---------------------------------------------------------------------- Modifiers
-
--- | Adds the list of tag names to the given image entity.
-withImageData :: Image -> Transaction Image
-withImageData image @ Image {..} = do
-    tagNames <- selectTagsByPost    imageID
-    sources  <- selectSourcesByPost imageID
-    return image
-        { imageTags    = tagNames
-        , imageSources = sources }
-
--- | Adds the list of tag names to the given image entity.
-withAlbumData :: Album -> Transaction Album
-withAlbumData album @ Album {..} = do
-    tagNames <- selectTagsByPost    albumID
-    sources  <- selectSourcesByPost albumID
-    pages    <- selectPagesByAlbum  albumID
-    return album
-        { albumTags    = tagNames
-        , albumSources = sources
-        , albumPages   = pages }
 
 ----------------------------------------------------------------------- Utility
 
